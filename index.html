@@ -1150,16 +1150,39 @@ function syncORMsFromLive(){
 }
 
 /* ============ LAB ENGINE ============ */
-var LAB_REF={"PSA": {"unit": "ng/mL", "low": null, "high": 0.1, "critHigh": 0.2, "label": "PSA", "diet": true, "train": false}, "Hemoglobin": {"unit": "g/dL", "low": 13.5, "high": 17.5, "critLow": 11.0, "label": "Hemoglobin", "diet": false, "train": true}, "WBC": {"unit": "K/uL", "low": 4.5, "high": 11.0, "critLow": 2.0, "critHigh": 20.0, "label": "WBC", "diet": false, "train": false}, "RBC": {"unit": "M/uL", "low": 4.5, "high": 5.9, "label": "RBC", "diet": false, "train": false}, "Hematocrit": {"unit": "%", "low": 41, "high": 53, "critLow": 30, "label": "Hematocrit", "diet": false, "train": true}, "Platelets": {"unit": "K/uL", "low": 150, "high": 400, "critLow": 50, "label": "Platelets", "diet": false, "train": false}, "Glucose": {"unit": "mg/dL", "low": 70, "high": 100, "critHigh": 126, "label": "Fasting Glucose", "diet": true, "train": true}, "BUN": {"unit": "mg/dL", "low": 7, "high": 20, "label": "BUN", "diet": false, "train": false}, "Creatinine": {"unit": "mg/dL", "low": 0.74, "high": 1.35, "label": "Creatinine", "note": "creatine", "diet": false, "train": false}, "eGFR": {"unit": "mL/min", "low": 60, "high": 120, "critLow": 30, "label": "eGFR", "note": "creatine", "diet": false, "train": false}, "Sodium": {"unit": "mEq/L", "low": 136, "high": 145, "label": "Sodium", "diet": false, "train": false}, "Potassium": {"unit": "mEq/L", "low": 3.5, "high": 5.0, "critLow": 3.0, "critHigh": 6.0, "label": "Potassium", "diet": true, "train": false}, "Calcium": {"unit": "mg/dL", "low": 8.5, "high": 10.5, "label": "Calcium", "diet": true, "train": false}, "ALT": {"unit": "U/L", "low": null, "high": 56, "critHigh": 100, "label": "ALT (liver)", "diet": false, "train": false}, "AST": {"unit": "U/L", "low": null, "high": 40, "critHigh": 80, "label": "AST (liver)", "diet": false, "train": false}, "TotalCholesterol": {"unit": "mg/dL", "low": null, "high": 200, "critHigh": 240, "label": "Total Cholesterol", "diet": true, "train": true}, "LDL": {"unit": "mg/dL", "low": null, "high": 100, "critHigh": 160, "label": "LDL Cholesterol", "diet": true, "train": true}, "HDL": {"unit": "mg/dL", "low": 40, "high": null, "critLow": 35, "label": "HDL Cholesterol", "diet": true, "train": true}, "Triglycerides": {"unit": "mg/dL", "low": null, "high": 150, "critHigh": 500, "label": "Triglycerides", "diet": true, "train": true}, "HbA1c": {"unit": "%", "low": null, "high": 5.7, "critHigh": 6.5, "label": "HbA1c", "diet": true, "train": true}, "EstAvgGlucose": {"unit": "mg/dL", "low": null, "high": 117, "label": "Est. Avg Glucose", "diet": true, "train": true}};
+var LAB_REF={"PSA": {"unit": "ng/mL", "low": null, "high": 0.1, "critHigh": 0.2, "label": "PSA", "diet": true, "train": false}, "Hemoglobin": {"unit": "g/dL", "low": 13.5, "high": 17.5, "critLow": 11.0, "label": "Hemoglobin", "diet": false, "train": true}, "WBC": {"unit": "K/uL", "low": 4.5, "high": 11.0, "critLow": 2.0, "critHigh": 20.0, "label": "WBC", "diet": false, "train": false}, "RBC": {"unit": "M/uL", "low": 4.5, "high": 5.9, "label": "RBC", "diet": false, "train": false}, "Hematocrit": {"unit": "%", "low": 41, "high": 53, "critLow": 30, "label": "Hematocrit", "diet": false, "train": true}, "Platelets": {"unit": "K/uL", "low": 150, "high": 400, "critLow": 50, "label": "Platelets", "diet": false, "train": false}, "Glucose": {"unit": "mg/dL", "low": 70, "high": 99, "critHigh": 126, "label": "Fasting Glucose (CMP)", "diet": true, "train": true}, "BUN": {"unit": "mg/dL", "low": 7, "high": 20, "label": "BUN", "diet": false, "train": false}, "Creatinine": {"unit": "mg/dL", "low": 0.74, "high": 1.35, "label": "Creatinine", "note": "creatine", "diet": false, "train": false}, "eGFR": {"unit": "mL/min", "low": 60, "high": 120, "critLow": 30, "label": "eGFR", "note": "creatine", "diet": false, "train": false}, "Sodium": {"unit": "mEq/L", "low": 136, "high": 145, "label": "Sodium", "diet": false, "train": false}, "Potassium": {"unit": "mEq/L", "low": 3.5, "high": 5.0, "critLow": 3.0, "critHigh": 6.0, "label": "Potassium", "diet": true, "train": false}, "Calcium": {"unit": "mg/dL", "low": 8.5, "high": 10.5, "label": "Calcium", "diet": true, "train": false}, "ALT": {"unit": "U/L", "low": null, "high": 56, "critHigh": 100, "label": "ALT (liver)", "diet": false, "train": false}, "AST": {"unit": "U/L", "low": null, "high": 40, "critHigh": 80, "label": "AST (liver)", "diet": false, "train": false}, "TotalCholesterol": {"unit": "mg/dL", "low": null, "high": 200, "critHigh": 240, "label": "Total Cholesterol", "diet": true, "train": true}, "LDL": {"unit": "mg/dL", "low": null, "high": 100, "critHigh": 160, "label": "LDL Cholesterol", "diet": true, "train": true}, "HDL": {"unit": "mg/dL", "low": 40, "high": null, "critLow": 35, "label": "HDL Cholesterol", "diet": true, "train": true}, "Triglycerides": {"unit": "mg/dL", "low": null, "high": 150, "critHigh": 500, "label": "Triglycerides", "diet": true, "train": true}, "HbA1c": {"unit": "%", "low": null, "high": 5.7, "critHigh": 6.5, "label": "HbA1c", "diet": true, "train": true}, "EstAvgGlucose": {"unit": "mg/dL", "low": null, "high": 117, "critHigh": 154, "label": "Est. Avg Glucose", "diet": true, "train": true}};
 var PANELS={"CBC": ["Hemoglobin", "WBC", "RBC", "Hematocrit", "Platelets"], "CMP": ["Glucose", "BUN", "Creatinine", "eGFR", "Sodium", "Potassium", "Calcium", "ALT", "AST"], "Lipids": ["TotalCholesterol", "LDL", "HDL", "Triglycerides"], "Metabolic": ["HbA1c", "EstAvgGlucose"], "Cancer": ["PSA"]};
 var DIET_TIPS={"PSA": "Low-carbohydrate dietary patterns have shown slower PSA doubling time in clinical trials. Emphasize fatty fish (salmon, sardines), cooked tomatoes with olive oil, cruciferous vegetables daily, and minimize processed meats and high-fat dairy.", "Glucose": "Reduce refined carbohydrates and added sugar. Increase fiber (legumes, vegetables, oats), healthy fats (olive oil, avocado, nuts), and lean protein. Eat carbohydrates with protein or fat to blunt glucose spikes.", "HbA1c": "A low-glycemic, high-fiber diet has the strongest evidence for reducing HbA1c. Prioritize non-starchy vegetables, legumes, whole grains, and fatty fish. Minimize white bread, rice, sugary drinks, and processed snacks. A low-carbohydrate pattern has additional evidence in prostate cancer specifically.", "EstAvgGlucose": "Same as HbA1c. Reduce refined carbohydrates and added sugar, increase fiber and healthy fats. Time larger carbohydrate meals around training.", "TotalCholesterol": "Increase soluble fiber (oats, beans, lentils, apples). Use olive oil instead of butter. Eat fatty fish 2-3x per week. Minimize saturated fat from processed meat and high-fat dairy.", "LDL": "Soluble fiber, plant sterols (nuts, seeds, legumes), and replacing saturated fat with unsaturated fat (olive oil, fish, avocado) have the strongest dietary evidence for LDL reduction.", "HDL": "Olive oil, avocado, nuts, and fatty fish raise HDL. Minimize refined carbohydrates and trans fats. Aerobic exercise is the primary driver but diet compounds the effect.", "Triglycerides": "Reduce added sugar and refined carbohydrates. Increase omega-3 fatty acids from fatty fish. Minimize alcohol. A low-carbohydrate pattern is the most effective dietary approach for triglycerides.", "Potassium": "Low potassium (hypokalemia is common on abiraterone): increase avocado, sweet potato, banana, legumes, salmon, spinach. High potassium: reduce these foods and discuss with your oncologist immediately.", "Calcium": "Low calcium: increase dairy or fortified plant milks, leafy greens, sardines with bones, tofu. Do not megadose calcium supplements \u2014 high-dose supplemental calcium is associated with aggressive prostate cancer."};
 var TRAIN_TIPS={"Hemoglobin": {"low": "ANEMIA FLAG: Hemoglobin below normal. Heavy compound loading and high-intensity intervals are contraindicated until this is addressed medically. Drop all work to Zone 1 only, reduce compound loads by 20-25%, and increase RIR target by 2. Discuss with your oncologist before pushing hard again.", "critLow": "CRITICAL ANEMIA: Hemoglobin critically low. Stop high-intensity training entirely. Walk only. Contact your oncologist."}, "Hematocrit": {"low": "Low hematocrit reduces oxygen delivery to muscle. Reduce cardio intensity to Zone 1-2 only and reduce compound loads by 15%. Discuss with your oncologist."}, "Glucose": {"high": "Elevated fasting glucose: increase Zone 2 cardio to 5 sessions per week. Post-meal walks of 10+ minutes have strong evidence for glucose control. Cardio day becomes mandatory.", "critHigh": "Fasting glucose meets clinical diabetes threshold. Significantly increase aerobic volume. Discuss with your doctor."}, "HbA1c": {"high": "Elevated HbA1c: aerobic exercise is the most effective intervention. Add one extra Zone 2 cardio session per week and make the mid-week cardio day mandatory. Target 200+ minutes of Zone 2 weekly.", "critHigh": "HbA1c at diabetic threshold. Significantly increase aerobic volume. Discuss with your doctor before continuing current program."}, "EstAvgGlucose": {"high": "Increase Zone 2 cardio emphasis. Make cardio day mandatory."}, "TotalCholesterol": {"high": "Elevated cholesterol: resistance training is the strongest exercise intervention for lipids. Prioritize lifting days over substitutions.", "critHigh": "High cholesterol: maintain all resistance days without fail."}, "LDL": {"high": "Elevated LDL: resistance training is your most effective exercise tool. Do not skip lifting days.", "critHigh": "High LDL: prioritize resistance days. Discuss with your doctor as statin therapy may be indicated."}, "HDL": {"low": "Low HDL: aerobic exercise is the most effective exercise intervention for raising HDL. Increase Zone 2 cardio minutes and do not skip the cardio recovery day.", "critLow": "Critically low HDL: make all cardio sessions mandatory and discuss cardiovascular risk with your doctor given your ADT status."}, "Triglycerides": {"high": "Elevated triglycerides: both cardio and resistance training help, but dietary carbohydrate reduction has the strongest evidence. Maintain full training program.", "critHigh": "Very high triglycerides: discuss with your doctor. Maintain training but do not increase intensity."}};
 var _activePanel="CBC";
 
-function getLabStatus(key,val){
+function getTCHDLRatio(entry){
+  if(!entry||!entry.TotalCholesterol||!entry.HDL)return null;
+  return parseFloat((entry.TotalCholesterol/entry.HDL).toFixed(2));
+}
+function getLabStatus(key,val,entry){
   var r=LAB_REF[key];
   if(!r||val===null||val===undefined||val==="")return "ok";
   var v=parseFloat(val);
+  // Ratio-aware override for LDL and HDL
+  if(key==="LDL"||key==="TotalCholesterol"){
+    var ratio=getTCHDLRatio(entry||lastLabEntry());
+    if(ratio!==null&&ratio<=3.5){
+      // Ratio is optimal — only flag if critically high
+      if(r.critHigh!=null&&v>r.critHigh)return "crit";
+      return "ok";
+    }
+    if(ratio!==null&&ratio<=5.0){
+      // Ratio acceptable — downgrade any flag to warn only
+      if(r.critHigh!=null&&v>r.critHigh)return "high";
+      if(r.high!=null&&v>r.high)return "warn";
+      return "ok";
+    }
+  }
+  if(key==="HDL"){
+    // High HDL is cardioprotective — never flag high HDL as a problem
+    if(v>r.low)return "ok";
+  }
   if(r.critLow!=null&&v<r.critLow)return "crit";
   if(r.critHigh!=null&&v>r.critHigh)return "crit";
   if(r.low!=null&&v<r.low)return "low";
@@ -1175,7 +1198,7 @@ function getDietFlags(){
   var flags=[];
   Object.keys(DIET_TIPS).forEach(function(key){
     var val=last[key];if(val===undefined)return;
-    var st=getLabStatus(key,val);
+    var st=getLabStatus(key,val,last);
     if(st!=="ok")flags.push({key:key,label:LAB_REF[key]?LAB_REF[key].label:key,tip:DIET_TIPS[key],status:st});
   });
   return flags;
@@ -1185,7 +1208,7 @@ function getLabTrainAdj(){
   var adjs=[];
   Object.keys(TRAIN_TIPS).forEach(function(key){
     var val=last[key];if(val===undefined)return;
-    var st=getLabStatus(key,val);var tips=TRAIN_TIPS[key];
+    var st=getLabStatus(key,val,last);var tips=TRAIN_TIPS[key];
     var msg=null;
     if(st==="crit")msg=tips.critLow||tips.critHigh||null;
     else if(st==="low")msg=tips.low||null;
@@ -1237,7 +1260,7 @@ function renderLabFlags(){
   var anyFlag=false;
   Object.keys(LAB_REF).forEach(function(k){
     if(last[k]===undefined)return;
-    var r=LAB_REF[k];var val=parseFloat(last[k]);var st=getLabStatus(k,val);
+    var r=LAB_REF[k];var val=parseFloat(last[k]);var st=getLabStatus(k,val,last);
     if(st==="ok")return;anyFlag=true;
     var cls=st==="crit"?"crit":"abnorm";
     var reflo=r.low!=null&&val<r.low;var dir=reflo?"Low":"High";
@@ -1247,7 +1270,15 @@ function renderLabFlags(){
     if(r.diet&&DIET_TIPS[k])h+='<div style="margin-top:6px;font-size:12.5px;opacity:.85;">&#129367; Dietary suggestions available</div>';
     h+='</div>';
   });
-  if(!anyFlag)h+='<div class="lab-flag ok">&#10003; All entered values within normal range.</div>';
+  // Show TC/HDL ratio if lipid data available
+  var ratio=getTCHDLRatio(last);
+  if(ratio!==null){
+    var ratioCls=ratio<=3.5?"ok":ratio<=5.0?"warn":"abnorm";
+    var ratioNote=ratio<=3.5?"Optimal (below 3.5)":ratio<=5.0?"Acceptable (below 5.0)":"Elevated (above 5.0)";
+    h+='<div class="lab-flag '+ratioCls+'"><b>TC / HDL Ratio: '+ratio+'</b> &mdash; '+ratioNote+'<div style="margin-top:6px;font-size:12.5px;font-weight:500;">The ratio reflects your net cardiovascular lipid risk more accurately than either value alone. A ratio below 3.5 is optimal and overrides concerns about individual LDL or total cholesterol values.</div></div>';
+  }
+  if(!anyFlag&&ratio===null)h+='<div class="lab-flag ok">&#10003; All entered values within normal range.</div>';
+  if(!anyFlag&&ratio!==null)h+='<div class="lab-flag ok">&#10003; All entered values within normal range. Ratio is '+ratio+'.</div>';
   var dietFlags=getDietFlags();
   if(dietFlags.length)h+='<button class="btn ghost sm" style="margin-top:4px;" onclick="openDietPopup()">View Dietary Suggestions ('+dietFlags.length+')</button>';
   h+='</div>';area.innerHTML=h;
