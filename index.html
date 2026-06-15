@@ -1197,9 +1197,7 @@ function getLabTrainAdj(){
 function renderLabs(){
   if(!DB.labs)DB.labs=[];
   var tabs=Object.keys(PANELS);
-  document.getElementById("labPanelTabs").innerHTML=tabs.map(function(t){
-    return '<span class="lab-tab '+(t===_activePanel?"sel":"")+'" onclick="setLabPanel(\"'+t+'\")">'+t+'</span>';
-  }).join("");
+  document.getElementById("labPanelTabs").innerHTML=tabs.map(function(t){return '<span class="lab-tab '+(t===_activePanel?"sel":"")+'" data-panel="'+t+'" onclick="setLabPanel(this.dataset.panel)">'+t+'</span>';}).join("");
   var last=lastLabEntry();
   document.getElementById("labDateTag").textContent=last?last.d:"No data yet";
   renderLabEntry();renderLabFlags();renderLabCharts();
