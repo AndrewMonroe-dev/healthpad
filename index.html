@@ -681,6 +681,11 @@ function currentFatigue(){if(selFatigue)return selFatigue;var t=todayStr();for(v
 function recentLowReadiness(){var c=0;DB.readiness.slice(-3).forEach(function(x){if(x.energy==="low")c++;});DB.workouts.slice(-3).forEach(function(x){if(x.fatigue==="low")c++;});return c;}
 function daySessions(dayName){return DB.workouts.filter(function(w){return w.day===dayName&&w.ex&&Object.keys(w.ex).length;}).length;}
 function exSuccessThisPhase(name,hi){var ph=currentPhase();return DB.workouts.filter(function(w){if(w.phase!==ph.key||!w.ex||!w.ex[name]||!w.ex[name].length)return false;return w.ex[name].every(function(s){return s.r&&s.r>=hi;});}).length;}
+/* RPE / RIR autoregulation */
+var TARGET_RIR={P0:3,P1:2,P2:1.5,P3:1.5};
+function e1rmRIR(w,r,rir){if(!w||!r||rir==null)return 0;if(isNaN(rir))rir=2;var rtf=r+rir;if(rtf<1)rtf=1;return Math.round(w*(1+rtf/30));}
+function liveE1RM(name){var sess=DB.workouts.filter(function(w){return w.ex&&w.ex[name]&&w.ex[name].length;}).slice(-6);var best=0;sess.forEach(function(w){w.ex[name].forEach(function(s){var e=e1rmRIR(s.w,s.r,s.rir);if(e>best)best=e;});});return best>0?best:(DB.oneRM[name]||0);}
+function exLastStats(name){var sess=DB.workouts.filter(function(w){return w.ex&&w.ex[name]&&w.ex[name].length;});if(!sess.length)return null;var last=sess[sess.length-1].ex[name];var rirs=last.filter(function(s){return s.rir!=null;}).map(function(s){return s.rir;});var avgRir=rirs.length?rirs.reduce(function(a,b){return a+b;},0)/rirs.length:null;var maxReps=Math.max.apply(null,last.map(function(s){return s.r||0;}));var bestE=0;last.forEach(function(s){var e=e1rmRIR(s.w,s.r,s.rir);if(e>bestE)bestE=e;});var priorE=0;if(sess.length>=2){sess[sess.length-2].ex[name].forEach(function(s){var e=e1rmRIR(s.w,s.r,s.rir);if(e>priorE)priorE=e;});}return {avgRir:avgRir,maxReps:maxReps,bestE:bestE,priorE:priorE};}
 function computeAdaptive(ex,holdToday,pauseVolume,wip){
   var ph=currentPhase();var base=ex.s;
   var extra=(pauseVolume||holdToday)?0:Math.min(ADAPT.maxAddSets,Math.floor(wip/2));
@@ -688,20 +693,27 @@ function computeAdaptive(ex,holdToday,pauseVolume,wip){
   if(isDeload()){sets=Math.max(1,Math.ceil(base/2));extra=0;}
   else if(holdToday){sets=Math.max(ex.bone?2:1,base-1);extra=0;}
   sets=Math.min(sets,base+ADAPT.maxAddSets);
-  var succ=exSuccessThisPhase(ex.n,ex.hi);
-  var bumps=Math.min(ADAPT.bumpCap,succ);
-  var orm=DB.oneRM[ex.n]||0;var f=1+bumps*ADAPT.bumpPct;
-  var loLoad=orm?Math.round(orm*ph.pct[0]*f/5)*5:0;
-  var hiLoad=orm?Math.round(orm*ph.pct[1]*f/5)*5:0;
-  var loadStr=orm?("~"+loLoad+(loLoad!==hiLoad?"\u2013"+hiLoad:"")+" lb"):"set by feel";
-  var rec=null;
-  if(!holdToday&&!isDeload()){
-    var last=lastSetData(ex.n);
-    if(last&&last.length&&last.every(function(s){return s.r&&s.r>=ex.hi;})){
-      rec=bumps>0?("Load earned \u2014 go heavier, reset reps to "+ex.lo):("Hit top reps \u2014 add load, reset to "+ex.lo);
+  var tRIR=TARGET_RIR[ph.key]||2;
+  if(!ex.bone&&ex.hi>=12)tRIR=Math.max(0.5,tRIR-0.5);
+  
+  var effRIR=tRIR+(holdToday?1:0)+(isDeload()?2:0);
+  var est=liveE1RM(ex.n);
+  var stats=exLastStats(ex.n);
+  var load=est?est/(1+(ex.lo+effRIR)/30):0;
+  var rec=null,downtrend=false;
+  if(stats&&!isDeload()){
+    if(stats.avgRir!=null&&stats.avgRir<=0.5&&stats.maxReps<ex.lo){
+      load=load*0.95;rec="Ground out last time \u2014 backed load off ~5%. Hit the rep target before adding.";
+    } else if(stats.maxReps>=ex.hi&&stats.avgRir!=null&&stats.avgRir>=tRIR+0.5&&!holdToday){
+      rec="Beat target with reps to spare \u2014 load stepped up.";
+    } else if(stats.maxReps>=ex.hi&&!holdToday){
+      rec="Hit top reps \u2014 load up, reset reps to "+ex.lo+".";
     }
+    if(stats.priorE>0&&stats.bestE>0&&stats.bestE<stats.priorE*0.95)downtrend=true;
   }
-  return {sets:sets,lo:ex.lo,hi:ex.hi,loadStr:loadStr,rec:rec,bumps:bumps,extra:extra};
+  var loadR=load?Math.round(load/5)*5:0;
+  var loadStr=load?("~"+loadR+" lb"):"set by feel";
+  return {sets:sets,lo:ex.lo,hi:ex.hi,loadStr:loadStr,rec:rec,est:Math.round(est),tRIR:Math.round(effRIR*10)/10,extra:extra,downtrend:downtrend};
 }
 
 function renderTrain(){
@@ -733,7 +745,7 @@ function renderTrain(){
     unlocks.forEach(function(u){if(ds>=ADAPT.unlockEvery&&exList.length<ADAPT.maxExercises&&!exList.some(function(e){return e.n===u.n;})){var uu=Object.assign({},u);uu.added=true;exList.push(uu);}});
   }
 
-  document.getElementById("dayNote").innerHTML='<div class="adaptpanel '+stateCls+'">'+stateTxt+'</div><div class="note dim">Working '+Math.round(ph.pct[0]*100)+'\u2013'+Math.round(ph.pct[1]*100)+'% of 1RM \u2022 target RPE '+ph.rpe+'</div>';
+  document.getElementById("dayNote").innerHTML='<div class="adaptpanel '+stateCls+'">'+stateTxt+'</div><div class="note dim">Loads auto-set from your live estimated 1RM, which updates from what you actually lift. Log RPE on every set \u2014 RIR = 10 \u2212 RPE.</div>';
 
   var html2="";
   exList.forEach(function(ex,ei){
@@ -744,18 +756,18 @@ function renderTrain(){
       rows+='<div class="setrow"><span class="sn">'+(si+1)+'</span>'+
         '<input type="number" inputmode="decimal" placeholder="lb" data-ex="'+ei+'" data-set="'+si+'" data-f="w" value="'+(pw||"")+'">'+
         '<input type="number" inputmode="numeric" placeholder="reps" data-ex="'+ei+'" data-set="'+si+'" data-f="r">'+
-        '<input type="number" inputmode="decimal" placeholder="RPE" data-ex="'+ei+'" data-set="'+si+'" data-f="rpe"></div>';
+        '<input type="number" inputmode="decimal" placeholder="RIR" data-ex="'+ei+'" data-set="'+si+'" data-f="rir"></div>';
     }
     var badges=(ex.bone?' <span class="pill bone">Bone</span>':'')+(ex.added?' <span class="pill added">Added</span>':'')+(holdToday?' <span class="pill held">Held</span>':'')+(a.extra>0?' <span class="pill added">+'+a.extra+' set</span>':'');
     html2+='<div class="ex" data-name="'+ex.n+'">'+
       '<div class="ex-h" onclick="toggleEx(this)">'+
         '<div><div class="ex-name">'+ex.n+badges+'</div>'+
-        '<div class="ex-target">'+a.sets+' \u00D7 '+(a.lo===a.hi?a.lo:a.lo+"\u2013"+a.hi)+' &middot; '+a.loadStr+'</div>'+
-        (a.rec?'<div class="ex-rec">\u25B2 '+a.rec+'</div>':'')+
+        '<div class="ex-target">'+a.sets+' \u00D7 '+(a.lo===a.hi?a.lo:a.lo+"\u2013"+a.hi)+' @ RIR '+a.tRIR+' ('+a.tRIR+' RIR) &middot; '+a.loadStr+(a.est?' &middot; est 1RM '+a.est:'')+'</div>'+
+        (a.rec?'<div class="ex-rec">\u25B2 '+a.rec+'</div>':'')+(a.downtrend?'<div class="ex-rec" style="color:var(--gold-soft);">\u25BC strength dipped vs last session \u2014 watch recovery</div>':'')+
         '</div><span style="color:var(--faint);">\u25BE</span>'+
       '</div>'+
       '<div class="ex-body">'+
-        '<div class="setlbl"><span></span><span>Weight</span><span>Reps</span><span>RPE</span></div>'+rows+
+        '<div class="setlbl"><span></span><span>Weight</span><span>Reps</span><span>RIR</span></div>'+rows+
         (ex.bone?'<div class="bonebar">Bone-priority lift. Keep this even on low days \u2014 reduce load before skipping.</div>':'')+
       '</div></div>';
   });
@@ -813,7 +825,7 @@ function e1rm(w,r){return r<=1?w:Math.round(w*(1+r/30));}
 function updatePR(name,sets){
   sets.forEach(function(s){
     if(s.w&&s.r){
-      var est=e1rm(s.w,s.r);
+      var est=e1rmRIR(s.w,s.r,s.rir);
       if(!DB.prs[name]||est>DB.prs[name].e1rm){
         DB.prs[name]={w:s.w,r:s.r,e1rm:est,d:todayStr()};
       }
@@ -936,7 +948,7 @@ function drawStrength(){
   var series=[];
   DB.workouts.forEach(function(w){
     if(w.ex&&w.ex[lift]){
-      var best=0;w.ex[lift].forEach(function(s){if(s.w&&s.r){var e=e1rm(s.w,s.r);if(e>best)best=e;}});
+      var best=0;w.ex[lift].forEach(function(s){if(s.w&&s.r){var e=e1rmRIR(s.w,s.r,s.rir);if(e>best)best=e;}});
       if(best)series.push({d:w.d,e:best});
     }
   });
