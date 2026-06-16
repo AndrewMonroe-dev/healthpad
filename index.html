@@ -65,6 +65,12 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ring-val{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1;}
 .ring-val.sm{font-size:30px;}
 .ring-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);margin-top:5px;font-weight:600;}
+/* PROGRESSION BANNER */
+.prog-banner{margin:0 16px 0;padding:16px 18px;border-radius:14px;border:1.5px solid var(--gold);background:rgba(203,162,76,.10);}
+.prog-banner-title{font-size:14px;font-weight:700;color:var(--gold);letter-spacing:.5px;margin-bottom:6px;}
+.prog-banner-body{font-size:13px;color:var(--ink2);line-height:1.5;margin-bottom:12px;}
+.prog-banner-btns{display:flex;gap:8px;}
+.prog-banner-btns .btn{margin-top:0;font-size:13px;padding:10px 14px;touch-action:manipulation;}
 /* ONBOARDING */
 .ob-step{}
 .ob-q{font-size:19px;font-weight:700;color:#ffffff;line-height:1.4;margin-bottom:22px;}
@@ -312,6 +318,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     <div class="sec" style="margin-top:14px;">
       <div class="note dim" id="paceNote"></div>
     </div>
+
+    <div id="progressionBanner" style="display:none;margin:0 0 4px 0;"></div>
 
     <div class="sec">
       <div class="sec-h">Today &middot; The Plan <span class="tag" id="todayPhaseTag"></span></div>
@@ -594,7 +602,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
           <div class="ob-opt" data-grp="exp" data-v="beginner">Less than 6 months</div>
           <div class="ob-opt" data-grp="exp" data-v="intermediate">6 months to 3 years</div>
           <div class="ob-opt" data-grp="exp" data-v="advanced">3+ years</div>
-          <div class="ob-opt" data-grp="exp" data-v="beginner">Returning after a long break</div>
+          <div class="ob-opt" data-grp="exp" data-v="returning">Returning after a long break</div>
         </div>
       </div>
       <div id="obStep3" class="ob-step" style="display:none;">
@@ -826,9 +834,13 @@ function weekNumber(){
   return Math.max(1,Math.floor(diff/7)+1);
 }
 function isDeload(){return weekNumber()%6===0;}
+function currentSplitKey(){
+  var ph=currentPhase();
+  return (ph&&ph.split&&typeof ph.split==="string")?ph.split:"AB";
+}
 function currentSplit(){
-  if(DB.program&&DB.program.split&&DB.program.split.length)return DB.program.split;
-  return currentPhase().split==="HEAVY"?SPLIT_HEAVY:SPLIT_AB;
+  if(DB.program&&DB.program.split&&Array.isArray(DB.program.split)&&DB.program.split.length)return DB.program.split;
+  return currentSplitKey()==="HEAVY"?SPLIT_HEAVY:SPLIT_AB;
 }
 function defaultDayIdx(){
   var js=new Date().getDay(); // 0 Sun..6 Sat
@@ -951,6 +963,7 @@ function renderHome(){
   document.getElementById("phaseNote").textContent=ph.note;
   ["sleep","energy","pain"].forEach(function(g){document.querySelectorAll('[data-grp="'+g+'"] .choice').forEach(function(c){c.classList.remove("sel","g","w","b");});});
   renderMilestones();
+  if(checkProgression)checkProgression();
 }
 
 function defaultMilestones(goalType){
@@ -1072,33 +1085,93 @@ function currentFatigue(){if(selFatigue)return selFatigue;var t=todayStr();for(v
 function recentLowReadiness(){var c=0;DB.readiness.slice(-3).forEach(function(x){if(x.energy==="low")c++;});DB.workouts.slice(-3).forEach(function(x){if(x.fatigue==="low")c++;});return c;}
 function daySessions(dayName){return DB.workouts.filter(function(w){return w.day===dayName&&w.ex&&Object.keys(w.ex).length;}).length;}
 function exSuccessThisPhase(name,hi){var ph=currentPhase();return DB.workouts.filter(function(w){if(w.phase!==ph.key||!w.ex||!w.ex[name]||!w.ex[name].length)return false;return w.ex[name].every(function(s){return s.r&&s.r>=hi;});}).length;}
-function computeAdaptive(ex,holdToday,pauseVolume,wip){
+function computeAdaptive(ex,holdToday,pauseVolume,wip,fatigueTier){
+  // fatigueTier: "good" | "mod" | "low" | null
+  // Only use minimum necessary adjustments per tier
   var ph=currentPhase();var base=ex.s;
-  var extra=(pauseVolume||holdToday)?0:Math.min(ADAPT.maxAddSets,Math.floor(wip/2));
-  var sets=base+extra;
-  if(isDeload()){sets=Math.max(1,Math.ceil(base/2));extra=0;}
-  else if(holdToday){sets=Math.max(ex.bone?2:1,base-1);extra=0;}
-  sets=Math.min(sets,base+ADAPT.maxAddSets);
   var tRIR=TARGET_RIR[ph.key]||2;
   if(!ex.bone&&ex.hi>=12)tRIR=Math.max(0.5,tRIR-0.5);
-  var effRIR=tRIR+(holdToday?1:0)+(isDeload()?2:0);
+
+  // ── SET COUNT ─────────────────────────────────────────────────
+  var extra=0;
+  if(isDeload()){
+    // Deload overrides everything
+  } else if(!pauseVolume&&!holdToday){
+    extra=Math.min(ADAPT.maxAddSets,Math.floor(wip/2));
+  }
+  var sets=base+extra;
+  if(isDeload()){sets=Math.max(1,Math.ceil(base/2));extra=0;}
+
+  // ── FATIGUE TIER ADJUSTMENTS ──────────────────────────────────
+  // Applied AFTER base set count. Minimal, targeted changes only.
+  var loAdj=0, hiAdj=0, rirAdj=0, setAdj=0, fatigueNote=null;
+
+  if(!isDeload()){
+    if(fatigueTier==="good"){
+      // Feeling good: allow top of rep range, drop RIR target by 0.5
+      // Only apply if NOT already in a hold state
+      if(!holdToday&&!pauseVolume){
+        rirAdj=-0.5;
+        hiAdj=ex.bone?0:1;     // +1 rep on top of range (not bone lifts)
+        fatigueNote="Energy high — pushing rep ceiling +1 and RIR tightened.";
+      }
+    } else if(fatigueTier==="mod"||fatigueTier===null){
+      // Moderate or unknown: no adjustment — baseline is baseline
+      rirAdj=0;
+    } else if(fatigueTier==="low"||holdToday){
+      // Low energy: drop one set, add 1 RIR, compress rep range toward low end
+      setAdj=-1;
+      rirAdj=1;
+      hiAdj=ex.bone?0:-(Math.floor((ex.hi-ex.lo)/2)); // compress toward lo
+      fatigueNote="Low energy — one fewer set, RIR eased, rep ceiling lowered.";
+    }
+  }
+
+  // Apply set adjustment (never below 1, or 2 for bone lifts)
+  sets=Math.max(ex.bone?2:1, sets+setAdj);
+  sets=Math.min(sets, base+ADAPT.maxAddSets);
+
+  // Apply rep adjustments
+  var adjLo=ex.lo+loAdj;
+  var adjHi=Math.max(adjLo, ex.hi+hiAdj);
+
+  // ── RIR ───────────────────────────────────────────────────────
+  var effRIR=Math.max(0, tRIR+rirAdj+(isDeload()?2:0));
+
+  // ── LOAD ──────────────────────────────────────────────────────
   var est=liveE1RM(ex.n);
   var stats=exLastStats(ex.n);
-  var load=est?est/(1+(ex.lo+effRIR)/30):0;
+  var load=est?est/(1+(adjLo+effRIR)/30):0;
+
+  // Load modifier for fatigue tier
+  if(fatigueTier==="low"&&!isDeload()){
+    load=load*0.95; // drop ~5% on low energy days
+  } else if(fatigueTier==="good"&&!isDeload()&&!holdToday){
+    load=load*1.02; // tiny push on good days
+  }
+
+  // ── PROGRESSION CUES ─────────────────────────────────────────
   var rec=null,downtrend=false;
   if(stats&&!isDeload()){
     if(stats.avgRir!=null&&stats.avgRir<=0.5&&stats.maxReps<ex.lo){
       load=load*0.95;rec="Ground out last time (RIR ~0) — backed load off ~5%.";
-    } else if(stats.maxReps>=ex.hi&&stats.avgRir!=null&&stats.avgRir>=tRIR+0.5&&!holdToday){
+    } else if(stats.maxReps>=ex.hi&&stats.avgRir!=null&&stats.avgRir>=tRIR+0.5&&fatigueTier!=="low"){
       rec="Beat target with reps to spare — load stepped up.";
-    } else if(stats.maxReps>=ex.hi&&!holdToday){
-      rec="Hit top reps — load up, reset reps to "+ex.lo+".";
+    } else if(stats.maxReps>=ex.hi&&fatigueTier!=="low"){
+      rec="Hit top reps — load up, reset reps to "+adjLo+".";
     }
     if(stats.priorE>0&&stats.bestE>0&&stats.bestE<stats.priorE*0.95)downtrend=true;
   }
+
   var loadR=load?Math.round(load/5)*5:0;
   var loadStr=load?("~"+loadR+" lb"):"set by feel";
-  return {sets:sets,lo:ex.lo,hi:ex.hi,loadStr:loadStr,rec:rec,est:Math.round(est),tRIR:Math.round(effRIR*10)/10,extra:extra,downtrend:downtrend};
+  return {
+    sets:sets,lo:adjLo,hi:adjHi,
+    loadStr:loadStr,rec:rec,est:Math.round(est),
+    tRIR:Math.round(effRIR*10)/10,
+    extra:extra,downtrend:downtrend,
+    fatigueNote:fatigueNote
+  };
 }
 
 function renderTrain(){
@@ -1129,6 +1202,9 @@ function renderTrain(){
   else if(labHold){stateCls="held";var critItems=allAdj.filter(function(a){return a.sev==="crit";});stateTxt=critItems.map(function(a){return a.label+": "+a.msg;}).join(" | ");}
   else if(holdToday){stateCls="held";stateTxt="Held — low energy logged. Volume trimmed and load progression paused for today.";}
   else if(pauseVolume){stateCls="";stateTxt="Volume ramp paused — recent low-energy trend. Loads still progress on performance.";}
+  else if(todayFat==="good"){stateCls="";stateTxt="Energy flag: high — rep ceilings raised +1, RIR tightened. Push today.";}
+  else if(todayFat==="low"){stateCls="held";stateTxt="Energy flag: low — sets reduced by 1, load pulled back ~5%, rep range compressed. Move well, not heavy.";}
+  else if(todayFat==="mod"){stateCls="";stateTxt="Energy flag: moderate — baseline targets. Consistent effort.";}
   else{stateCls="";stateTxt="Adaptive: active — targets climbing on your logged data. Week "+(wip+1)+" in phase.";}
 
   var exList=d.ex.slice();
@@ -1141,7 +1217,7 @@ function renderTrain(){
 
   var html2="";
   exList.forEach(function(ex,ei){
-    var a=computeAdaptive(ex,holdToday,pauseVolume,wip);
+    var a=computeAdaptive(ex,holdToday,pauseVolume,wip,todayFat);
     var rows="";var last=lastSetData(ex.n);
     for(var si=0;si<a.sets;si++){
       var pw=last&&last[si]?last[si].w:"";
@@ -1155,7 +1231,7 @@ function renderTrain(){
       '<div class="ex-h" onclick="toggleEx(this)">'+
         '<div><div class="ex-name">'+ex.n+badges+'</div>'+
         '<div class="ex-target">'+a.sets+' × '+(a.lo===a.hi?a.lo:a.lo+"–"+a.hi)+' @ RIR '+a.tRIR+' &middot; '+a.loadStr+(a.est?' &middot; e1RM '+a.est:'')+'</div>'+
-        (a.rec?'<div class="ex-rec">▲ '+a.rec+'</div>':'')+
+        (a.fatigueNote?'<div class="ex-rec" style="color:var(--dim);">⚡ '+a.fatigueNote+'</div>':'')+(a.rec?'<div class="ex-rec">▲ '+a.rec+'</div>':'')+
         (a.downtrend?'<div class="ex-rec" style="color:var(--gold);">▼ Strength dipped vs last session — watch recovery</div>':'')+
         '</div><span style="color:var(--faint);">▾</span>'+
       '</div>'+
@@ -1970,6 +2046,11 @@ function obFinish(){
   // Set protein target based on experience + goal
   var bw=DB.weights.length?DB.weights[DB.weights.length-1].w:180;
   DB.settings.proteinTarget=calcProteinTarget(a,bw);
+  // Save onboarding answers for future program upgrades
+  DB.settings.exp=a.exp;
+  DB.settings.equip=a.equip;
+  DB.settings.limits=a.limits;
+  DB.settings.maxDays=parseInt(a.days);
   // Mark onboarded
   DB.settings.hasOnboarded=true;
   save();
@@ -1985,10 +2066,11 @@ function calcProteinTarget(a,bw){
   if(a.goal==="weight_loss"||a.goal==="recomp")return Math.round(bw*0.85);
   return Math.round(bw*0.75);
 }
+function normalizeExp(exp){return (exp==="returning")?"beginner":exp;}
 
 /* ── PROGRAM GENERATOR ─────────────────────────────────────────── */
 function generateProgram(a){
-  var goal=a.goal, exp=a.exp, days=parseInt(a.days), equip=a.equip;
+  var goal=a.goal, exp=(a.exp==="returning"?"beginner":a.exp), days=parseInt(a.days), equip=a.equip;
   var limits=a.limits||[];
   var hasKnee=limits.indexOf("knee")>-1;
   var hasBack=limits.indexOf("lower_back")>-1;
@@ -2229,6 +2311,196 @@ function getActiveSplit(){
   var p=getActivePlan();
   if(!p)return currentSplit();
   return p.split;
+}
+
+
+/* ============ PROGRESSION ENGINE ============ */
+
+// How many training days are currently scheduled
+function scheduledDaysPerWeek(){
+  if(!DB.program||!DB.program.split)return 3;
+  return DB.program.split.filter(function(d){return !d.rest;}).length;
+}
+
+// How many sessions actually completed in last N weeks
+function sessionsInLastWeeks(n){
+  var cutoff=new Date();cutoff.setDate(cutoff.getDate()-n*7);
+  return DB.workouts.filter(function(w){
+    return new Date(w.d+"T00:00:00")>=cutoff&&w.ex&&Object.keys(w.ex).length>0;
+  }).length;
+}
+
+// Attendance rate over last 4 weeks (sessions done / sessions scheduled)
+function attendanceRate(){
+  var scheduled=scheduledDaysPerWeek()*4;
+  if(scheduled===0)return 0;
+  var done=sessionsInLastWeeks(4);
+  return done/scheduled;
+}
+
+// Weeks since program started
+function weeksSinceStart(){
+  if(!DB.goal||!DB.goal.startDate)return 0;
+  var s=new Date(DB.goal.startDate+"T00:00:00");
+  return Math.floor((new Date()-s)/(1000*60*60*24*7));
+}
+
+// Recovery is green: no crit flags, BP not Stage 2, readiness ok
+function recoveryIsGreen(){
+  var labAdj=getLabTrainAdj?getLabTrainAdj():null;
+  var bpAdj=getBPTrainAdj?getBPTrainAdj():null;
+  var allAdj=(labAdj||[]).concat(bpAdj||[]);
+  if(allAdj.some(function(a){return a.sev==="crit";}))return false;
+  if(recentLowReadiness()>=3)return false;
+  return true;
+}
+
+// Has a cardio day in the current split
+function hasCardioDay(){
+  if(!DB.program||!DB.program.split)return false;
+  return DB.program.split.some(function(d){return d.cardio;});
+}
+
+// Current split type
+function currentSplitType(){
+  if(!DB.program)return "FB";
+  return DB.program.splitType||"FB";
+}
+
+// User's max days from onboarding answer
+function userMaxDays(){
+  return parseInt(DB.settings.maxDays||6);
+}
+
+// Snooze: check if a suggestion was snoozed recently
+function isSnoozed(key){
+  var s=DB.settings["snooze_"+key];
+  if(!s)return false;
+  var snoozeUntil=new Date(s+"T00:00:00");
+  return new Date()<snoozeUntil;
+}
+function snooze(key,weeks){
+  DB.settings["snooze_"+key]=new Date(new Date().getTime()+weeks*7*24*60*60*1000).toISOString().slice(0,10);
+  save();
+}
+
+// Accept a day addition
+function acceptAddDay(type){
+  if(!DB.program||!DB.program.split)return;
+  var split=DB.program.split;
+  var goal=(DB.goal&&DB.goal.goal)||DB.goal&&DB.goal.type||"custom";
+
+  if(type==="cardio"){
+    // Find first rest day and make it cardio
+    var ri=split.findIndex(function(d){return d.rest;});
+    if(ri>-1){split[ri]={day:"Cardio + Core",rest:false,cardio:true,ex:[]};}
+  } else if(type==="ul"){
+    // Upgrade Full Body to Upper/Lower
+    var equip=DB.settings.equip||"full";
+    var exp=DB.settings.exp||"intermediate";
+    var limits=DB.settings.limits||[];
+    var days=scheduledDaysPerWeek();
+    var newProg=buildUpperLower(Math.min(days+1,userMaxDays()),goal,exp,equip,limits);
+    DB.program.split=newProg.split;
+    DB.program.splitType="UL";
+  } else if(type==="addday"){
+    // Add a day — type of day depends on goal and current split
+    var newDay=null;
+    var st=currentSplitType();
+    if(st==="CARDIO"||goal==="vo2max"||goal==="heart"||goal==="endurance"){
+      newDay={day:"Zone 2 Cardio",rest:false,cardio:true,ex:[]};
+    } else if(st==="FB"){
+      // Add Full Body C or upgrade to UL
+      var fbDays=split.filter(function(d){return !d.rest&&!d.cardio;}).length;
+      if(fbDays>=3){
+        // Upgrade to UL instead
+        acceptAddDay("ul");return;
+      } else {
+        newDay={day:"Full Body C",rest:false,ex:split.filter(function(d){return d.day==="Full Body A";})[0]?
+          split.filter(function(d){return d.day==="Full Body B";})[0].ex.slice():[]};
+      }
+    } else {
+      // UL split — add optional pump or cardio
+      var hasOpt=split.some(function(d){return d.day==="Optional Pump";});
+      newDay=hasOpt?{day:"Zone 2 Cardio",rest:false,cardio:true,ex:[]}:
+        {day:"Optional Pump",rest:false,ex:[
+          {n:"Pec Deck",s:3,lo:12,hi:15},
+          {n:"Preacher Curl",s:3,lo:10,hi:12},
+          {n:"Cable Lateral Raise",s:3,lo:15,hi:20},
+          {n:"Cable Crunch",s:3,lo:15,hi:20}
+        ]};
+    }
+    if(newDay){
+      // Replace first rest day
+      var ri2=split.findIndex(function(d){return d.rest;});
+      if(ri2>-1)split[ri2]=newDay;
+    }
+  }
+
+  DB.program.split=split;
+  DB.settings.hasOnboarded=true;
+  save();
+  renderHome();
+  toast("Program updated. Check Train tab.");
+  document.getElementById("progressionBanner").style.display="none";
+}
+
+function checkProgression(){
+  var banner=document.getElementById("progressionBanner");
+  if(!banner)return;
+  if(!DB.settings.hasOnboarded||!DB.program){banner.style.display="none";return;}
+
+  var days=scheduledDaysPerWeek();
+  var maxDays=userMaxDays();
+  var attendance=attendanceRate();
+  var weeks=weeksSinceStart();
+  var green=recoveryIsGreen();
+  var splitType=currentSplitType();
+  var goal=(DB.goal&&DB.goal.type)||"custom";
+  var hasCardio=hasCardioDay();
+
+  // Need at least 4 weeks and data before any suggestion
+  if(weeks<4||DB.workouts.length<8){banner.style.display="none";return;}
+
+  var title="",body="",type="",btnLabel="";
+
+  // Priority 1: Suggest FB→UL upgrade if on full body 3+ days and ready
+  if(splitType==="FB"&&days>=3&&attendance>=0.85&&green&&weeks>=6&&!isSnoozed("ul_upgrade")){
+    title="Ready to level up your split?";
+    body="You've been consistent on Full Body for "+weeks+" weeks with "+Math.round(attendance*100)+"% attendance and your recovery metrics are green. Upper/Lower splits allow more volume per muscle group and better strength progression.";
+    type="ul";btnLabel="Switch to Upper/Lower";
+  }
+  // Priority 2: Suggest adding a cardio day if none exists and goal warrants it
+  else if(!hasCardio&&(goal==="heart"||goal==="vo2max"||goal==="weight_loss"||goal==="endurance")&&days<maxDays&&attendance>=0.85&&green&&weeks>=4&&!isSnoozed("add_cardio")){
+    title="Add a cardio day?";
+    body="Your "+{heart:"heart health",vo2max:"VO2 max",weight_loss:"weight loss",endurance:"endurance"}[goal]+" goal benefits from dedicated aerobic work. You've got room in your schedule and your recovery is solid.";
+    type="cardio";btnLabel="Add Cardio Day";
+  }
+  // Priority 3: Add a training day
+  else if(days<maxDays&&attendance>=0.90&&green&&weeks>=4&&!isSnoozed("add_day")){
+    var nextWhat=splitType==="CARDIO"?"a cardio session":"a training day";
+    title="Time to add "+nextWhat+"?";
+    body="You've completed "+Math.round(attendance*100)+"% of your scheduled sessions over the last 4 weeks and your recovery metrics are green. Adding another day will keep your progress on track.";
+    type="addday";btnLabel="Add Day";
+  }
+  else{banner.style.display="none";return;}
+
+  // Show banner
+  banner.style.display="block";
+  banner.innerHTML='<div class="prog-banner">'+
+    '<div class="prog-banner-title">&#9650; '+title+'</div>'+
+    '<div class="prog-banner-body">'+body+'</div>'+
+    '<div class="prog-banner-btns">'+
+    '<button class="btn sm" style="flex:2;touch-action:manipulation;" onclick="acceptAddDay(&quot;'+type+'&quot;)">'+btnLabel+'</button>'+
+    '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="snoozeProgression(&quot;'+type+'&quot;)">Not Yet</button>'+
+    '</div></div>';
+}
+
+function snoozeProgression(type){
+  var keyMap={ul:"ul_upgrade",cardio:"add_cardio",addday:"add_day"};
+  snooze(keyMap[type]||"add_day",2);
+  document.getElementById("progressionBanner").style.display="none";
+  toast("Suggestion snoozed for 2 weeks.");
 }
 
 /* ============ INIT ============ */
