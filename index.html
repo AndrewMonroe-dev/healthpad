@@ -65,6 +65,13 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ring-val{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1;}
 .ring-val.sm{font-size:30px;}
 .ring-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);margin-top:5px;font-weight:600;}
+/* ONBOARDING */
+.ob-step{}
+.ob-q{font-size:19px;font-weight:700;color:#ffffff;line-height:1.4;margin-bottom:22px;}
+.ob-opts{display:flex;flex-direction:column;gap:10px;}
+.ob-opt{padding:15px 18px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;color:rgba(255,255,255,.85);font-size:15px;cursor:pointer;transition:all .15s;font-weight:500;}
+.ob-opt:hover{border-color:#e0c279;color:#ffffff;}
+.ob-opt.sel{border-color:#e0c279;background:rgba(224,194,121,.12);color:#ffffff;font-weight:700;}
 /* TOGGLE SWITCH */
 .toggle-sw{display:inline-flex;align-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .toggle-sw input{display:none;}
@@ -456,6 +463,13 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
   <div class="view" id="v-setup">
 
     <div class="sec">
+      <div class="sec-h">Your Name</div>
+      <div class="note dim" style="margin-bottom:8px;">Used to identify your data in Google Sheets. Each person gets their own tab when syncing.</div>
+      <input type="text" id="inUserName" placeholder="e.g. Andrew" style="margin-bottom:8px;">
+      <button class="btn sm" onclick="saveUserName()">Save Name</button>
+      <div class="note dim" id="userNameEcho" style="margin-top:6px;"></div>
+    </div>
+    <div class="sec">
       <div class="sec-h">Your Goal</div>
       <div class="note dim" style="margin-bottom:12px;">Set your primary goal and target date. This drives the countdown ring and milestone list on the home screen.</div>
       <label class="fld">Primary Goal</label>
@@ -479,6 +493,13 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="note dim" id="goalSettingsEcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
+      <div class="sec-h">Medication Stack</div>
+      <div class="note dim" style="margin-bottom:8px;">Your current medications. Keeps workout flags in context. Update when prescriptions change.</div>
+      <textarea id="inMedStack" rows="6" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;" placeholder="e.g. Metformin 500mg twice daily&#10;Lisinopril 10mg daily&#10;Atorvastatin 20mg nightly&#10;Vitamin D 2000 IU daily"></textarea>
+      <button class="btn sm" style="margin-top:8px;" onclick="saveMedStack()">Save Medications</button>
+      <div class="note dim" id="medStackEcho" style="margin-top:6px;"></div>
+    </div>
+    <div class="sec">
       <div class="sec-h">Milestones</div>
       <div class="note dim" style="margin-bottom:10px;">Add up to 6 personal milestones. They appear on the home screen and check off automatically when possible, or you can check them off manually.</div>
       <div id="milestoneEditor"></div>
@@ -491,20 +512,6 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="note dim">Drives the working-weight calculator. The three barbell lifts start blank &mdash; set them by feel after Phase 0.</div>
       <div id="oneRMList" style="margin-top:12px;"></div>
       <div id="ormBtnRow"><button class="btn sm ghost" onclick="saveOneRMs()">Save 1RMs</button></div>
-    </div>
-    <div class="sec">
-      <div class="sec-h">Your Name</div>
-      <div class="note dim" style="margin-bottom:8px;">Used to identify your data in Google Sheets. Each person gets their own tab when syncing.</div>
-      <input type="text" id="inUserName" placeholder="e.g. Andrew" style="margin-bottom:8px;">
-      <button class="btn sm" onclick="saveUserName()">Save Name</button>
-      <div class="note dim" id="userNameEcho" style="margin-top:6px;"></div>
-    </div>
-    <div class="sec">
-      <div class="sec-h">Medication Stack</div>
-      <div class="note dim" style="margin-bottom:8px;">Your current medications. Keeps workout flags in context. Update when prescriptions change.</div>
-      <textarea id="inMedStack" rows="6" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;" placeholder="e.g. Metformin 500mg twice daily&#10;Lisinopril 10mg daily&#10;Atorvastatin 20mg nightly&#10;Vitamin D 2000 IU daily"></textarea>
-      <button class="btn sm" style="margin-top:8px;" onclick="saveMedStack()">Save Medications</button>
-      <div class="note dim" id="medStackEcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
       <div class="sec-h">Google Sheets Sync</div>
@@ -531,7 +538,6 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div id="phaseOverview"></div>
     </div>
   </div>
-
   <!-- LABS -->
   <div class="view" id="v-labs">
     <div class="sec">
@@ -543,6 +549,81 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     <button class="btn" onclick="saveLabEntry()">Save Lab Results</button>
     <div id="labFlagsArea" style="margin-top:14px;"></div>
     <div id="labChartsArea" style="margin-top:14px;"></div>
+  </div>
+
+  <!-- ONBOARDING -->
+  <div id="onboarding" style="display:none;position:fixed;inset:0;background:rgba(10,6,4,.96);z-index:5000;overflow-y:auto;padding:0;">
+    <div style="max-width:480px;margin:0 auto;padding:40px 24px 60px;">
+      <div style="text-align:center;margin-bottom:32px;">
+        <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e0c279;margin-bottom:8px;">HealthPad Setup</div>
+        <div style="font-size:22px;font-weight:700;color:#ffffff;">Let's build your program.</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-top:8px;">5 quick questions. Takes about a minute.</div>
+      </div>
+      <!-- Progress bar -->
+      <div style="height:3px;background:rgba(255,255,255,.12);border-radius:2px;margin-bottom:36px;">
+        <div id="obProgress" style="height:3px;background:#e0c279;border-radius:2px;width:20%;transition:width .3s;"></div>
+      </div>
+      <!-- Steps -->
+      <div id="obStep1" class="ob-step">
+        <div class="ob-q">What is your primary fitness goal?</div>
+        <div class="ob-opts">
+          <div class="ob-opt" data-grp="goal" data-v="weight_loss">Lose Weight</div>
+          <div class="ob-opt" data-grp="goal" data-v="muscle">Gain Muscle</div>
+          <div class="ob-opt" data-grp="goal" data-v="strength">Maximize Strength</div>
+          <div class="ob-opt" data-grp="goal" data-v="recomp">Body Recomposition</div>
+          <div class="ob-opt" data-grp="goal" data-v="vo2max">Improve Cardio / VO2 Max</div>
+          <div class="ob-opt" data-grp="goal" data-v="heart">Heart Health</div>
+          <div class="ob-opt" data-grp="goal" data-v="endurance">Build Endurance</div>
+          <div class="ob-opt" data-grp="goal" data-v="custom">General Fitness</div>
+        </div>
+      </div>
+      <div id="obStep2" class="ob-step" style="display:none;">
+        <div class="ob-q">How long have you been training consistently?</div>
+        <div class="ob-opts">
+          <div class="ob-opt" data-grp="exp" data-v="beginner">Less than 6 months</div>
+          <div class="ob-opt" data-grp="exp" data-v="intermediate">6 months to 3 years</div>
+          <div class="ob-opt" data-grp="exp" data-v="advanced">3+ years</div>
+          <div class="ob-opt" data-grp="exp" data-v="beginner">Returning after a long break</div>
+        </div>
+      </div>
+      <div id="obStep3" class="ob-step" style="display:none;">
+        <div class="ob-q">How many days per week can you train?</div>
+        <div class="ob-opts">
+          <div class="ob-opt" data-grp="days" data-v="2">2 days</div>
+          <div class="ob-opt" data-grp="days" data-v="3">3 days</div>
+          <div class="ob-opt" data-grp="days" data-v="4">4 days</div>
+          <div class="ob-opt" data-grp="days" data-v="5">5 days</div>
+          <div class="ob-opt" data-grp="days" data-v="6">6 days</div>
+        </div>
+      </div>
+      <div id="obStep4" class="ob-step" style="display:none;">
+        <div class="ob-q">What equipment do you have access to?</div>
+        <div class="ob-opts">
+          <div class="ob-opt" data-grp="equip" data-v="full">Full commercial gym</div>
+          <div class="ob-opt" data-grp="equip" data-v="barbell">Barbell + rack + dumbbells</div>
+          <div class="ob-opt" data-grp="equip" data-v="dumbbells">Dumbbells only</div>
+          <div class="ob-opt" data-grp="equip" data-v="bodyweight">Bodyweight only</div>
+        </div>
+      </div>
+      <div id="obStep5" class="ob-step" style="display:none;">
+        <div class="ob-q">Any injuries or limitations we should know about?</div>
+        <div class="ob-opts" id="obLimitOpts">
+          <div class="ob-opt ob-multi" data-grp="limit" data-v="none">None — cleared for full training</div>
+          <div class="ob-opt ob-multi" data-grp="limit" data-v="lower_back">Lower back issues</div>
+          <div class="ob-opt ob-multi" data-grp="limit" data-v="knee">Knee problems</div>
+          <div class="ob-opt ob-multi" data-grp="limit" data-v="shoulder">Shoulder impingement</div>
+          <div class="ob-opt ob-multi" data-grp="limit" data-v="hip">Hip / mobility limitations</div>
+          <div class="ob-opt ob-multi" data-grp="limit" data-v="cardiac">Cardiovascular condition</div>
+        </div>
+        <div class="note dim" style="color:rgba(255,255,255,.4);margin-top:10px;font-size:12px;">Select all that apply. Select None if unrestricted.</div>
+      </div>
+      <!-- Nav buttons -->
+      <div style="display:flex;gap:12px;margin-top:32px;">
+        <button id="obBack" class="btn dark" style="flex:1;display:none;" onclick="obPrev()">Back</button>
+        <button id="obNext" class="btn" style="flex:2;" onclick="obNext()">Next</button>
+      </div>
+      <div id="obError" style="color:#ff6b6b;font-size:13px;text-align:center;margin-top:12px;min-height:18px;"></div>
+    </div>
   </div>
 
   <!-- DIET POPUP -->
@@ -694,7 +775,7 @@ var SPLIT_HEAVY=[
 ];
 
 /* ============ STATE ============ */
-var DB={weights:[],nutrition:[],rhr:[],bp:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -721,11 +802,12 @@ function exLastStats(name){var sess=DB.workouts.filter(function(w){return w.ex&&
 /* ============ PHASE LOGIC ============ */
 function currentPhase(){
   var t=new Date();t.setHours(0,0,0,0);
-  for(var i=0;i<PHASES.length;i++){
-    var e=new Date(PHASES[i].end+"T23:59:59");
-    if(t<=e)return PHASES[i];
+  var phases=getActivePhases?getActivePhases():PHASES;
+  for(var i=0;i<phases.length;i++){
+    var e=new Date(phases[i].end+"T23:59:59");
+    if(t<=e)return phases[i];
   }
-  return PHASES[PHASES.length-1];
+  return phases[phases.length-1];
 }
 function weekNumber(){
   var t=new Date();t.setHours(0,0,0,0);
@@ -733,7 +815,10 @@ function weekNumber(){
   return Math.max(1,Math.floor(diff/7)+1);
 }
 function isDeload(){return weekNumber()%6===0;}
-function currentSplit(){return currentPhase().split==="HEAVY"?SPLIT_HEAVY:SPLIT_AB;}
+function currentSplit(){
+  if(DB.program&&DB.program.split&&DB.program.split.length)return DB.program.split;
+  return currentPhase().split==="HEAVY"?SPLIT_HEAVY:SPLIT_AB;
+}
 function defaultDayIdx(){
   var js=new Date().getDay(); // 0 Sun..6 Sat
   return js===0?6:js-1; // map to Mon=0
@@ -1778,6 +1863,349 @@ function loadAndShowQuote(){
     });
 }
 
+
+/* ============ ONBOARDING ============ */
+var OB={step:1,total:5,answers:{goal:null,exp:null,days:null,equip:null,limits:[]}};
+
+function obShow(){
+  document.getElementById("onboarding").style.display="block";
+  obRender();
+}
+function obHide(){
+  document.getElementById("onboarding").style.display="none";
+}
+function obRender(){
+  document.getElementById("obProgress").style.width=(OB.step/OB.total*100)+"%";
+  document.getElementById("obBack").style.display=OB.step>1?"block":"none";
+  document.getElementById("obNext").textContent=OB.step===OB.total?"Build My Program":"Next";
+  document.getElementById("obError").textContent="";
+  for(var i=1;i<=OB.total;i++){
+    var el=document.getElementById("obStep"+i);
+    if(el)el.style.display=i===OB.step?"block":"none";
+  }
+  // Re-apply selections
+  var grpMap={1:"goal",2:"exp",3:"days",4:"equip",5:"limit"};
+  var grp=grpMap[OB.step];
+  document.querySelectorAll(".ob-opt[data-grp='"+grp+"']").forEach(function(o){
+    var v=o.dataset.v;
+    if(OB.step===5){
+      o.classList.toggle("sel",OB.answers.limits.indexOf(v)>-1);
+    } else {
+      o.classList.toggle("sel",OB.answers[grp]===v);
+    }
+  });
+}
+function obNext(){
+  var grpMap={1:"goal",2:"exp",3:"days",4:"equip"};
+  if(OB.step<5){
+    var grp=grpMap[OB.step];
+    if(!OB.answers[grp]){document.getElementById("obError").textContent="Please pick an option to continue.";return;}
+  }
+  if(OB.step===5){
+    if(!OB.answers.limits.length){document.getElementById("obError").textContent="Please select at least one option.";return;}
+    obFinish();return;
+  }
+  OB.step++;obRender();
+}
+function obPrev(){if(OB.step>1){OB.step--;obRender();}}
+
+// Click handlers wired via delegation
+document.addEventListener("click",function(e){
+  var opt=e.target.closest(".ob-opt");
+  if(!opt)return;
+  var grp=opt.dataset.grp,v=opt.dataset.v;
+  if(opt.classList.contains("ob-multi")){
+    // Multi-select (step 5)
+    if(v==="none"){
+      OB.answers.limits=["none"];
+    } else {
+      var ni=OB.answers.limits.indexOf("none");
+      if(ni>-1)OB.answers.limits.splice(ni,1);
+      var idx=OB.answers.limits.indexOf(v);
+      if(idx>-1)OB.answers.limits.splice(idx,1);
+      else OB.answers.limits.push(v);
+    }
+  } else {
+    OB.answers[grp]=v;
+  }
+  obRender();
+});
+
+function obFinish(){
+  var a=OB.answers;
+  // Save goal type
+  DB.goal=DB.goal||{};
+  DB.goal.type=a.goal;
+  // Generate program
+  var prog=generateProgram(a);
+  DB.program=prog;
+  // Save start date as today
+  var td=todayStr();
+  DB.goal.startDate=td;
+  // Set protein target based on experience + goal
+  var bw=DB.weights.length?DB.weights[DB.weights.length-1].w:180;
+  DB.settings.proteinTarget=calcProteinTarget(a,bw);
+  // Mark onboarded
+  DB.settings.hasOnboarded=true;
+  save();
+  obHide();
+  // Reload home
+  renderHome();
+  toast("Program built. Head to Train to get started.");
+}
+
+function calcProteinTarget(a,bw){
+  // g/lb bodyweight
+  if(a.goal==="muscle"||a.goal==="strength")return Math.round(bw*1.0);
+  if(a.goal==="weight_loss"||a.goal==="recomp")return Math.round(bw*0.85);
+  return Math.round(bw*0.75);
+}
+
+/* ── PROGRAM GENERATOR ─────────────────────────────────────────── */
+function generateProgram(a){
+  var goal=a.goal, exp=a.exp, days=parseInt(a.days), equip=a.equip;
+  var limits=a.limits||[];
+  var hasKnee=limits.indexOf("knee")>-1;
+  var hasBack=limits.indexOf("lower_back")>-1;
+  var hasShoulder=limits.indexOf("shoulder")>-1;
+  var hasCardiac=limits.indexOf("cardiac")>-1;
+  var fullGym=equip==="full"||equip==="barbell";
+  var hasBar=equip==="barbell"||equip==="full";
+  var dbOnly=equip==="dumbbells";
+  var bwOnly=equip==="bodyweight";
+
+  // ── CARDIO / HEART HEALTH / VO2 MAX → cardio-dominant ──────
+  if(goal==="vo2max"||goal==="endurance"||(goal==="heart"&&days<=3)){
+    return buildCardioPlan(days,exp,limits);
+  }
+
+  // ── BEGINNER or 2-3 days → Full Body ───────────────────────
+  if(exp==="beginner"||days<=3){
+    return buildFullBody(days,goal,equip,limits);
+  }
+
+  // ── INTERMEDIATE / ADVANCED + 4+ days → Split ──────────────
+  if(days>=5&&(goal==="muscle"||goal==="strength"||goal==="recomp")){
+    return buildUpperLower(days,goal,exp,equip,limits);
+  }
+  if(days===4){
+    return buildUpperLower(4,goal,exp,equip,limits);
+  }
+
+  // Default fallback
+  return buildFullBody(days,goal,equip,limits);
+}
+
+function ex(n,s,lo,hi,bone){
+  var o={n:n,s:s,lo:lo,hi:hi};
+  if(bone)o.bone=true;
+  return o;
+}
+
+function buildFullBody(days,goal,equip,limits){
+  var hasBar=equip==="full"||equip==="barbell";
+  var dbOnly=equip==="dumbbells";
+  var bwOnly=equip==="bodyweight";
+  var hasKnee=limits.indexOf("knee")>-1;
+  var hasBack=limits.indexOf("lower_back")>-1;
+  var hasShoulder=limits.indexOf("shoulder")>-1;
+  var isStr=goal==="strength";
+  var isCard=goal==="vo2max"||goal==="heart"||goal==="endurance";
+
+  // Squat pattern
+  var squat=hasKnee?ex("Goblet Squat",3,10,15):
+    hasBar?ex("Barbell Back Squat",3,isStr?5:8,isStr?5:12,true):
+    dbOnly?ex("Goblet Squat",3,10,15):ex("Bodyweight Squat",3,15,20);
+  // Hinge
+  var hinge=hasBack?ex("Seated Leg Curl",3,10,15):
+    hasBar?ex("Trap-Bar Deadlift",3,isStr?4:6,isStr?5:8,true):
+    dbOnly?ex("DB Romanian Deadlift",3,10,12):ex("Single-Leg Hip Hinge",3,10,12);
+  // Push
+  var push=hasShoulder?ex("Low-to-High Cable Fly",3,12,15):
+    hasBar?ex("Barbell Bench Press",3,isStr?5:8,isStr?5:10):
+    dbOnly?ex("DB Bench Press",3,8,12):ex("Push-Up",3,10,20);
+  // Pull
+  var pull=hasBar?ex("Barbell Row",3,isStr?5:8,isStr?5:10):
+    equip==="full"?ex("Seated Cable Row",3,10,12):
+    dbOnly?ex("Single-Arm DB Row",3,10,12):ex("Inverted Row",3,8,15);
+  // Press
+  var press=hasShoulder?ex("DB Lateral Raise",3,12,20):
+    hasBar?ex("Barbell Overhead Press",3,isStr?5:8,isStr?5:8,true):
+    dbOnly?ex("DB Shoulder Press",3,10,12):ex("Pike Push-Up",3,8,15);
+
+  var dayA={day:"Full Body A",rest:false,ex:[squat,push,pull,press,ex("Standing Calf Raise",3,12,20)]};
+  var dayB={day:"Full Body B",rest:false,ex:[hinge,push,pull,ex("DB Lateral Raise",3,12,15),ex("EZ-Bar Curl",3,10,12)]};
+  var cardioDay={day:"Cardio + Core",rest:false,cardio:true,ex:[]};
+  var restDay={day:"Rest",rest:true,ex:[]};
+
+  var split=[];
+  if(days===2){split=[dayA,restDay,restDay,dayB,restDay,restDay,restDay];}
+  else if(days===3){split=[dayA,restDay,dayB,restDay,dayA,restDay,restDay];}
+  else{split=[dayA,restDay,dayB,cardioDay,restDay,restDay,restDay];}
+
+  var phases=buildPhases(goal,"FB");
+  return {splitType:"FB",split:split,phases:phases};
+}
+
+function buildUpperLower(days,goal,exp,equip,limits){
+  var hasBar=equip==="full"||equip==="barbell";
+  var fullGym=equip==="full";
+  var dbOnly=equip==="dumbbells";
+  var hasKnee=limits.indexOf("knee")>-1;
+  var hasBack=limits.indexOf("lower_back")>-1;
+  var hasShoulder=limits.indexOf("shoulder")>-1;
+  var isAdv=exp==="advanced";
+  var isStr=goal==="strength";
+
+  var squat=hasKnee?ex("Leg Press",4,10,12):
+    hasBar?ex("Barbell Back Squat",4,isStr?5:6,isStr?5:8,true):ex("Goblet Squat",3,10,15);
+  var hinge=hasBack?ex("Seated Leg Curl",3,10,12):
+    hasBar?ex("Trap-Bar Deadlift",4,isStr?3:5,isStr?5:6,true):ex("DB Romanian Deadlift",3,10,12);
+  var chestP=hasBar?ex("Barbell Bench Press",4,isStr?5:6,isStr?5:8):
+    fullGym?ex("Hammer Chest Press",4,8,10):ex("DB Bench Press",4,8,12);
+  var incP=fullGym?ex("Incline DB Chest Press",3,10,12):ex("DB Bench Press",3,10,12);
+  var row=hasBar?ex("Barbell Row",4,isStr?5:6,isStr?5:8):
+    fullGym?ex("Hammer Iso-Lateral Row",4,8,10):ex("Single-Arm DB Row",4,10,12);
+  var lat=fullGym?ex("Hammer Lat Pulldown",4,8,12):
+    hasBar?ex("Pull-Up",4,5,10):ex("DB Pullover",3,12,15);
+  var ohp=hasShoulder?ex("DB Lateral Raise",3,12,20):
+    hasBar?ex("Barbell Overhead Press",4,isStr?5:6,isStr?5:8,true):ex("DB Shoulder Press",3,10,12);
+
+  var lowerA={day:"Lower A",rest:false,ex:[
+    squat,
+    ex(hasKnee?"Leg Press":"Reverse Hack Squat",3,8,12),
+    ex("Leg Extension",3,12,15),
+    ex("Standing Calf Raise",4,10,15)
+  ]};
+  var lowerB={day:"Lower B",rest:false,ex:[
+    hinge,
+    ex("Leg Press",3,10,12),
+    ex("Seated Leg Curl",3,12,15),
+    ex("Standing Calf Raise",4,12,15)
+  ]};
+  var upperA={day:"Upper A",rest:false,ex:[
+    chestP,row,incP,
+    fullGym?ex("High-to-Low Cable Fly",2,12,15):ex("DB Fly",2,12,15),
+    ex("Cable Tricep Pressdown",3,12,15)
+  ]};
+  var upperB={day:"Upper B",rest:false,ex:[
+    ohp,lat,
+    fullGym?ex("Hammer Iso Shoulder Press",3,10,12):ex("DB Shoulder Press",3,10,12),
+    ex("EZ-Bar Curl",3,10,12),
+    ex("DB Skull Crusher",3,12,12)
+  ]};
+  var cardio={day:"Cardio + Core",rest:false,cardio:true,ex:[]};
+  var rest={day:"Rest",rest:true,ex:[]};
+
+  var split=[];
+  if(days===4){split=[lowerA,upperA,rest,lowerB,upperB,rest,rest];}
+  else if(days===5){split=[lowerA,upperA,cardio,lowerB,upperB,rest,rest];}
+  else{split=[lowerA,upperA,cardio,lowerB,upperB,cardio,rest];}
+
+  var phases=buildPhases(goal,"UL");
+  return {splitType:"UL",split:split,phases:phases};
+}
+
+function buildCardioPlan(days,exp,limits){
+  var hasCardiac=limits.indexOf("cardiac")>-1;
+  var cardioDay={day:"Zone 2 Cardio",rest:false,cardio:true,ex:[]};
+  var strengthDay={day:"Full Body Strength",rest:false,ex:[
+    ex("Goblet Squat",3,12,15),
+    ex("DB Romanian Deadlift",3,12,15),
+    ex("DB Bench Press",3,12,15),
+    ex("Single-Arm DB Row",3,12,15),
+    ex("DB Shoulder Press",3,12,15)
+  ]};
+  var rest={day:"Rest",rest:true,ex:[]};
+
+  var split=[];
+  if(days<=3){split=[cardioDay,rest,strengthDay,rest,cardioDay,rest,rest];}
+  else if(days===4){split=[cardioDay,strengthDay,cardioDay,rest,cardioDay,rest,rest];}
+  else{split=[cardioDay,strengthDay,cardioDay,strengthDay,cardioDay,rest,rest];}
+
+  var phases=buildPhases("vo2max","CARDIO");
+  return {splitType:"CARDIO",split:split,phases:phases};
+}
+
+function buildPhases(goal,splitType){
+  var td=todayStr();
+  var start=new Date(td+"T00:00:00");
+  function addWeeks(d,w){var r=new Date(d);r.setDate(r.getDate()+w*7);return r.toISOString().slice(0,10);}
+  var phases=[];
+  if(goal==="weight_loss"||goal==="recomp"){
+    phases=[
+      {key:"P0",name:"Foundation",start:td,end:addWeeks(start,4),pct:[0.50,0.65],rpe:"6-7",cal:2000,split:splitType,
+       note:"Learn your movements, establish calorie baseline. No ego lifting this phase."},
+      {key:"P1",name:"Fat Loss",start:addWeeks(start,4),end:addWeeks(start,16),pct:[0.65,0.75],rpe:"7-8",cal:1800,split:splitType,
+       note:"Caloric deficit. Maintain strength while stripping fat. Cardio days mandatory."},
+      {key:"P2",name:"Sustain",start:addWeeks(start,16),end:addWeeks(start,24),pct:[0.70,0.80],rpe:"7-8.5",cal:2000,split:splitType,
+       note:"Ease back to maintenance. Hold the loss, build a platform for the next phase."}
+    ];
+  } else if(goal==="muscle"){
+    phases=[
+      {key:"P0",name:"Foundation",start:td,end:addWeeks(start,4),pct:[0.55,0.65],rpe:"6-7",cal:2500,split:splitType,
+       note:"Establish movement quality and baseline strength. Moderate load, moderate volume."},
+      {key:"P1",name:"Hypertrophy",start:addWeeks(start,4),end:addWeeks(start,16),pct:[0.65,0.75],rpe:"7-8.5",cal:2800,split:splitType,
+       note:"Volume block. Higher reps, more sets, slight caloric surplus. Progressive overload every session."},
+      {key:"P2",name:"Strength",start:addWeeks(start,16),end:addWeeks(start,24),pct:[0.78,0.88],rpe:"8-9",cal:2900,split:splitType,
+       note:"Convert volume gains to strength. Lower reps, heavier loads, longer rest."}
+    ];
+  } else if(goal==="strength"){
+    phases=[
+      {key:"P0",name:"Technique",start:td,end:addWeeks(start,4),pct:[0.55,0.65],rpe:"6-7",cal:2600,split:splitType,
+       note:"Lock in movement quality on all three main lifts. No max effort yet."},
+      {key:"P1",name:"Volume Build",start:addWeeks(start,4),end:addWeeks(start,12),pct:[0.70,0.80],rpe:"7-8",cal:2800,split:splitType,
+       note:"Build work capacity. Multiple sets of moderate intensity across the main lifts."},
+      {key:"P2",name:"Intensity",start:addWeeks(start,12),end:addWeeks(start,20),pct:[0.80,0.92],rpe:"8-9.5",cal:2900,split:splitType,
+       note:"Heavy singles and doubles. Volume drops, intensity peaks."},
+      {key:"P3",name:"Peak",start:addWeeks(start,20),end:addWeeks(start,24),pct:[0.90,0.97],rpe:"9-10",cal:2900,split:splitType,
+       note:"Test week prep. Express your strength. Deload the week prior."}
+    ];
+  } else if(goal==="vo2max"||goal==="endurance"){
+    phases=[
+      {key:"P0",name:"Aerobic Base",start:td,end:addWeeks(start,6),pct:[0.50,0.60],rpe:"5-6",cal:2200,split:splitType,
+       note:"Zone 2 only. 30-40 min sessions, talk-test pace. Build your aerobic engine."},
+      {key:"P1",name:"Threshold",start:addWeeks(start,6),end:addWeeks(start,14),pct:[0.60,0.70],rpe:"6-7",cal:2400,split:splitType,
+       note:"Add one tempo session per week. Zone 2 sessions extend to 45-60 min."},
+      {key:"P2",name:"VO2 Intervals",start:addWeeks(start,14),end:addWeeks(start,20),pct:[0.70,0.80],rpe:"7-9",cal:2500,split:splitType,
+       note:"4-6 x 4 min intervals at 90-95% max HR once per week. Taper 2 weeks before retest."}
+    ];
+  } else if(goal==="heart"){
+    phases=[
+      {key:"P0",name:"Baseline",start:td,end:addWeeks(start,4),pct:[0.40,0.55],rpe:"4-6",cal:2000,split:splitType,
+       note:"Establish BP and RHR baselines. Zone 2 cardio 3x/week, 30 min. Sodium under 2300mg."},
+      {key:"P1",name:"Consistency",start:addWeeks(start,4),end:addWeeks(start,16),pct:[0.50,0.65],rpe:"5-7",cal:2000,split:splitType,
+       note:"Zone 2 cardio 5x/week, 40+ min. Resistance training 2-3x/week. Monitor 14-day BP average."},
+      {key:"P2",name:"Optimize",start:addWeeks(start,16),end:addWeeks(start,24),pct:[0.60,0.72],rpe:"6-7.5",cal:2000,split:splitType,
+       note:"Review BP trend. Adjust sodium, fiber, and aerobic load based on your data."}
+    ];
+  } else {
+    phases=[
+      {key:"P0",name:"Foundation",start:td,end:addWeeks(start,6),pct:[0.50,0.65],rpe:"6-7",cal:2200,split:splitType,
+       note:"Build the habit. Learn movements, track daily, make training non-negotiable."},
+      {key:"P1",name:"Build",start:addWeeks(start,6),end:addWeeks(start,18),pct:[0.65,0.78],rpe:"7-8",cal:2300,split:splitType,
+       note:"Increase intensity progressively. Add volume where recovery allows."},
+      {key:"P2",name:"Express",start:addWeeks(start,18),end:addWeeks(start,24),pct:[0.75,0.85],rpe:"7.5-9",cal:2400,split:splitType,
+       note:"Push toward your goal. Increase frequency of your weakest area."}
+    ];
+  }
+  return phases;
+}
+
+/* ── Override currentPhase/currentSplit with program-aware versions ─ */
+function getActivePlan(){
+  return (DB.program&&DB.program.phases)?DB.program:null;
+}
+function getActivePhases(){
+  var p=getActivePlan();
+  return p?p.phases:PHASES;
+}
+function getActiveSplit(){
+  var p=getActivePlan();
+  if(!p)return currentSplit();
+  return p.split;
+}
+
 /* ============ INIT ============ */
 load();
 setTimeout(function(){document.getElementById("splash").classList.add("hide");},3200);
@@ -1787,9 +2215,12 @@ loadBPPromptPref();
 loadMedStack();
 loadGoalSettings();
 loadUserName();
-setTimeout(checkDietPopup,4000);
-setTimeout(checkBPPrompt,5200);
-setTimeout(loadAndShowQuote,3400);
+setTimeout(function(){
+  if(!DB.settings.hasOnboarded){obShow();return;}
+  setTimeout(checkDietPopup,800);
+  setTimeout(checkBPPrompt,2000);
+  setTimeout(loadAndShowQuote,200);
+},3400);
 // PWA: minimal inline service worker for installability/offline shell
 if("serviceWorker" in navigator){
   try{
