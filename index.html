@@ -322,8 +322,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     <div id="workoutArea"></div>
     <button class="btn" onclick="saveWorkout()">Save Session</button>
     <div class="btn-row" style="margin-top:10px;">
-      <button class="btn sm dark" onclick="startTimer(180)">Rest 3:00</button>
-      <button class="btn sm dark" onclick="startTimer(90)">Rest 1:30</button>
+      <button class="btn sm dark" onclick="startTimer(getBPRestSec(180))">Rest 3:00+</button>
+      <button class="btn sm dark" onclick="startTimer(getBPRestSec(90))">Rest 1:30+</button>
     </div>
   </div>
 
@@ -342,6 +342,24 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <label class="fld">Morning RHR (bpm)</label>
       <input type="number" id="inRHR" inputmode="numeric" placeholder="e.g. 58">
       <button class="btn sm ghost" onclick="saveRHR()">Record RHR</button>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">Blood Pressure <span class="tag" id="bpStatusTag"></span></div>
+      <div class="note dim" style="margin-bottom:10px;">Log both numbers each time you measure. The 14-day average drives workout adjustments — one reading never changes your program.</div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div style="flex:1;min-width:80px;">
+          <label class="fld">Systolic (top)</label>
+          <input type="number" id="inBPsys" inputmode="numeric" placeholder="e.g. 138">
+        </div>
+        <div style="flex:1;min-width:80px;">
+          <label class="fld">Diastolic (bottom)</label>
+          <input type="number" id="inBPdia" inputmode="numeric" placeholder="e.g. 88">
+        </div>
+        <button class="btn sm ghost" onclick="saveBP()" style="align-self:flex-end;">Record BP</button>
+      </div>
+      <div class="note dim" id="bpEcho" style="margin-top:10px;"></div>
+      <div id="bpHistory" style="margin-top:12px;"></div>
     </div>
 
     <div class="sec">
@@ -416,6 +434,13 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="note dim">Drives the working-weight calculator. The three barbell lifts start blank &mdash; set them by feel after Phase 0.</div>
       <div id="oneRMList" style="margin-top:12px;"></div>
       <div id="ormBtnRow"><button class="btn sm ghost" onclick="saveOneRMs()">Save 1RMs</button></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h">Medication Stack</div>
+      <div class="note dim" style="margin-bottom:8px;">Your current medications. Keeps workout flags in context. Update when prescriptions change.</div>
+      <textarea id="inMedStack" rows="6" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;" placeholder="e.g. Orgovyx (relugolix) 120mg daily&#10;Abiraterone 1000mg daily&#10;Prednisone 5mg BID&#10;Duloxetine 60mg daily&#10;Phentermine 37.5mg daily"></textarea>
+      <button class="btn sm" style="margin-top:8px;" onclick="saveMedStack()">Save Medications</button>
+      <div class="note dim" id="medStackEcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
       <div class="sec-h">Google Sheets Sync</div>
@@ -584,7 +609,7 @@ var SPLIT_HEAVY=[
 ];
 
 /* ============ STATE ============ */
-var DB={weights:[],nutrition:[],rhr:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:""}};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:"",medStack:""}};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -647,6 +672,8 @@ function nav(v){
   if(v==="prog")renderProg();
   if(v==="setup")renderSetup();
   if(v==="labs"){renderLabs();}
+  if(v==="log"){renderBPSection();}
+  if(v==="setup"){loadMedStack();}
   window.scrollTo(0,0);
   el.style.animation="none"; void el.offsetWidth;
   el.style.animation="slideIn"+(dir>0?"R":"L")+" .34s cubic-bezier(.22,.9,.3,1)";
@@ -786,12 +813,14 @@ function renderTrain(){
   var pauseVolume=(recentLowReadiness()>=2);
 
   var labAdj=getLabTrainAdj?getLabTrainAdj():null;
-  var labHold=labAdj&&labAdj.some(function(a){return a.sev==="crit";});
+  var bpAdj=getBPTrainAdj?getBPTrainAdj():null;
+  var allAdj=(labAdj||[]).concat(bpAdj||[]);
+  var labHold=allAdj.some(function(a){return a.sev==="crit";});
   if(labHold)holdToday=true;
 
   var stateCls="", stateTxt="";
   if(isDeload()){stateCls="deload";stateTxt="Deload week — volume cut ~50%, progression paused. Recover.";}
-  else if(labHold){stateCls="held";stateTxt="Lab flag active: critical value detected. Volume and load held back. See Labs tab.";}
+  else if(labHold){stateCls="held";var critItems=allAdj.filter(function(a){return a.sev==="crit";});stateTxt=critItems.map(function(a){return a.label+": "+a.msg;}).join(" | ");}
   else if(holdToday){stateCls="held";stateTxt="Held — low energy logged. Volume trimmed and load progression paused for today.";}
   else if(pauseVolume){stateCls="";stateTxt="Volume ramp paused — recent low-energy trend. Loads still progress on performance.";}
   else{stateCls="";stateTxt="Adaptive: active — targets climbing on your logged data. Week "+(wip+1)+" in phase.";}
@@ -802,7 +831,7 @@ function renderTrain(){
     unlocks.forEach(function(u){if(ds>=ADAPT.unlockEvery&&exList.length<ADAPT.maxExercises&&!exList.some(function(e){return e.n===u.n;})){var uu=Object.assign({},u);uu.added=true;exList.push(uu);}});
   }
 
-  document.getElementById("dayNote").innerHTML='<div class="adapt-panel '+stateCls+'">'+stateTxt+'</div><div class="note dim">Log RIR (reps in reserve) on every set. E.g., RIR 2 = you had 2 reps left in the tank.</div>'+(labAdj&&labAdj.length?'<div class="adapt-panel held" style="margin-top:8px;">&#9888; Lab adjustment active: '+labAdj.map(function(a){return a.label;}).join(", ")+'</div>':'');
+  document.getElementById("dayNote").innerHTML='<div class="adapt-panel '+stateCls+'">'+stateTxt+'</div><div class="note dim">Log RIR (reps in reserve) on every set. E.g., RIR 2 = you had 2 reps left in the tank.</div>'+(allAdj&&allAdj.length?'<div class="adapt-panel held" style="margin-top:8px;">&#9888; Active adjustments: '+allAdj.map(function(a){return a.label;}).join(", ")+'</div>':'');
 
   var html2="";
   exList.forEach(function(ex,ei){
@@ -1120,11 +1149,170 @@ document.addEventListener("click",function(e){
   }
 });
 
+
+/* ============ BLOOD PRESSURE ============ */
+function saveBP(){
+  var sys=parseInt(document.getElementById("inBPsys").value);
+  var dia=parseInt(document.getElementById("inBPdia").value);
+  if(isNaN(sys)||isNaN(dia)||sys<60||sys>250||dia<40||dia>150){toast("Enter valid BP (e.g. 138 / 88)");return;}
+  DB.bp=DB.bp||[];
+  DB.bp=DB.bp.filter(function(x){return x.d!==todayStr();});
+  DB.bp.push({d:todayStr(),s:sys,d2:dia});
+  save();
+  document.getElementById("inBPsys").value="";
+  document.getElementById("inBPdia").value="";
+  toast("BP recorded");
+  renderBPSection();
+  renderHome();
+}
+
+function bp14dayAvg(){
+  if(!DB.bp||!DB.bp.length)return null;
+  var cutoff=new Date();cutoff.setDate(cutoff.getDate()-14);
+  var recent=DB.bp.filter(function(x){return new Date(x.d+"T00:00:00")>=cutoff;});
+  if(!recent.length)return null;
+  var avgS=Math.round(recent.reduce(function(a,b){return a+b.s;},0)/recent.length);
+  var avgD=Math.round(recent.reduce(function(a,b){return a+b.d2;},0)/recent.length);
+  return {s:avgS,d:avgD,n:recent.length};
+}
+
+function bpTier(avg){
+  if(!avg)return "unknown";
+  if(avg.s>=160||avg.d>=100)return "stage2";
+  if(avg.s>=140||avg.d>=90)return "stage1";
+  if(avg.s>=130||avg.d>=80)return "elevated";
+  return "normal";
+}
+
+function bpTierLabel(tier){
+  return {normal:"Normal",elevated:"Elevated",stage1:"Stage 1 HTN",stage2:"Stage 2 HTN — HIGH PRIORITY",unknown:"No data yet"}[tier]||"—";
+}
+
+function bpTierColor(tier){
+  return {normal:"var(--good)",elevated:"var(--gold)",stage1:"#e87c30",stage2:"var(--red)",unknown:"var(--dim)"}[tier]||"var(--dim)";
+}
+
+function getBPRestSec(base){
+  var avg=bp14dayAvg();var tier=bpTier(avg);
+  if(tier==="stage2")return Math.max(base,180);
+  if(tier==="stage1")return Math.max(base,150);
+  if(tier==="elevated")return Math.max(base,120);
+  return base;
+}
+
+function getBPTrainAdj(){
+  var avg=bp14dayAvg();
+  if(!avg)return null;
+  var tier=bpTier(avg);
+  if(tier==="normal")return null;
+  var adjs=[];
+  if(tier==="elevated"){
+    adjs.push({sev:"info",label:"BP Elevated",msg:"14-day avg "+avg.s+"/"+avg.d+" mmHg. Rest extended to 2 min min. Zone 2 cardio days mandatory."});
+  } else if(tier==="stage1"){
+    adjs.push({sev:"warn",label:"BP Stage 1 HTN",msg:"14-day avg "+avg.s+"/"+avg.d+" mmHg. RPE ceiling 7. One fewer set per compound lift. Rest 2-3 min. Zone 2 cardio mandatory. No Valsalva."});
+  } else if(tier==="stage2"){
+    adjs.push({sev:"crit",label:"BP Stage 2 — HIGH PRIORITY",msg:"14-day avg "+avg.s+"/"+avg.d+" mmHg. Loads capped at 70% 1RM. Sets reduced to 2. Isometrics 5 sec max. Rest 3 min min. All cardio days mandatory Zone 2, 40+ min. Discuss with your oncology team."});
+  }
+  return adjs.length?adjs:null;
+}
+
+function renderBPSection(){
+  DB.bp=DB.bp||[];
+  var avg=bp14dayAvg();
+  var tier=bpTier(avg);
+  var tag=document.getElementById("bpStatusTag");
+  if(tag){
+    tag.textContent=avg?bpTierLabel(tier):"No readings yet";
+    tag.style.cssText="background:"+bpTierColor(tier)+";color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;";
+  }
+  var echo=document.getElementById("bpEcho");
+  if(echo){
+    if(avg){
+      echo.innerHTML="14-day average: <strong>"+avg.s+"/"+avg.d+" mmHg</strong> ("+avg.n+" readings) \u2014 <span style='color:"+bpTierColor(tier)+"'>"+bpTierLabel(tier)+"</span>."+
+        (tier!=="normal"?" Workout adjusted automatically until this comes down.":"");
+    } else {
+      echo.textContent="No readings in the last 14 days.";
+    }
+  }
+  var hist=document.getElementById("bpHistory");
+  if(hist){
+    var recent=(DB.bp||[]).slice(-7).reverse();
+    if(!recent.length){hist.innerHTML="";return;}
+    var rows=recent.map(function(x){
+      var t=bpTier({s:x.s,d:x.d2});
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">'+
+        '<span style="opacity:.7;">'+x.d+'</span>'+
+        '<span style="font-weight:600;color:'+bpTierColor(t)+';">'+x.s+'/'+x.d2+' mmHg</span>'+
+        '</div>';
+    }).join("");
+    hist.innerHTML='<div style="font-size:11px;opacity:.6;margin-bottom:4px;">Last 7 readings</div>'+rows;
+  }
+}
+
+/* ============ MED STACK ============ */
+function saveMedStack(){
+  var v=document.getElementById("inMedStack").value.trim();
+  DB.settings=DB.settings||{};
+  DB.settings.medStack=v;
+  save();
+  document.getElementById("medStackEcho").textContent="Saved.";
+  setTimeout(function(){document.getElementById("medStackEcho").textContent="";},2000);
+}
+
+function loadMedStack(){
+  var el=document.getElementById("inMedStack");
+  if(el&&DB.settings&&DB.settings.medStack){el.value=DB.settings.medStack;}
+}
+
+/* ============ BP DAILY PROMPT ============ */
+function checkBPPrompt(){
+  DB.bp=DB.bp||[];
+  var todayLogged=DB.bp.some(function(x){return x.d===todayStr();});
+  if(todayLogged)return;
+  var avg=bp14dayAvg();
+  var avgTxt=avg?"Your 14-day average is <strong style='color:"+bpTierColor(bpTier(avg))+"'>"+avg.s+"/"+avg.d+" mmHg</strong> ("+bpTierLabel(bpTier(avg))+"). ":"";
+  var modal=document.createElement("div");
+  modal.id="bpModal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+  modal.innerHTML='<div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:340px;width:100%;">'+
+    '<div style="font-weight:700;font-size:16px;margin-bottom:6px;">⚡ Daily BP Check</div>'+
+    '<div style="font-size:13px;color:var(--dim);margin-bottom:14px;">'+avgTxt+'Log today\u2019s reading to keep your workout accurate.</div>'+
+    '<div style="display:flex;gap:10px;margin-bottom:14px;">'+
+    '<div style="flex:1;"><label style="font-size:11px;opacity:.7;display:block;margin-bottom:4px;">Systolic</label><input id="bpModalSys" type="number" inputmode="numeric" placeholder="138" style="width:100%;padding:9px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:16px;"></div>'+
+    '<div style="flex:1;"><label style="font-size:11px;opacity:.7;display:block;margin-bottom:4px;">Diastolic</label><input id="bpModalDia" type="number" inputmode="numeric" placeholder="88" style="width:100%;padding:9px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:16px;"></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;">'+
+    '<button class="btn" style="flex:1;" onclick="saveBPModal()">Log BP</button>'+
+    '<button class="btn sm dark" onclick="document.getElementById(\'bpModal\').remove()">Skip today</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:var(--dim);margin-top:10px;">Orgovyx + abiraterone + prednisone = elevated CV risk. Daily BP is priority 1.</div>'+
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+function saveBPModal(){
+  var sys=parseInt(document.getElementById("bpModalSys").value);
+  var dia=parseInt(document.getElementById("bpModalDia").value);
+  if(isNaN(sys)||isNaN(dia)||sys<60||sys>250||dia<40||dia>150){toast("Enter valid BP numbers");return;}
+  DB.bp=DB.bp||[];
+  DB.bp=DB.bp.filter(function(x){return x.d!==todayStr();});
+  DB.bp.push({d:todayStr(),s:sys,d2:dia});
+  save();
+  var m=document.getElementById("bpModal");
+  if(m)m.remove();
+  toast("BP logged — workout adjusted");
+  renderHome();
+  renderBPSection();
+}
+
 /* ============ INIT ============ */
 load();
 setTimeout(function(){document.getElementById("splash").classList.add("hide");},3200);
 renderHome();
+renderBPSection();
+loadMedStack();
 setTimeout(checkDietPopup,4000);
+setTimeout(checkBPPrompt,5200);
 // PWA: minimal inline service worker for installability/offline shell
 if("serviceWorker" in navigator){
   try{
