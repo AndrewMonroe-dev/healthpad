@@ -663,6 +663,60 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
         </div>
         <div class="note dim" style="color:rgba(255,255,255,.4);margin-top:10px;font-size:12px;">Select all that apply. Select None if unrestricted.</div>
       </div>
+
+      <div id="obStep6" class="ob-step" style="display:none;">
+        <div class="ob-q">Sex</div>
+        <div class="note dim" style="color:rgba(255,255,255,.45);margin-bottom:18px;font-size:13px;">Used for the Mifflin-St Jeor BMR calculation.</div>
+        <div class="ob-opts">
+          <div class="ob-opt" data-grp="sex" data-v="male">Male</div>
+          <div class="ob-opt" data-grp="sex" data-v="female">Female</div>
+        </div>
+      </div>
+
+      <div id="obStep7" class="ob-step" style="display:none;">
+        <div class="ob-q">Age &amp; Height</div>
+        <div class="note dim" style="color:rgba(255,255,255,.45);margin-bottom:18px;font-size:13px;">Height in feet and inches.</div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;color:rgba(255,255,255,.6);display:block;margin-bottom:6px;">Age (years)</label>
+          <input id="obAge" type="number" inputmode="numeric" placeholder="e.g. 45" min="16" max="100" style="width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;">
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div style="flex:1;">
+            <label style="font-size:12px;color:rgba(255,255,255,.6);display:block;margin-bottom:6px;">Feet</label>
+            <input id="obHeightFt" type="number" inputmode="numeric" placeholder="5" min="4" max="7" style="width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;">
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:12px;color:rgba(255,255,255,.6);display:block;margin-bottom:6px;">Inches</label>
+            <input id="obHeightIn" type="number" inputmode="numeric" placeholder="10" min="0" max="11" style="width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;">
+          </div>
+        </div>
+      </div>
+
+      <div id="obStep8" class="ob-step" style="display:none;">
+        <div class="ob-q">Current Weight &amp; Body Fat</div>
+        <div class="note dim" style="color:rgba(255,255,255,.45);margin-bottom:18px;font-size:13px;">Weight in pounds. Body fat is optional — skip if unsure.</div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;color:rgba(255,255,255,.6);display:block;margin-bottom:6px;">Body Weight (lbs)</label>
+          <input id="obWeight" type="number" inputmode="decimal" placeholder="e.g. 195" min="80" max="500" style="width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;">
+        </div>
+        <div>
+          <label style="font-size:12px;color:rgba(255,255,255,.6);display:block;margin-bottom:6px;">Body Fat % <span style="opacity:.5;">(optional)</span></label>
+          <input id="obBodyFat" type="number" inputmode="decimal" placeholder="e.g. 22" min="3" max="60" style="width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;">
+        </div>
+      </div>
+
+      <div id="obStep9" class="ob-step" style="display:none;">
+        <div class="ob-q">How active are you outside the gym?</div>
+        <div class="note dim" style="color:rgba(255,255,255,.45);margin-bottom:18px;font-size:13px;">Be honest — overestimating is the most common calorie mistake.</div>
+        <div class="ob-opts">
+          <div class="ob-opt" data-grp="activity" data-v="1.2">Sedentary — desk job, mostly sitting</div>
+          <div class="ob-opt" data-grp="activity" data-v="1.375">Lightly active — on my feet some, light daily movement</div>
+          <div class="ob-opt" data-grp="activity" data-v="1.55">Moderately active — physically active job or lifestyle</div>
+          <div class="ob-opt" data-grp="activity" data-v="1.725">Very active — physical job or very active daily life</div>
+          <div class="ob-opt" data-grp="activity" data-v="1.9">Extremely active — physical labor job AND hard training</div>
+        </div>
+      </div>
+
       <!-- Nav buttons -->
       <div style="display:flex;gap:12px;margin-top:32px;">
         <button id="obBack" class="btn dark" style="flex:1;display:none;touch-action:manipulation;" onclick="obPrev()">Back</button>
@@ -702,8 +756,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 
 /* ============ CONSTANTS ============ */
 var GOAL_WEIGHT=200;
-var END_DATE=new Date(2027,3,14); // Apr 14 2027
-var START_DATE=new Date(2026,5,14); // Jun 14 2026
+var END_DATE=null; // Set dynamically from user goal
+var START_DATE=null; // Set dynamically from user goal
 var PROTEIN_TARGET=210;
 
 var PHASES=[
@@ -714,7 +768,7 @@ var PHASES=[
   {key:"P2",name:"Strength Build",start:"2026-10-19",end:"2027-02-07",pct:[0.75,0.85],rpe:"7-9",cal:2800,split:"HEAVY",
    note:"Maintenance calories. Heavy progressive overload, lower reps on main lifts, peak bone loading on squat / overhead press / trap-bar deadlift."},
   {key:"P3",name:"Peak",start:"2027-02-08",end:"2027-04-14",pct:[0.80,0.90],rpe:"8-9",cal:2850,split:"HEAVY",
-   note:"Maintenance. Intensity peaks, volume drops, express your strength. Finish lean and strong, primed for testosterone recovery after April 14."}
+   note:"Intensity peaks, volume drops. Express your strength. Finish lean and strong."}
 ];
 
 /* exercise: name, sets, repLow, repHigh, key(for 1RM lookup or null), bone */
@@ -872,7 +926,8 @@ function currentPhase(){
 }
 function weekNumber(){
   var t=new Date();t.setHours(0,0,0,0);
-  var diff=Math.floor((t-START_DATE)/(1000*60*60*24));
+  var _ws=DB.goal&&DB.goal.startDate?new Date(DB.goal.startDate+"T00:00:00"):t;
+  var diff=Math.floor((t-_ws)/(1000*60*60*24));
   return Math.max(1,Math.floor(diff/7)+1);
 }
 function isDeload(){return weekNumber()%6===0;}
@@ -921,18 +976,27 @@ function renderHome(){
   var t=new Date();t.setHours(0,0,0,0);
   // Goal-driven countdown
   var g=DB.goal||{};
-  var gTarget=g.targetDate?new Date(g.targetDate+"T00:00:00"):END_DATE;
-  var gStart=g.startDate?new Date(g.startDate+"T00:00:00"):START_DATE;
-  var gName=g.name||"Goal";
-  var days=Math.ceil((gTarget-t)/(1000*60*60*24));
-  countUp("cdDays",Math.max(0,days),0,"");
+  var hasGoal=g.targetDate&&g.targetDate.length>0;
+  var gTarget=hasGoal?new Date(g.targetDate+"T00:00:00"):null;
+  var gStart=g.startDate?new Date(g.startDate+"T00:00:00"):t;
+  var gName=g.name||"";
   var cdLbl=document.getElementById("cdLabel");
-  if(cdLbl)cdLbl.textContent="Days to "+gName.substring(0,18);
   var hd=document.getElementById("heroDate");
-  if(hd)hd.textContent=gTarget.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})+(gName?" — "+gName:"");
-  var total=Math.max(1,gTarget-gStart),elapsed=t-gStart;
-  var cpct=Math.max(0,Math.min(1,elapsed/total));
-  setRing("ringCampaign",cpct);
+  if(!hasGoal){
+    // No goal set yet — show blank state
+    document.getElementById("cdDays").textContent="—";
+    if(cdLbl)cdLbl.textContent="Set a goal";
+    if(hd)hd.textContent="Go to Setup → Your Goal to set a target date.";
+    setRing("ringCampaign",0);
+  } else {
+    var days=Math.ceil((gTarget-t)/(1000*60*60*24));
+    countUp("cdDays",Math.max(0,days),0,"");
+    if(cdLbl)cdLbl.textContent=gName?"Days to "+gName.substring(0,18):"Days to Goal";
+    if(hd)hd.textContent=gTarget.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})+(gName?" — "+gName:"");
+    var total=Math.max(1,gTarget-gStart),elapsed=t-gStart;
+    var cpct=Math.max(0,Math.min(1,elapsed/total));
+    setRing("ringCampaign",cpct);
+  }
   // Weight ring — only meaningful for weight_loss / recomp goals
   var lw=lastWeight();
   document.getElementById("hdrWeight").textContent=lw?lw.toFixed(1):"\u2014";
@@ -996,7 +1060,8 @@ function renderHome(){
   }
   var nt=todayNutrition();var pro=nt?nt.pro:0;
   countUp("homePro",pro,0,"");
-  setRing("ringPro",pro/PROTEIN_TARGET);
+  var _pt=(DB.settings&&DB.settings.proteinTarget)||PROTEIN_TARGET;
+  setRing("ringPro",pro/_pt);
   var ph=currentPhase();
   document.getElementById("phasePill").textContent=ph.name;
   document.getElementById("phasePill").className="phase-pill"+(isDeload()?" deload":"");
@@ -1369,10 +1434,12 @@ function renderLog(){
   var nt=todayNutrition();var pro=nt?nt.pro:0,cal=nt?nt.cal:0;
   document.getElementById("proGramsLog").textContent=(pro||0);
   document.getElementById("proSubLog").textContent="of "+PROTEIN_TARGET+" g";
-  setRing("ringProLog",pro/PROTEIN_TARGET);
+  var _pt2=(DB.settings&&DB.settings.proteinTarget)||PROTEIN_TARGET;
+  setRing("ringProLog",pro/_pt2);
   document.getElementById("calLogVal").textContent=(cal||0);
-  document.getElementById("calSubLog").textContent="of "+ph.cal;
-  setRing("ringCalLog",cal/ph.cal);
+  document.getElementById("calSubLog").textContent="of "+((DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250);
+  var _ct=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
+  setRing("ringCalLog",cal/_ct);
   renderNutFlags(nt);
 }
 
@@ -1382,7 +1449,8 @@ function saveWeight(){
   DB.weights=DB.weights.filter(function(x){return x.d!==todayStr();});
   DB.weights.push({d:todayStr(),w:v});
   DB.weights.sort(function(a,b){return new Date(a.d)-new Date(b.d);});
-  save();document.getElementById("inWeight").value="";renderLog();toast("Weight recorded");trySheetSync();
+  recalcCaloriesFromCurrentWeight();
+  save();document.getElementById("inWeight").value="";renderLog();toast("Weight recorded — calorie target updated");trySheetSync();
 }
 function saveRHR(){
   var v=parseInt(document.getElementById("inRHR").value);
@@ -1415,12 +1483,13 @@ function getNutTargets(){
   var ph=currentPhase();
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
   // Targets vary by goal
-  var cal=ph.cal||2250;
+  var cal=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
   var calLow=goalType==="muscle"?cal-100:cal-200;
   var calHigh=goalType==="weight_loss"?cal+150:goalType==="muscle"?cal+300:cal+200;
+  var proTarget=(DB.settings&&DB.settings.proteinTarget)||PROTEIN_TARGET;
   return {
     calLow:calLow, calHigh:calHigh,
-    proMin:PROTEIN_TARGET,
+    proMin:proTarget,
     fiberMin:25, fiberGood:35,
     sugarMax:goalType==="weight_loss"||goalType==="heart"?36:50,
     satFatMax:goalType==="heart"?13:20,
@@ -2006,7 +2075,7 @@ function loadAndShowQuote(){
 
 
 /* ============ ONBOARDING ============ */
-var OB={step:1,total:5,answers:{goal:null,exp:null,days:null,equip:null,limits:[]}};
+var OB={step:1,total:9,answers:{goal:null,exp:null,days:null,equip:null,limits:[],sex:null,age:null,heightFt:null,heightIn:null,weight:null,bodyFat:null,activity:null}};
 
 function obShow(){
   document.getElementById("onboarding").style.display="block";
@@ -2018,14 +2087,14 @@ function obHide(){
 function obRender(){
   document.getElementById("obProgress").style.width=(OB.step/OB.total*100)+"%";
   document.getElementById("obBack").style.display=OB.step>1?"block":"none";
-  document.getElementById("obNext").textContent=OB.step===OB.total?"Build My Program":"Next";
+  document.getElementById("obNext").textContent=OB.step===9?"Build My Program":"Next";
   document.getElementById("obError").textContent="";
   for(var i=1;i<=OB.total;i++){
     var el=document.getElementById("obStep"+i);
     if(el)el.style.display=i===OB.step?"block":"none";
   }
   // Re-apply selections
-  var grpMap={1:"goal",2:"exp",3:"days",4:"equip",5:"limit"};
+  var grpMap={1:"goal",2:"exp",3:"days",4:"equip",5:"limit",6:"sex",9:"activity"};
   var grp=grpMap[OB.step];
   document.querySelectorAll(".ob-opt[data-grp='"+grp+"']").forEach(function(o){
     var v=o.dataset.v;
@@ -2037,13 +2106,31 @@ function obRender(){
   });
 }
 function obNext(){
-  var grpMap={1:"goal",2:"exp",3:"days",4:"equip"};
-  if(OB.step<5){
+  var err=document.getElementById("obError");
+  err.textContent="";
+  if(OB.step===1||OB.step===2||OB.step===3||OB.step===4){
+    var grpMap={1:"goal",2:"exp",3:"days",4:"equip"};
     var grp=grpMap[OB.step];
-    if(!OB.answers[grp]){document.getElementById("obError").textContent="Please pick an option to continue.";return;}
-  }
-  if(OB.step===5){
-    if(!OB.answers.limits.length){document.getElementById("obError").textContent="Please select at least one option.";return;}
+    if(!OB.answers[grp]){err.textContent="Please pick an option to continue.";return;}
+  } else if(OB.step===5){
+    if(!OB.answers.limits.length){err.textContent="Please select at least one option.";return;}
+  } else if(OB.step===6){
+    if(!OB.answers.sex){err.textContent="Please select Male or Female.";return;}
+  } else if(OB.step===7){
+    var age=parseInt(document.getElementById("obAge").value);
+    var ft=parseInt(document.getElementById("obHeightFt").value);
+    var inc=parseInt(document.getElementById("obHeightIn").value)||0;
+    if(isNaN(age)||age<16||age>100){err.textContent="Enter a valid age (16–100).";return;}
+    if(isNaN(ft)||ft<4||ft>7){err.textContent="Enter height in feet (4–7).";return;}
+    if(isNaN(inc)||inc<0||inc>11){err.textContent="Enter inches (0–11).";return;}
+    OB.answers.age=age;OB.answers.heightFt=ft;OB.answers.heightIn=inc;
+  } else if(OB.step===8){
+    var wt=parseFloat(document.getElementById("obWeight").value);
+    var bf=parseFloat(document.getElementById("obBodyFat").value);
+    if(isNaN(wt)||wt<80||wt>500){err.textContent="Enter a valid weight in pounds.";return;}
+    OB.answers.weight=wt;OB.answers.bodyFat=isNaN(bf)?null:bf;
+  } else if(OB.step===9){
+    if(!OB.answers.activity){err.textContent="Please select an activity level.";return;}
     obFinish();return;
   }
   OB.step++;obRender();
@@ -2088,30 +2175,61 @@ document.addEventListener("click",function(e){
 
 function obFinish(){
   var a=OB.answers;
-  // Save goal type
   DB.goal=DB.goal||{};
   DB.goal.type=a.goal;
-  // Generate program
-  var prog=generateProgram(a);
-  DB.program=prog;
-  // Save start date as today
-  var td=todayStr();
-  DB.goal.startDate=td;
-  // Set protein target based on experience + goal
-  var bw=DB.weights.length?DB.weights[DB.weights.length-1].w:180;
-  DB.settings.proteinTarget=calcProteinTarget(a,bw);
-  // Save onboarding answers for future program upgrades
+  // Save bio data
+  DB.settings.sex=a.sex;
+  DB.settings.age=a.age;
+  DB.settings.heightFt=a.heightFt;
+  DB.settings.heightIn=a.heightIn||0;
+  DB.settings.bodyFat=a.bodyFat||null;
+  DB.settings.activity=parseFloat(a.activity)||1.375;
   DB.settings.exp=a.exp;
   DB.settings.equip=a.equip;
   DB.settings.limits=a.limits;
   DB.settings.maxDays=parseInt(a.days);
-  // Mark onboarded
+  // Log starting weight
+  if(a.weight){
+    var td2=todayStr();
+    DB.weights=DB.weights.filter(function(x){return x.d!==td2;});
+    DB.weights.push({d:td2,w:parseFloat(a.weight)});
+    DB.weights.sort(function(aa,bb){return new Date(aa.d)-new Date(bb.d);});
+  }
+  // Calculate BMR/TDEE/calories
+  var wt=a.weight||lastWeight()||180;
+  var bmr=calcBMR(wt,a.heightFt||5,a.heightIn||10,a.age||40,a.sex||"male",a.bodyFat||null);
+  var tdee=calcTDEE(bmr,a.activity||1.375);
+  var ct=calcCalorieTarget(tdee,a.goal);
+  DB.settings.currentBMR=bmr;
+  DB.settings.currentTDEE=tdee;
+  DB.settings.currentCalTarget=ct.cal;
+  DB.settings.proteinTarget=calcProteinFromLeanMass(wt,a.bodyFat||null,a.goal);
+  // Generate program with calculated calorie targets per phase
+  var prog=generateProgram(a);
+  if(prog.phases){
+    prog.phases.forEach(function(ph){
+      if(a.goal==="weight_loss"){
+        if(ph.key==="P0")ph.cal=ct.cal+100;
+        else if(ph.key==="P1")ph.cal=ct.cal;
+        else ph.cal=Math.round(tdee*0.95);
+      } else if(a.goal==="muscle"){
+        if(ph.key==="P0")ph.cal=tdee+100;
+        else if(ph.key==="P1")ph.cal=tdee+250;
+        else ph.cal=tdee+350;
+      } else if(a.goal==="strength"){
+        ph.cal=tdee+150;
+      } else {
+        ph.cal=ct.cal;
+      }
+    });
+  }
+  DB.program=prog;
+  DB.goal.startDate=todayStr();
   DB.settings.hasOnboarded=true;
   save();
   obHide();
-  // Reload home
   renderHome();
-  toast("Program built. Head to Train to get started.");
+  toast("Program built — BMR "+bmr+" / Target "+ct.cal+" kcal/day");
 }
 
 function calcProteinTarget(a,bw){
@@ -2684,6 +2802,64 @@ function dismissInstallBanner(){
   try{localStorage.setItem("hp_install_dismissed","1");}catch(e){}
 }
 
+
+/* ============ CALORIE ENGINE ============ */
+function lbsToKg(lbs){return lbs*0.453592;}
+function feetInchesToCm(ft,inc){return((ft*12)+inc)*2.54;}
+
+function calcBMR(weightLbs,heightFt,heightIn,age,sex,bodyFatPct){
+  var wKg=lbsToKg(weightLbs);
+  var hCm=feetInchesToCm(heightFt,heightIn||0);
+  var mifflin=sex==="male"?(10*wKg)+(6.25*hCm)-(5*age)+5:(10*wKg)+(6.25*hCm)-(5*age)-161;
+  if(bodyFatPct&&bodyFatPct>3&&bodyFatPct<60){
+    var lbmKg=wKg*(1-bodyFatPct/100);
+    var kma=370+(21.6*lbmKg);
+    return Math.round(kma*0.6+mifflin*0.4);
+  }
+  return Math.round(mifflin);
+}
+
+function calcTDEE(bmr,mult){return Math.round(bmr*parseFloat(mult||1.375));}
+
+function calcCalorieTarget(tdee,goalType){
+  if(goalType==="weight_loss")return {cal:Math.max(1200,tdee-450),note:"Deficit 450 kcal/day (≈1 lb/week loss)."};
+  if(goalType==="muscle")return {cal:tdee+250,note:"Lean bulk surplus 250 kcal."};
+  if(goalType==="strength")return {cal:tdee+150,note:"Small surplus 150 kcal."};
+  return {cal:tdee,note:"Maintenance calories."};
+}
+
+function calcProteinFromLeanMass(weightLbs,bodyFatPct,goalType){
+  var leanLbs=bodyFatPct&&bodyFatPct>3&&bodyFatPct<60?weightLbs*(1-bodyFatPct/100):weightLbs*0.80;
+  if(goalType==="muscle"||goalType==="strength")return Math.round(leanLbs*1.0);
+  if(goalType==="weight_loss"||goalType==="recomp")return Math.round(leanLbs*0.95);
+  return Math.round(leanLbs*0.85);
+}
+
+function recalcCaloriesFromCurrentWeight(){
+  var s=DB.settings||{};
+  if(!s.hasOnboarded||!s.sex||!s.age||!s.heightFt)return;
+  var lw=lastWeight();if(!lw)return;
+  var bmr=calcBMR(lw,s.heightFt,s.heightIn||0,s.age,s.sex,s.bodyFat||null);
+  var tdee=calcTDEE(bmr,s.activity||1.375);
+  var goalType=(DB.goal&&DB.goal.type)||"custom";
+  var ct=calcCalorieTarget(tdee,goalType);
+  DB.settings.currentBMR=bmr;
+  DB.settings.currentTDEE=tdee;
+  DB.settings.currentCalTarget=ct.cal;
+  DB.settings.proteinTarget=calcProteinFromLeanMass(lw,s.bodyFat||null,goalType);
+  // Update current phase cal target too
+  if(DB.program&&DB.program.phases){
+    var ph=currentPhase();
+    if(ph){
+      if(goalType==="weight_loss"){ph.cal=ct.cal;}
+      else if(goalType==="muscle"){ph.cal=tdee+250;}
+      else if(goalType==="strength"){ph.cal=tdee+150;}
+      else{ph.cal=ct.cal;}
+    }
+  }
+  save();
+}
+
 /* ============ INIT ============ */
 load();
 setTimeout(function(){document.getElementById("splash").classList.add("hide");},3200);
@@ -2773,7 +2949,7 @@ var DIET_TIPS={"PSA": "Low-carbohydrate dietary patterns have shown slower PSA d
 "UricAcid": "High uric acid increases gout and cardiovascular risk. Reduce organ meats, shellfish, sugary drinks, and alcohol. Increase water intake to 64+ oz/day.",
 "Magnesium": "Low magnesium: increase dark leafy greens, nuts, seeds, legumes, whole grains. Magnesium supports muscle function, sleep quality, and blood pressure.",
 "FastingInsulin": "Elevated fasting insulin indicates insulin resistance. Reduce refined carbohydrates and sugar, increase fiber and protein, prioritize resistance training and Zone 2 cardio."};
-var TRAIN_TIPS={"Hemoglobin": {"low": "ANEMIA FLAG: Hemoglobin below normal. Heavy compound loading and high-intensity intervals are contraindicated until this is addressed medically. Drop all work to Zone 1 only, reduce compound loads by 20-25%, and increase RIR target by 2. Discuss with your oncologist before pushing hard again.", "critLow": "CRITICAL ANEMIA: Hemoglobin critically low. Stop high-intensity training entirely. Walk only. Contact your oncologist."}, "Hematocrit": {"low": "Low hematocrit reduces oxygen delivery to muscle. Reduce cardio intensity to Zone 1-2 only and reduce compound loads by 15%. Discuss with your oncologist."}, "Glucose": {"high": "Elevated fasting glucose: increase Zone 2 cardio to 5 sessions per week. Post-meal walks of 10+ minutes have strong evidence for glucose control. Cardio day becomes mandatory.", "critHigh": "Fasting glucose meets clinical diabetes threshold. Significantly increase aerobic volume. Discuss with your doctor."}, "HbA1c": {"high": "Elevated HbA1c: aerobic exercise is the most effective intervention. Add one extra Zone 2 cardio session per week and make the mid-week cardio day mandatory. Target 200+ minutes of Zone 2 weekly.", "critHigh": "HbA1c at diabetic threshold. Significantly increase aerobic volume. Discuss with your doctor before continuing current program."}, "EstAvgGlucose": {"high": "Increase Zone 2 cardio emphasis. Make cardio day mandatory."}, "TotalCholesterol": {"high": "Elevated cholesterol: resistance training is the strongest exercise intervention for lipids. Prioritize lifting days over substitutions.", "critHigh": "High cholesterol: maintain all resistance days without fail."}, "LDL": {"high": "Elevated LDL: resistance training is your most effective exercise tool. Do not skip lifting days.", "critHigh": "High LDL: prioritize resistance days. Discuss with your doctor as statin therapy may be indicated."}, "HDL": {"low": "Low HDL: aerobic exercise is the most effective exercise intervention for raising HDL. Increase Zone 2 cardio minutes and do not skip the cardio recovery day.", "critLow": "Critically low HDL: make all cardio sessions mandatory and discuss cardiovascular risk with your doctor given your ADT status."}, "Triglycerides": {"high": "Elevated triglycerides: both cardio and resistance training help, but dietary carbohydrate reduction has the strongest evidence. Maintain full training program.", "critHigh": "Very high triglycerides: discuss with your doctor. Maintain training but do not increase intensity."},
+var TRAIN_TIPS={"Hemoglobin": {"low": "ANEMIA FLAG: Hemoglobin below normal. Heavy compound loading and high-intensity intervals are contraindicated until this is addressed medically. Drop all work to Zone 1 only, reduce compound loads by 20-25%, and increase RIR target by 2. Discuss with your oncologist before pushing hard again.", "critLow": "CRITICAL ANEMIA: Hemoglobin critically low. Stop high-intensity training entirely. Walk only. Contact your oncologist."}, "Hematocrit": {"low": "Low hematocrit reduces oxygen delivery to muscle. Reduce cardio intensity to Zone 1-2 only and reduce compound loads by 15%. Discuss with your oncologist."}, "Glucose": {"high": "Elevated fasting glucose: increase Zone 2 cardio to 5 sessions per week. Post-meal walks of 10+ minutes have strong evidence for glucose control. Cardio day becomes mandatory.", "critHigh": "Fasting glucose meets clinical diabetes threshold. Significantly increase aerobic volume. Discuss with your doctor."}, "HbA1c": {"high": "Elevated HbA1c: aerobic exercise is the most effective intervention. Add one extra Zone 2 cardio session per week and make the mid-week cardio day mandatory. Target 200+ minutes of Zone 2 weekly.", "critHigh": "HbA1c at diabetic threshold. Significantly increase aerobic volume. Discuss with your doctor before continuing current program."}, "EstAvgGlucose": {"high": "Increase Zone 2 cardio emphasis. Make cardio day mandatory."}, "TotalCholesterol": {"high": "Elevated cholesterol: resistance training is the strongest exercise intervention for lipids. Prioritize lifting days over substitutions.", "critHigh": "High cholesterol: maintain all resistance days without fail."}, "LDL": {"high": "Elevated LDL: resistance training is your most effective exercise tool. Do not skip lifting days.", "critHigh": "High LDL: prioritize resistance days. Discuss with your doctor as statin therapy may be indicated."}, "HDL": {"low": "Low HDL: aerobic exercise is the most effective exercise intervention for raising HDL. Increase Zone 2 cardio minutes and do not skip the cardio recovery day.", "critLow": "Critically low HDL: make all cardio sessions mandatory and discuss cardiovascular risk with your doctor."}, "Triglycerides": {"high": "Elevated triglycerides: both cardio and resistance training help, but dietary carbohydrate reduction has the strongest evidence. Maintain full training program.", "critHigh": "Very high triglycerides: discuss with your doctor. Maintain training but do not increase intensity."},
 "TSH": {"high": "Elevated TSH suggests hypothyroidism, which reduces aerobic capacity and recovery. Reduce training volume by 20-30% until thyroid function is treated. Discuss with your doctor.", "critHigh": "Severely elevated TSH: limit to light movement only. Discuss with your doctor urgently.", "low": "Suppressed TSH may suggest hyperthyroidism. Avoid high-intensity training until evaluated. Elevated heart rate risk."},
 "VitaminD": {"low": "Low Vitamin D impairs muscle function, bone density, and recovery. Reduce heavy loading until levels normalize. Bone-density exercises (squat, deadlift, OHP) remain important but increase RIR target by 1.", "critLow": "Critically low Vitamin D: high fracture risk. Reduce bone-loading exercises until levels are treated. Discuss with your doctor."},
 "SerumIron": {"low": "Low iron reduces oxygen delivery and endurance capacity. Reduce cardio intensity to Zone 1-2 only. Treat the deficiency before returning to full training."},
