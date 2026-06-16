@@ -65,6 +65,13 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ring-val{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1;}
 .ring-val.sm{font-size:30px;}
 .ring-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);margin-top:5px;font-weight:600;}
+/* TOGGLE SWITCH */
+.toggle-sw{display:inline-flex;align-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.toggle-sw input{display:none;}
+.toggle-track{width:40px;height:22px;background:var(--border);border-radius:11px;position:relative;transition:background .2s;}
+.toggle-sw input:checked + .toggle-track{background:var(--red);}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.toggle-sw input:checked + .toggle-track .toggle-thumb{left:21px;}
 .ring-sub{font-size:10px;color:var(--faint);margin-top:2px;}
 
 .hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;}
@@ -249,10 +256,10 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
         </svg>
         <div class="ring-center">
           <div class="ring-val" id="cdDays">&mdash;</div>
-          <div class="ring-lbl">Days to Apr 14</div>
+          <div class="ring-lbl" id="cdLabel">Days to Goal</div>
         </div>
       </div>
-      <div class="hero-date">Sunday, April 14, 2027 &mdash; ADT Ends</div>
+      <div class="hero-date" id="heroDate">&mdash;</div>
     </div>
 
     <div class="ringrow">
@@ -315,7 +322,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="note" id="dayNote"></div>
     </div>
     <div class="sec">
-      <div class="sec-h">ADT Energy Flag</div>
+      <div class="sec-h">Energy Flag</div>
       <div class="choices" data-grp="fatigue"><div class="choice" data-v="good">Feeling Good</div><div class="choice" data-v="mod">Moderate</div><div class="choice" data-v="low">Low Energy</div></div>
       <div class="note" id="fatigueNote" style="margin-top:11px;"></div>
     </div>
@@ -346,7 +353,16 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 
     <div class="sec">
       <div class="sec-h">Blood Pressure <span class="tag" id="bpStatusTag"></span></div>
-      <div class="note dim" style="margin-bottom:10px;">Log both numbers each time you measure. The 14-day average drives workout adjustments — one reading never changes your program.</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="note dim" style="margin:0;max-width:78%;">Log both numbers each time you measure. The 14-day average drives workout adjustments — one reading never changes your program.</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <label class="toggle-sw" id="bpPromptToggleWrap" title="Daily BP prompt on/off">
+            <input type="checkbox" id="bpPromptToggle" onchange="saveBPPromptPref(this.checked)">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <span style="font-size:10px;color:var(--faint);letter-spacing:.5px;">DAILY PROMPT</span>
+        </div>
+      </div>
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
         <div style="flex:1;min-width:80px;">
           <label class="fld">Systolic (top)</label>
@@ -378,14 +394,25 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
           </svg><div class="ring-center"><div class="ring-val sm" id="calLogVal">0</div><div class="ring-sub" id="calSubLog">of 2250</div><div class="ring-lbl">kcal</div></div></div>
         </div>
       </div>
-      <label class="fld">Calories (from MyNetDiary)</label>
+      <label class="fld">Calories</label>
       <input type="number" id="inCal" inputmode="numeric" placeholder="total kcal">
       <div class="row3" style="margin-top:6px;">
-        <div><label class="fld">Protein g</label><input type="number" id="inPro" inputmode="numeric" placeholder="210"></div>
+        <div><label class="fld">Protein g</label><input type="number" id="inPro" inputmode="numeric" placeholder="g"></div>
         <div><label class="fld">Carbs g</label><input type="number" id="inCarb" inputmode="numeric" placeholder="g"></div>
         <div><label class="fld">Fat g</label><input type="number" id="inFat" inputmode="numeric" placeholder="g"></div>
       </div>
-      <button class="btn sm" onclick="saveNutrition()">Record Day</button>
+      <div class="row3" style="margin-top:6px;">
+        <div><label class="fld">Fiber g</label><input type="number" id="inFiber" inputmode="numeric" placeholder="g"></div>
+        <div><label class="fld">Sugar g</label><input type="number" id="inSugar" inputmode="numeric" placeholder="g"></div>
+        <div><label class="fld">Sat Fat g</label><input type="number" id="inSatFat" inputmode="numeric" placeholder="g"></div>
+      </div>
+      <div class="row3" style="margin-top:6px;">
+        <div><label class="fld">Sodium mg</label><input type="number" id="inSodium" inputmode="numeric" placeholder="mg"></div>
+        <div><label class="fld">Water oz</label><input type="number" id="inWater" inputmode="numeric" placeholder="oz"></div>
+        <div><label class="fld">Veg Servings</label><input type="number" id="inVeg" inputmode="numeric" placeholder="0"></div>
+      </div>
+      <button class="btn sm" style="margin-top:10px;" onclick="saveNutrition()">Record Day</button>
+      <div id="nutFlagArea" style="margin-top:12px;"></div>
     </div>
   </div>
 
@@ -419,15 +446,37 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 
   <!-- SETUP -->
   <div class="view" id="v-setup">
+
     <div class="sec">
-      <div class="sec-h">Creatine Reminder <span class="tag">6:00 PM</span></div>
-      <div class="note">PWAs can't push reliable iPhone alerts alone. This adds a repeating daily 6 PM Calendar reminder in one tap.</div>
-      <button class="btn gold" onclick="addCreatineReminder()">Add Daily 6 PM Reminder</button>
-      <small class="help">Tap "Add All" when iOS asks. Dose: 3&ndash;5 g creatine monohydrate.</small>
+      <div class="sec-h">Your Goal</div>
+      <div class="note dim" style="margin-bottom:12px;">Set your primary goal and target date. This drives the countdown ring and milestone list on the home screen.</div>
+      <label class="fld">Primary Goal</label>
+      <select id="inGoalType" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:14px;margin-bottom:12px;">
+        <option value="weight_loss">Lose Weight</option>
+        <option value="muscle">Gain Muscle</option>
+        <option value="vo2max">Grow VO2 Max</option>
+        <option value="heart">Heart Health</option>
+        <option value="strength">Maximize Strength</option>
+        <option value="recomp">Body Recomposition</option>
+        <option value="endurance">Build Endurance</option>
+        <option value="custom">Custom</option>
+      </select>
+      <label class="fld">Goal Name / Description</label>
+      <input type="text" id="inGoalName" placeholder="e.g. Get to 200 lbs, Run a 5K, Hit 315 deadlift" style="margin-bottom:12px;">
+      <label class="fld">Target Date</label>
+      <input type="date" id="inGoalDate" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:14px;width:100%;">
+      <label class="fld">Start Date</label>
+      <input type="date" id="inGoalStart" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:14px;width:100%;">
+      <button class="btn sm" onclick="saveGoalSettings()">Save Goal</button>
+      <div class="note dim" id="goalSettingsEcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
-      <div class="sec-h">Lab Note</div>
-      <div class="note" id="creatineLabNote"></div>
+      <div class="sec-h">Milestones</div>
+      <div class="note dim" style="margin-bottom:10px;">Add up to 6 personal milestones. They appear on the home screen and check off automatically when possible, or you can check them off manually.</div>
+      <div id="milestoneEditor"></div>
+      <button class="btn sm ghost" style="margin-top:10px;" onclick="addMilestoneField()">+ Add Milestone</button>
+      <button class="btn sm" style="margin-top:10px;margin-left:8px;" onclick="saveMilestones()">Save Milestones</button>
+      <div class="note dim" id="milestoneEcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
       <div class="sec-h">Estimated 1-Rep Maxes</div>
@@ -436,15 +485,22 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div id="ormBtnRow"><button class="btn sm ghost" onclick="saveOneRMs()">Save 1RMs</button></div>
     </div>
     <div class="sec">
+      <div class="sec-h">Your Name</div>
+      <div class="note dim" style="margin-bottom:8px;">Used to identify your data in Google Sheets. Each person gets their own tab when syncing.</div>
+      <input type="text" id="inUserName" placeholder="e.g. Andrew" style="margin-bottom:8px;">
+      <button class="btn sm" onclick="saveUserName()">Save Name</button>
+      <div class="note dim" id="userNameEcho" style="margin-top:6px;"></div>
+    </div>
+    <div class="sec">
       <div class="sec-h">Medication Stack</div>
       <div class="note dim" style="margin-bottom:8px;">Your current medications. Keeps workout flags in context. Update when prescriptions change.</div>
-      <textarea id="inMedStack" rows="6" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;" placeholder="e.g. Orgovyx (relugolix) 120mg daily&#10;Abiraterone 1000mg daily&#10;Prednisone 5mg BID&#10;Duloxetine 60mg daily&#10;Phentermine 37.5mg daily"></textarea>
+      <textarea id="inMedStack" rows="6" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;" placeholder="e.g. Metformin 500mg twice daily&#10;Lisinopril 10mg daily&#10;Atorvastatin 20mg nightly&#10;Vitamin D 2000 IU daily"></textarea>
       <button class="btn sm" style="margin-top:8px;" onclick="saveMedStack()">Save Medications</button>
       <div class="note dim" id="medStackEcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
       <div class="sec-h">Google Sheets Sync</div>
-      <div class="note dim">Optional backup &amp; cross-device. Works fully offline without it.</div>
+      <div class="note dim">Optional backup &amp; cross-device. Works fully offline without it. Each user syncs to their own tab — set your name above first.</div>
       <label class="fld">Apps Script URL</label>
       <input type="text" id="inSheetUrl" placeholder="https://script.google.com/macros/s/.../exec">
       <div class="btn-row" style="margin-top:12px;">
@@ -528,14 +584,35 @@ var PHASES=[
 
 /* exercise: name, sets, repLow, repHigh, key(for 1RM lookup or null), bone */
 var DEFAULT_1RM={
- "Hammer Chest Press":350,"Hammer Iso-Lateral Row":163,"Hammer Lat Pulldown":300,"Reverse Hack Squat":700,
- "Hammer Iso Shoulder Press":163,"Standing Shrugs":153,"Standing Calf Raise":833,"Hammer Incline Press":236,
- "Pec Deck":180,"T-Bar Row":87,"Triceps Press Machine":225,"DB Lateral Raise":37,"EZ-Bar Curl":74,
- "Leg Extension":120,"Incline DB Curl":55,"High-to-Low Cable Fly":42,"Cable Lateral Raise":20,"Preacher Curl":116,
- "Barbell RDL":256,"Leg Press":650,"Cable Tricep Pressdown":93,"Incline DB Chest Press":87,"DB Shoulder Press":56,
- "Cable Pullovers":154,"Bayesian Cable Curl":28,"Kelso Shrugs":118,"Overhead Tricep Cable Ext":48,
- "DB Bench Press":75,"Hammer Iso Front Lat Pulldown":290,"Seated Lateral Raise":31,"DB Skull Crusher":73,
- "Barbell Back Squat":0,"Barbell Overhead Press":0,"Trap-Bar Deadlift":0,"Seated Leg Curl":120
+ // Chest
+ "Hammer Chest Press":0,"Hammer Incline Press":0,"Incline DB Chest Press":0,"DB Bench Press":0,
+ "Pec Deck":0,"High-to-Low Cable Fly":0,"Low-to-High Cable Fly":0,"Cable Crossover":0,
+ "Barbell Bench Press":0,"Close-Grip Bench Press":0,"Dips":0,
+ // Back
+ "Hammer Iso-Lateral Row":0,"Hammer Lat Pulldown":0,"Hammer Iso Front Lat Pulldown":0,
+ "T-Bar Row":0,"Barbell Row":0,"Seated Cable Row":0,"Single-Arm DB Row":0,
+ "Cable Straight-Arm Pulldown":0,"Cable Pullovers":0,"Kelso Shrugs":0,"Standing Shrugs":0,
+ "Face Pull":0,"Chest-Supported Row":0,"Pull-Up":0,"Chin-Up":0,
+ // Shoulders
+ "Hammer Iso Shoulder Press":0,"DB Shoulder Press":0,"Barbell Overhead Press":0,
+ "DB Lateral Raise":0,"Cable Lateral Raise":0,"Seated Lateral Raise":0,
+ "Rear Delt Fly":0,"Reverse Pec Deck":0,"Upright Row":0,"Arnold Press":0,
+ // Arms
+ "EZ-Bar Curl":0,"Incline DB Curl":0,"Preacher Curl":0,"Bayesian Cable Curl":0,
+ "Hammer Curl":0,"Concentration Curl":0,"Cable Curl":0,
+ "Cable Tricep Pressdown":0,"DB Skull Crusher":0,"Overhead Tricep Cable Ext":0,
+ "Triceps Press Machine":0,"Close-Grip DB Press":0,"Tricep Kickback":0,
+ // Legs
+ "Barbell Back Squat":0,"Trap-Bar Deadlift":0,"Barbell RDL":0,
+ "Reverse Hack Squat":0,"Leg Press":0,"Leg Extension":0,"Seated Leg Curl":0,
+ "Lying Leg Curl":0,"Standing Calf Raise":0,"Seated Calf Raise":0,
+ "Bulgarian Split Squat":0,"Goblet Squat":0,"Hip Thrust":0,"Glute Kickback":0,
+ "Abductor Machine":0,"Adductor Machine":0,"Nordic Curl":0,
+ // Core
+ "Cable Crunch":0,"Decline Crunch":0,"Hanging Leg Raise":0,"Ab Wheel Rollout":0,
+ "Pallof Press":0,"Plank":0,"Side Plank":0,"Landmine Rotation":0,
+ // Functional / Cardio-adjacent
+ "Sled Push":0,"Farmers Carry":0,"Battle Ropes":0,"Box Jump":0,"Step-Up":0
 };
 
 /* Weekly templates. Day idx 0..6 Mon..Sun */
@@ -609,7 +686,7 @@ var SPLIT_HEAVY=[
 ];
 
 /* ============ STATE ============ */
-var DB={weights:[],nutrition:[],rhr:[],bp:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:"",medStack:""}};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -672,8 +749,8 @@ function nav(v){
   if(v==="prog")renderProg();
   if(v==="setup")renderSetup();
   if(v==="labs"){renderLabs();}
-  if(v==="log"){renderBPSection();}
-  if(v==="setup"){loadMedStack();}
+  if(v==="log"){renderBPSection();loadBPPromptPref();}
+  if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();}
   window.scrollTo(0,0);
   el.style.animation="none"; void el.offsetWidth;
   el.style.animation="slideIn"+(dir>0?"R":"L")+" .34s cubic-bezier(.22,.9,.3,1)";
@@ -684,11 +761,21 @@ function nav(v){
 /* ============ HOME ============ */
 function renderHome(){
   var t=new Date();t.setHours(0,0,0,0);
-  var days=Math.ceil((END_DATE-t)/(1000*60*60*24));
-  countUp("cdDays",days,0,"");
-  var total=(END_DATE-START_DATE),elapsed=(t-START_DATE);
+  // Goal-driven countdown
+  var g=DB.goal||{};
+  var gTarget=g.targetDate?new Date(g.targetDate+"T00:00:00"):END_DATE;
+  var gStart=g.startDate?new Date(g.startDate+"T00:00:00"):START_DATE;
+  var gName=g.name||"Goal";
+  var days=Math.ceil((gTarget-t)/(1000*60*60*24));
+  countUp("cdDays",Math.max(0,days),0,"");
+  var cdLbl=document.getElementById("cdLabel");
+  if(cdLbl)cdLbl.textContent="Days to "+gName.substring(0,18);
+  var hd=document.getElementById("heroDate");
+  if(hd)hd.textContent=gTarget.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})+(gName?" — "+gName:"");
+  var total=Math.max(1,gTarget-gStart),elapsed=t-gStart;
   var cpct=Math.max(0,Math.min(1,elapsed/total));
   setRing("ringCampaign",cpct);
+  // Weight ring — only meaningful for weight_loss / recomp goals
   var lw=lastWeight();
   document.getElementById("hdrWeight").textContent=lw?lw.toFixed(1):"\u2014";
   var startW=DB.weights.length?DB.weights[0].w:lw;
@@ -699,18 +786,18 @@ function renderHome(){
     var wpct=need>0?Math.max(0,Math.min(1,lost/need)):0;
     setRing("ringWeight",wpct);
     if(DB.weights.length>=2){
-      var first=DB.weights[0], last=DB.weights[DB.weights.length-1];
-      var wkSpan=Math.max(1,(new Date(last.d)-new Date(first.d))/(1000*60*60*24*7));
-      var rate=(first.w-last.w)/wkSpan;
-      var rem=last.w-GOAL_WEIGHT;
+      var first=DB.weights[0], last2=DB.weights[DB.weights.length-1];
+      var wkSpan=Math.max(1,(new Date(last2.d)-new Date(first.d))/(1000*60*60*24*7));
+      var rate=(first.w-last2.w)/wkSpan;
+      var rem=last2.w-GOAL_WEIGHT;
       if(rate>0.05){
         var wksLeft=rem/rate;var proj=new Date();proj.setDate(proj.getDate()+Math.round(wksLeft*7));
-        document.getElementById("paceNote").textContent="Losing ~"+rate.toFixed(2)+" lb/wk. At this pace you reach 200 around "+proj.toLocaleDateString('en-US',{month:'short',year:'numeric'})+". Target: 1\u20131.5 lb/wk.";
+        document.getElementById("paceNote").textContent="Losing ~"+rate.toFixed(2)+" lb/wk \u2014 on pace to reach "+GOAL_WEIGHT+" lb around "+proj.toLocaleDateString("en-US",{month:"short",year:"numeric"})+". Target: 1\u20131.5 lb/wk.";
       } else {document.getElementById("paceNote").textContent="Not enough downward trend yet \u2014 log daily and trust the weekly average.";}
-    } else {document.getElementById("paceNote").textContent="Keep logging \u2014 your pace projection appears after a few weigh-ins.";}
+    } else {document.getElementById("paceNote").textContent="Keep logging \u2014 pace projection appears after a few weigh-ins.";}
   } else {
     document.getElementById("homeToGo").textContent="\u2014";
-    document.getElementById("paceNote").textContent="Log your first weigh-in to start tracking the descent to 200.";
+    document.getElementById("paceNote").textContent="Log your first weigh-in to start tracking.";
   }
   var nt=todayNutrition();var pro=nt?nt.pro:0;
   countUp("homePro",pro,0,"");
@@ -725,20 +812,95 @@ function renderHome(){
   renderMilestones();
 }
 
-function renderMilestones(){
+function defaultMilestones(goalType){
   var lw=lastWeight();
   var startW=DB.weights.length?DB.weights[0].w:null;
-  var miles=[
-    {t:"Begin the campaign",done:DB.weights.length>0||DB.workouts.length>0,d:"Jun 2026"},
-    {t:"First 10 lbs down",done:startW&&lw&&(startW-lw)>=10,d:""},
-    {t:"Phase 2 \u2014 Strength Build",done:new Date()>=new Date("2026-10-19"),d:"Oct 2026"},
-    {t:"Break 220 lbs",done:lw&&lw<=220,d:""},
-    {t:"Phase 3 \u2014 Peak",done:new Date()>=new Date("2027-02-08"),d:"Feb 2027"},
-    {t:"Reach 200 lbs",done:lw&&lw<=200,d:"Goal"},
-    {t:"ADT complete",done:new Date()>=END_DATE,d:"Apr 14 2027"}
-  ];
+  var now=new Date();
+  if(goalType==="weight_loss"){
+    return [
+      {t:"First weigh-in logged",auto:function(){return DB.weights.length>0;},d:""},
+      {t:"First 5 lbs down",auto:function(){return startW&&lw&&(startW-lw)>=5;},d:""},
+      {t:"First 10 lbs down",auto:function(){return startW&&lw&&(startW-lw)>=10;},d:""},
+      {t:"Halfway to goal weight",auto:function(){return false;},d:""},
+      {t:"Goal weight reached",auto:function(){return false;},d:"Goal"}
+    ];
+  } else if(goalType==="muscle"){
+    return [
+      {t:"First workout logged",auto:function(){return DB.workouts.length>0;},d:""},
+      {t:"First PR set",auto:function(){return Object.keys(DB.prs||{}).length>0;},d:""},
+      {t:"4 weeks consistent",auto:function(){return DB.workouts.length>=16;},d:""},
+      {t:"Bodyweight on the bar",auto:function(){return false;},d:""},
+      {t:"Phase 2 strength block begins",auto:function(){return false;},d:""}
+    ];
+  } else if(goalType==="vo2max"){
+    return [
+      {t:"First cardio session logged",auto:function(){return DB.workouts.some(function(w){return w.cardioMin>0;});},d:""},
+      {t:"10 cardio sessions complete",auto:function(){return DB.workouts.filter(function(w){return w.cardioMin>0;}).length>=10;},d:""},
+      {t:"30 min Zone 2 without stopping",auto:function(){return false;},d:""},
+      {t:"45 min Zone 2 session",auto:function(){return false;},d:""},
+      {t:"VO2 Max retest — beat baseline",auto:function(){return false;},d:""}
+    ];
+  } else if(goalType==="heart"){
+    return [
+      {t:"BP baseline established (5 readings)",auto:function(){return (DB.bp||[]).length>=5;},d:""},
+      {t:"14-day BP average under 140/90",auto:function(){var a=bp14dayAvg();return a&&a.s<140&&a.d<90;},d:""},
+      {t:"14-day BP average under 130/80",auto:function(){var a=bp14dayAvg();return a&&a.s<130&&a.d<80;},d:""},
+      {t:"Resting HR below 60 bpm",auto:function(){return DB.rhr.length&&DB.rhr[DB.rhr.length-1].v<60;},d:""},
+      {t:"8 weeks consistent Zone 2",auto:function(){return false;},d:""}
+    ];
+  } else if(goalType==="strength"){
+    return [
+      {t:"All three 1RMs established",auto:function(){var o=DB.oneRM||{};return o["Barbell Back Squat"]>0&&o["Barbell Deadlift"]>0&&o["Barbell Bench Press"]>0;},d:""},
+      {t:"First PR logged",auto:function(){return Object.keys(DB.prs||{}).length>0;},d:""},
+      {t:"Squat PR broken",auto:function(){return false;},d:""},
+      {t:"Deadlift PR broken",auto:function(){return false;},d:""},
+      {t:"Goal total hit",auto:function(){return false;},d:"Goal"}
+    ];
+  } else if(goalType==="recomp"){
+    return [
+      {t:"First weigh-in logged",auto:function(){return DB.weights.length>0;},d:""},
+      {t:"First PR logged",auto:function(){return Object.keys(DB.prs||{}).length>0;},d:""},
+      {t:"4 weeks hitting protein target",auto:function(){return false;},d:""},
+      {t:"Strength up, weight neutral",auto:function(){return false;},d:""},
+      {t:"8 weeks consistent",auto:function(){return DB.workouts.length>=32;},d:""}
+    ];
+  } else if(goalType==="endurance"){
+    return [
+      {t:"First session logged",auto:function(){return DB.workouts.length>0;},d:""},
+      {t:"10 sessions complete",auto:function(){return DB.workouts.length>=10;},d:""},
+      {t:"30 min continuous cardio",auto:function(){return false;},d:""},
+      {t:"60 min continuous cardio",auto:function(){return false;},d:""},
+      {t:"Event completed",auto:function(){return false;},d:"Goal"}
+    ];
+  } else {
+    return [
+      {t:"First session logged",auto:function(){return DB.workouts.length>0;},d:""},
+      {t:"Two weeks consistent",auto:function(){return DB.workouts.length>=8;},d:""},
+      {t:"One month in",auto:function(){return DB.workouts.length>=20;},d:""},
+      {t:"Milestone 4",auto:function(){return false;},d:""},
+      {t:"Goal reached",auto:function(){return false;},d:"Goal"}
+    ];
+  }
+}
+
+function renderMilestones(){
+  var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
+  // Use custom milestones if saved, else generate defaults
+  var saved=DB.milestones&&DB.milestones.length?DB.milestones:null;
+  var defs=defaultMilestones(goalType);
+  var miles;
+  if(saved){
+    miles=saved.map(function(m){
+      // try to find matching auto-check in defs
+      var match=defs.find(function(d){return d.t===m.t;});
+      var autoDone=match&&match.auto?match.auto():false;
+      return {t:m.t,done:m.done||autoDone,d:m.d||""};
+    });
+  } else {
+    miles=defs.map(function(m){return {t:m.t,done:m.auto?m.auto():false,d:m.d};});
+  }
   document.getElementById("mileList").innerHTML=miles.map(function(m){
-    return '<div class="mile '+(m.done?"done":"")+'"><span class="dot"></span><span class="mt">'+m.t+'</span><span class="md">'+(m.done?"\u2713 ":"")+m.d+'</span></div>';
+    return '<div class="mile '+(m.done?"done":"")+'"><span class="dot"></span><span class="mt" style="color:'+(m.done?"var(--ink)":"var(--fg)")+';">'+m.t+'</span><span class="md">'+(m.done?"\u2713":"")+(m.d?" "+m.d:"")+'</span></div>';
   }).join("");
 }
 function saveReadiness(){
@@ -752,12 +914,15 @@ function saveReadiness(){
 /* ============ ADAPTIVE ENGINE ============ */
 var ADAPT={maxAddSets:2,maxExercises:7,bumpCap:8,unlockEvery:6};
 var ADAPT_UNLOCKS={
- "Lower A":[{n:"Seated Leg Curl",s:3,lo:12,hi:15}],
- "Upper A":[{n:"Pec Deck",s:3,lo:12,hi:15}],
- "Lower B":[{n:"Leg Extension",s:3,lo:12,hi:15}],
- "Upper B":[{n:"Cable Lateral Raise",s:3,lo:15,hi:20}],
- "Lower Heavy A":[{n:"Leg Press",s:3,lo:8,hi:8}],
- "Upper Heavy A":[{n:"Cable Tricep Pressdown",s:3,lo:12,hi:12}],
+ "Lower A":[{n:"Seated Leg Curl",s:3,lo:12,hi:15},{n:"Bulgarian Split Squat",s:3,lo:10,hi:12},{n:"Abductor Machine",s:3,lo:15,hi:20},{n:"Glute Kickback",s:3,lo:15,hi:20}],
+ "Upper A":[{n:"Pec Deck",s:3,lo:12,hi:15},{n:"Low-to-High Cable Fly",s:2,lo:15,hi:15},{n:"Cable Crossover",s:2,lo:12,hi:15},{n:"Chest-Supported Row",s:3,lo:10,hi:12},{n:"Face Pull",s:3,lo:15,hi:20}],
+ "Lower B":[{n:"Leg Extension",s:3,lo:12,hi:15},{n:"Lying Leg Curl",s:3,lo:12,hi:15},{n:"Seated Calf Raise",s:3,lo:15,hi:20},{n:"Hip Thrust",s:3,lo:8,hi:10},{n:"Adductor Machine",s:3,lo:15,hi:20}],
+ "Upper B":[{n:"Cable Lateral Raise",s:3,lo:15,hi:20},{n:"Rear Delt Fly",s:3,lo:15,hi:20},{n:"Bayesian Cable Curl",s:3,lo:12,hi:15},{n:"Hammer Curl",s:3,lo:10,hi:12},{n:"Arnold Press",s:3,lo:10,hi:12}],
+ "Optional Pump":[{n:"Cable Crunch",s:3,lo:15,hi:20},{n:"Hanging Leg Raise",s:3,lo:10,hi:15},{n:"Pallof Press",s:3,lo:12,hi:15},{n:"Cable Curl",s:3,lo:12,hi:15},{n:"Concentration Curl",s:3,lo:12,hi:15},{n:"Tricep Kickback",s:3,lo:15,hi:15}],
+ "Lower Heavy A":[{n:"Leg Press",s:3,lo:8,hi:8},{n:"Nordic Curl",s:3,lo:5,hi:8},{n:"Hip Thrust",s:3,lo:6,hi:8},{n:"Abductor Machine",s:3,lo:12,hi:15}],
+ "Upper Heavy A":[{n:"Cable Tricep Pressdown",s:3,lo:12,hi:12},{n:"Close-Grip Bench Press",s:3,lo:6,hi:8},{n:"Face Pull",s:3,lo:15,hi:20},{n:"Cable Straight-Arm Pulldown",s:3,lo:10,hi:12}],
+ "Lower Heavy B":[{n:"Seated Calf Raise",s:3,lo:12,hi:15},{n:"Lying Leg Curl",s:3,lo:8,hi:10},{n:"Adductor Machine",s:3,lo:12,hi:15}],
+ "Upper Heavy B":[{n:"Rear Delt Fly",s:3,lo:15,hi:20},{n:"Reverse Pec Deck",s:3,lo:12,hi:15},{n:"Upright Row",s:3,lo:8,hi:10},{n:"Cable Curl",s:3,lo:10,hi:12}],
  "Lower Heavy B":[{n:"Seated Leg Curl",s:3,lo:10,hi:12}],
  "Upper Heavy B":[{n:"Cable Lateral Raise",s:3,lo:15,hi:20}]
 };
@@ -932,6 +1097,7 @@ function renderLog(){
   document.getElementById("calLogVal").textContent=(cal||0);
   document.getElementById("calSubLog").textContent="of "+ph.cal;
   setRing("ringCalLog",cal/ph.cal);
+  renderNutFlags(nt);
 }
 
 function saveWeight(){
@@ -953,12 +1119,79 @@ function saveNutrition(){
   var pro=parseInt(document.getElementById("inPro").value)||0;
   var carb=parseInt(document.getElementById("inCarb").value)||0;
   var fat=parseInt(document.getElementById("inFat").value)||0;
-  if(!cal&&!pro){toast("Enter your numbers");return;}
+  var fiber=parseInt(document.getElementById("inFiber").value)||0;
+  var sugar=parseInt(document.getElementById("inSugar").value)||0;
+  var satFat=parseInt(document.getElementById("inSatFat").value)||0;
+  var sodium=parseInt(document.getElementById("inSodium").value)||0;
+  var water=parseInt(document.getElementById("inWater").value)||0;
+  var veg=parseInt(document.getElementById("inVeg").value)||0;
+  if(!cal&&!pro){toast("Enter at least calories or protein");return;}
   DB.nutrition=DB.nutrition.filter(function(x){return x.d!==todayStr();});
-  DB.nutrition.push({d:todayStr(),cal:cal,pro:pro,carb:carb,fat:fat});
+  DB.nutrition.push({d:todayStr(),cal:cal,pro:pro,carb:carb,fat:fat,
+    fiber:fiber,sugar:sugar,satFat:satFat,sodium:sodium,water:water,veg:veg});
   save();renderLog();toast("Day recorded");trySheetSync();
-  document.getElementById("inCal").value="";document.getElementById("inPro").value="";
-  document.getElementById("inCarb").value="";document.getElementById("inFat").value="";
+  ["inCal","inPro","inCarb","inFat","inFiber","inSugar","inSatFat","inSodium","inWater","inVeg"].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value="";
+  });
+}
+
+function getNutTargets(){
+  var ph=currentPhase();
+  var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
+  // Targets vary by goal
+  var cal=ph.cal||2250;
+  var calLow=goalType==="muscle"?cal-100:cal-200;
+  var calHigh=goalType==="weight_loss"?cal+150:goalType==="muscle"?cal+300:cal+200;
+  return {
+    calLow:calLow, calHigh:calHigh,
+    proMin:PROTEIN_TARGET,
+    fiberMin:25, fiberGood:35,
+    sugarMax:goalType==="weight_loss"||goalType==="heart"?36:50,
+    satFatMax:goalType==="heart"?13:20,
+    sodiumMax:goalType==="heart"||goalType==="heart"?1500:2300,
+    waterMin:64, vegMin:3
+  };
+}
+
+function renderNutFlags(nt){
+  var area=document.getElementById("nutFlagArea");
+  if(!area)return;
+  if(!nt){area.innerHTML="";return;}
+  var tgt=getNutTargets();
+  var flags=[];
+  var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
+  var goalLabel={weight_loss:"weight loss",muscle:"muscle gain",vo2max:"VO2 max",
+    heart:"heart health",strength:"strength",recomp:"recomposition",endurance:"endurance",custom:"your goal"}[goalType]||"your goal";
+
+  if(nt.cal&&nt.cal>tgt.calHigh)
+    flags.push({sev:"warn",msg:"Calories ("+nt.cal+" kcal) are above your "+goalLabel+" target of "+tgt.calHigh+" kcal."});
+  if(nt.cal&&nt.cal<tgt.calLow&&goalType!=="weight_loss")
+    flags.push({sev:"info",msg:"Calories ("+nt.cal+" kcal) may be too low for "+goalLabel+". Target is at least "+tgt.calLow+" kcal."});
+  if(nt.pro&&nt.pro<tgt.proMin)
+    flags.push({sev:"warn",msg:"Protein ("+nt.pro+"g) is below your "+tgt.proMin+"g target. Muscle retention and recovery depend on hitting this."});
+  if(nt.fiber&&nt.fiber<tgt.fiberMin)
+    flags.push({sev:"info",msg:"Fiber ("+nt.fiber+"g) is below the "+tgt.fiberMin+"g minimum. Target 25-35g daily from vegetables, legumes, and whole grains."});
+  if(nt.sugar&&nt.sugar>tgt.sugarMax)
+    flags.push({sev:"warn",msg:"Added sugar ("+nt.sugar+"g) is high for "+goalLabel+". Aim for under "+tgt.sugarMax+"g."});
+  if(nt.satFat&&nt.satFat>tgt.satFatMax)
+    flags.push({sev:"info",msg:"Saturated fat ("+nt.satFat+"g) is above the "+tgt.satFatMax+"g target. Swap in olive oil, avocado, and fish where possible."});
+  if(nt.sodium&&nt.sodium>tgt.sodiumMax)
+    flags.push({sev:"warn",msg:"Sodium ("+nt.sodium+"mg) exceeds the "+tgt.sodiumMax+"mg target. High sodium worsens blood pressure — worth watching given your BP data."});
+  if(nt.water&&nt.water<tgt.waterMin)
+    flags.push({sev:"info",msg:"Water ("+nt.water+"oz) is below 64oz. Hydration supports performance, kidney function, and blood pressure."});
+  if(nt.veg!==undefined&&nt.veg<tgt.vegMin)
+    flags.push({sev:"info",msg:"Only "+nt.veg+" vegetable serving"+(nt.veg===1?"":"s")+" logged. Aim for 3+ daily for fiber, micronutrients, and cardiovascular health."});
+
+  if(!flags.length){
+    area.innerHTML='<div class="adapt-panel" style="background:rgba(45,138,53,.12);border-color:var(--good);margin-top:0;">&#10003; Nutrition looks on target for '+goalLabel+'.</div>';
+    return;
+  }
+  area.innerHTML=flags.map(function(f){
+    var bg=f.sev==="warn"?"rgba(192,40,30,.10)":"rgba(203,162,76,.10)";
+    var bc=f.sev==="warn"?"var(--red)":"var(--gold)";
+    var icon=f.sev==="warn"?"⚠":"ℹ";
+    return '<div class="adapt-panel" style="background:'+bg+';border-color:'+bc+';margin-bottom:6px;">'+icon+' '+f.msg+'</div>';
+  }).join("");
 }
 function lastWeight(){return DB.weights.length?DB.weights[DB.weights.length-1].w:null;}
 function todayNutrition(){var t=todayStr();for(var i=0;i<DB.nutrition.length;i++)if(DB.nutrition[i].d===t)return DB.nutrition[i];return null;}
@@ -1065,7 +1298,6 @@ function renderPRs(){
 
 /* ============ SETUP ============ */
 function renderSetup(){
-  document.getElementById("creatineLabNote").innerHTML="Before any bloodwork, remind your oncology team you take creatine. It raises serum creatinine on labs in a benign way, and you don't want that misread as reduced kidney function. The Iso-100 and Premier shakes add to that creatinine load too \u2014 same harmless effect, worth one mention.";
   // 1RM editor
   var html="";
   Object.keys(DEFAULT_1RM).forEach(function(k){
@@ -1075,10 +1307,65 @@ function renderSetup(){
   document.getElementById("oneRMList").innerHTML=html;
   document.getElementById("ormBtnRow").innerHTML='<div class="btn-row"><button class="btn sm ghost" onclick="saveOneRMs()">Save 1RMs</button><button class="btn sm dark" onclick="syncORMsFromLive()">Sync from Live Data</button></div>';
   document.getElementById("inSheetUrl").value=DB.settings.sheetUrl||"";
-  // phase overview
-  document.getElementById("phaseOverview").innerHTML=PHASES.map(function(p){
-    return '<div style="margin-bottom:11px;"><span class="phase-pill">'+p.name+'</span> <span class="pill line">'+p.start.slice(5)+' \u2192 '+p.end.slice(5)+'</span><div class="note" style="margin-top:5px;">'+Math.round(p.pct[0]*100)+'\u2013'+Math.round(p.pct[1]*100)+'% 1RM \u2022 RPE '+p.rpe+' \u2022 '+p.cal+' kcal</div></div>';
-  }).join("");
+  // phase overview — goal-aware
+  var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
+  var goalName=(DB.goal&&DB.goal.name)||"";
+  var overviewHTML="";
+  // Generic goal guidance by type
+  var goalGuides={
+    weight_loss:[
+      {name:"Foundation",note:"Establish movement patterns, dial in calorie deficit, hit protein target daily. Deficit of 300-500 kcal/day. Lift to preserve muscle."},
+      {name:"Fat Loss",note:"Deficit maintained, cardio increases, strength held. Weekly weight loss 0.5-1% of bodyweight. Protein 0.8-1g/lb."},
+      {name:"Final Push",note:"Tighten deficit slightly, cardio peaks, track adherence weekly. Expect rate to slow — stay consistent."}
+    ],
+    muscle:[
+      {name:"Hypertrophy Base",note:"Moderate load 65-75% 1RM, 8-15 reps, caloric surplus 200-300 kcal. Progressive overload weekly."},
+      {name:"Volume Block",note:"Peak volume phase. Sets increase, RIR target 2-3. Maintenance or slight surplus calories."},
+      {name:"Strength Conversion",note:"Load increases, reps drop to 4-6, sets reduce. Express the muscle built in the volume block."}
+    ],
+    vo2max:[
+      {name:"Aerobic Base",note:"Zone 2 cardio 3-4x/week, 30-40 min each. Build capillary density and mitochondrial efficiency. Talk-test pace."},
+      {name:"Threshold Build",note:"Add one tempo session/week at Zone 3-4. Increase Zone 2 duration to 45-60 min. Total weekly cardio 150+ min."},
+      {name:"VO2 Max Intervals",note:"Add one VO2 max interval session (4-6 x 4 min at 90-95% max HR). Taper 2 weeks before retest."}
+    ],
+    heart:[
+      {name:"Baseline",note:"Establish resting BP and RHR baselines with daily logging. Zone 2 cardio 3x/week 30 min. Sodium under 2300mg."},
+      {name:"Consistency Block",note:"Zone 2 cardio 5x/week, 40+ min. Resistance training 2-3x/week. Monitor BP weekly average."},
+      {name:"Optimization",note:"Review 14-day BP trend. If Stage 1 or better, maintain volume. Adjust sodium, fiber, and aerobic load based on trend."}
+    ],
+    strength:[
+      {name:"Technique & Base",note:"Learn or re-establish movement on main lifts at 60-70% 1RM. High reps, RIR 4-5. Establish true 1RM estimates."},
+      {name:"Strength Block",note:"Load climbs to 80-90% 1RM. Low reps (3-5), longer rest (3-4 min). Progressive overload session to session."},
+      {name:"Peak",note:"Test week. 1-3 rep maxes. Deload the week prior. Express full strength."}
+    ],
+    recomp:[
+      {name:"Foundation",note:"Maintenance calories, high protein (1g/lb). Full resistance program. Track weight and strength — both should hold or improve."},
+      {name:"Recomp Block",note:"Minor deficit on rest days, maintenance on training days. Protein stays high. Expect slow visual change — trust the data."},
+      {name:"Assess",note:"Compare photos and strength logs to baseline. Adjust calories based on 4-week trend. Recomp is slow — 3-6 months minimum."}
+    ],
+    endurance:[
+      {name:"Base Miles",note:"Build aerobic base with easy Zone 2 work. No racing effort. Weekly volume increases 10% max."},
+      {name:"Build",note:"Add tempo and threshold sessions. Resistance training 2x/week for injury prevention. Fueling matters — no undereating."},
+      {name:"Race Prep",note:"Sport-specific simulation. Peak volume week, then 2-3 week taper. Sleep and nutrition are as important as training."}
+    ],
+    custom:[
+      {name:"Phase 1",note:"Set your baseline metrics and establish consistency. Log daily."},
+      {name:"Phase 2",note:"Build on your foundation. Increase intensity or volume based on your goal."},
+      {name:"Phase 3",note:"Push toward your target date. Review and adjust weekly."}
+    ]
+  };
+  var guide=goalGuides[goalType]||goalGuides.custom;
+  var colors=["var(--red)","var(--gold)","var(--good)"];
+  overviewHTML+='<div class="note dim" style="margin-bottom:12px;">Generic plan for <strong>'+
+    {weight_loss:"Weight Loss",muscle:"Muscle Gain",vo2max:"VO2 Max",heart:"Heart Health",strength:"Strength",recomp:"Recomposition",endurance:"Endurance",custom:"Custom Goal"}[goalType]+
+    (goalName?" — "+goalName:"")+
+    '</strong>. Set your goal dates above to make the countdown ring accurate.</div>';
+  guide.forEach(function(p,i){
+    overviewHTML+='<div style="margin-bottom:11px;display:flex;gap:10px;align-items:flex-start;">'+
+      '<span style="background:'+colors[i%3]+';color:#fff;font-size:11px;letter-spacing:1px;padding:3px 10px;border-radius:10px;white-space:nowrap;font-weight:700;">'+p.name+'</span>'+
+      '<div class="note" style="margin:0;">'+p.note+'</div></div>';
+  });
+  document.getElementById("phaseOverview").innerHTML=overviewHTML;
 }
 function saveOneRMs(){
   document.querySelectorAll('[data-orm]').forEach(function(inp){
@@ -1115,7 +1402,8 @@ function trySheetSync(){if(DB.settings.sheetUrl)syncNow(true);}
 function syncNow(quiet){
   if(!DB.settings.sheetUrl){if(!quiet)toast("Add your Sheets URL first");return;}
   var note=document.getElementById("syncNote");
-  fetch(DB.settings.sheetUrl,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(DB)})
+  var payload=Object.assign({},DB,{_userName:DB.settings.userName||"Default",_ts:new Date().toISOString()});
+  fetch(DB.settings.sheetUrl,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)})
    .then(function(){if(note)note.textContent="Last sync attempt: "+new Date().toLocaleTimeString();if(!quiet)toast("Synced to Sheets");})
    .catch(function(){if(!quiet)toast("Sync failed \u2014 check URL");});
 }
@@ -1265,8 +1553,22 @@ function loadMedStack(){
 }
 
 /* ============ BP DAILY PROMPT ============ */
+function saveBPPromptPref(on){
+  DB.settings=DB.settings||{};
+  DB.settings.bpPrompt=on;
+  save();
+  toast("Daily BP prompt "+(on?"enabled":"disabled"));
+}
+function loadBPPromptPref(){
+  var el=document.getElementById("bpPromptToggle");
+  if(!el)return;
+  var on=(DB.settings&&DB.settings.bpPrompt!==undefined)?DB.settings.bpPrompt:true;
+  el.checked=on;
+}
 function checkBPPrompt(){
   DB.bp=DB.bp||[];
+  var on=(DB.settings&&DB.settings.bpPrompt!==undefined)?DB.settings.bpPrompt:true;
+  if(!on)return;
   var todayLogged=DB.bp.some(function(x){return x.d===todayStr();});
   if(todayLogged)return;
   var avg=bp14dayAvg();
@@ -1285,7 +1587,7 @@ function checkBPPrompt(){
     '<button class="btn" style="flex:1;" onclick="saveBPModal()">Log BP</button>'+
     '<button class="btn sm dark" onclick="document.getElementById(\'bpModal\').remove()">Skip today</button>'+
     '</div>'+
-    '<div style="font-size:11px;color:var(--dim);margin-top:10px;">Orgovyx + abiraterone + prednisone = elevated CV risk. Daily BP is priority 1.</div>'+
+    '<div style="font-size:11px;color:var(--dim);margin-top:10px;">Consistent daily logging builds the 14-day average that drives your workout adjustments.</div>'+
     '</div>';
   document.body.appendChild(modal);
 }
@@ -1305,12 +1607,104 @@ function saveBPModal(){
   renderBPSection();
 }
 
+
+/* ============ GOAL SETTINGS ============ */
+function saveGoalSettings(){
+  DB.goal=DB.goal||{};
+  DB.goal.type=document.getElementById("inGoalType").value;
+  DB.goal.name=document.getElementById("inGoalName").value.trim();
+  DB.goal.targetDate=document.getElementById("inGoalDate").value;
+  DB.goal.startDate=document.getElementById("inGoalStart").value;
+  save();
+  document.getElementById("goalSettingsEcho").textContent="Goal saved.";
+  setTimeout(function(){document.getElementById("goalSettingsEcho").textContent="";},2000);
+  renderHome();
+  renderMilestoneEditor();
+}
+
+function loadGoalSettings(){
+  var g=DB.goal||{};
+  var gt=document.getElementById("inGoalType");
+  var gn=document.getElementById("inGoalName");
+  var gd=document.getElementById("inGoalDate");
+  var gs=document.getElementById("inGoalStart");
+  if(gt&&g.type)gt.value=g.type;
+  if(gn)gn.value=g.name||"";
+  if(gd)gd.value=g.targetDate||"";
+  if(gs)gs.value=g.startDate||"";
+  renderMilestoneEditor();
+}
+
+function renderMilestoneEditor(){
+  var ed=document.getElementById("milestoneEditor");
+  if(!ed)return;
+  var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
+  var defs=defaultMilestones(goalType);
+  var saved=DB.milestones&&DB.milestones.length?DB.milestones:defs.map(function(d){return {t:d.t,done:false,d:d.d||""};});
+  // show up to 6 rows
+  var rows=saved.slice(0,6);
+  var html="";
+  rows.forEach(function(m,i){
+    html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'
+      +'<input type="checkbox" id="mc'+i+'" '+(m.done?"checked":"")+' style="width:18px;height:18px;accent-color:var(--red);">'
+      +'<input type="text" id="mt'+i+'" value="'+m.t.replace(/"/g,"&quot;")+'" placeholder="Milestone description" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:13px;">'
+      +'</div>';
+  });
+  // fill empty slots up to 6
+  for(var i=rows.length;i<6;i++){
+    html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'
+      +'<input type="checkbox" id="mc'+i+'" style="width:18px;height:18px;accent-color:var(--red);">'
+      +'<input type="text" id="mt'+i+'" placeholder="Optional milestone '+( i+1)+'" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:13px;">'
+      +'</div>';
+  }
+  ed.innerHTML=html;
+}
+
+function addMilestoneField(){
+  // just save and re-render with +1 shown — handled by the 6-slot grid
+  toast("Edit the empty slots below to add milestones");
+}
+
+function saveMilestones(){
+  var miles=[];
+  for(var i=0;i<6;i++){
+    var t=document.getElementById("mt"+i);
+    var c=document.getElementById("mc"+i);
+    if(t&&t.value.trim()){
+      miles.push({t:t.value.trim(),done:c&&c.checked,d:""});
+    }
+  }
+  DB.milestones=miles;
+  save();
+  renderMilestones();
+  document.getElementById("milestoneEcho").textContent="Milestones saved.";
+  setTimeout(function(){document.getElementById("milestoneEcho").textContent="";},2000);
+}
+
+
+/* ============ USER NAME ============ */
+function saveUserName(){
+  var v=document.getElementById("inUserName").value.trim();
+  DB.settings=DB.settings||{};
+  DB.settings.userName=v;
+  save();
+  document.getElementById("userNameEcho").textContent="Saved.";
+  setTimeout(function(){document.getElementById("userNameEcho").textContent="";},2000);
+}
+function loadUserName(){
+  var el=document.getElementById("inUserName");
+  if(el&&DB.settings&&DB.settings.userName)el.value=DB.settings.userName;
+}
+
 /* ============ INIT ============ */
 load();
 setTimeout(function(){document.getElementById("splash").classList.add("hide");},3200);
 renderHome();
 renderBPSection();
+loadBPPromptPref();
 loadMedStack();
+loadGoalSettings();
+loadUserName();
 setTimeout(checkDietPopup,4000);
 setTimeout(checkBPPrompt,5200);
 // PWA: minimal inline service worker for installability/offline shell
@@ -1338,10 +1732,48 @@ function syncORMsFromLive(){
 }
 
 /* ============ LAB ENGINE ============ */
-var LAB_REF={"PSA": {"unit": "ng/mL", "low": null, "high": 0.1, "critHigh": 0.2, "label": "PSA", "diet": true, "train": false}, "Hemoglobin": {"unit": "g/dL", "low": 13.5, "high": 17.5, "critLow": 11.0, "label": "Hemoglobin", "diet": false, "train": true}, "WBC": {"unit": "K/uL", "low": 4.5, "high": 11.0, "critLow": 2.0, "critHigh": 20.0, "label": "WBC", "diet": false, "train": false}, "RBC": {"unit": "M/uL", "low": 4.5, "high": 5.9, "label": "RBC", "diet": false, "train": false}, "Hematocrit": {"unit": "%", "low": 41, "high": 53, "critLow": 30, "label": "Hematocrit", "diet": false, "train": true}, "Platelets": {"unit": "K/uL", "low": 150, "high": 400, "critLow": 50, "label": "Platelets", "diet": false, "train": false}, "Glucose": {"unit": "mg/dL", "low": 70, "high": 99, "critHigh": 126, "label": "Fasting Glucose (CMP)", "diet": true, "train": true}, "BUN": {"unit": "mg/dL", "low": 7, "high": 20, "label": "BUN", "diet": false, "train": false}, "Creatinine": {"unit": "mg/dL", "low": 0.74, "high": 1.35, "label": "Creatinine", "note": "creatine", "diet": false, "train": false}, "eGFR": {"unit": "mL/min", "low": 60, "high": 120, "critLow": 30, "label": "eGFR", "note": "creatine", "diet": false, "train": false}, "Sodium": {"unit": "mEq/L", "low": 136, "high": 145, "label": "Sodium", "diet": false, "train": false}, "Potassium": {"unit": "mEq/L", "low": 3.5, "high": 5.0, "critLow": 3.0, "critHigh": 6.0, "label": "Potassium", "diet": true, "train": false}, "Calcium": {"unit": "mg/dL", "low": 8.5, "high": 10.5, "label": "Calcium", "diet": true, "train": false}, "ALT": {"unit": "U/L", "low": null, "high": 56, "critHigh": 100, "label": "ALT (liver)", "diet": false, "train": false}, "AST": {"unit": "U/L", "low": null, "high": 40, "critHigh": 80, "label": "AST (liver)", "diet": false, "train": false}, "TotalCholesterol": {"unit": "mg/dL", "low": null, "high": 200, "critHigh": 240, "label": "Total Cholesterol", "diet": true, "train": true}, "LDL": {"unit": "mg/dL", "low": null, "high": 100, "critHigh": 160, "label": "LDL Cholesterol", "diet": true, "train": true}, "HDL": {"unit": "mg/dL", "low": 40, "high": null, "critLow": 35, "label": "HDL Cholesterol", "diet": true, "train": true}, "Triglycerides": {"unit": "mg/dL", "low": null, "high": 150, "critHigh": 500, "label": "Triglycerides", "diet": true, "train": true}, "HbA1c": {"unit": "%", "low": null, "high": 5.7, "critHigh": 6.5, "label": "HbA1c", "diet": true, "train": true}, "EstAvgGlucose": {"unit": "mg/dL", "low": null, "high": 117, "critHigh": 154, "label": "Est. Avg Glucose", "diet": true, "train": true}};
-var PANELS={"CBC": ["Hemoglobin", "WBC", "RBC", "Hematocrit", "Platelets"], "CMP": ["Glucose", "BUN", "Creatinine", "eGFR", "Sodium", "Potassium", "Calcium", "ALT", "AST"], "Lipids": ["TotalCholesterol", "LDL", "HDL", "Triglycerides"], "Metabolic": ["HbA1c", "EstAvgGlucose"], "Cancer": ["PSA"]};
-var DIET_TIPS={"PSA": "Low-carbohydrate dietary patterns have shown slower PSA doubling time in clinical trials. Emphasize fatty fish (salmon, sardines), cooked tomatoes with olive oil, cruciferous vegetables daily, and minimize processed meats and high-fat dairy.", "Glucose": "Reduce refined carbohydrates and added sugar. Increase fiber (legumes, vegetables, oats), healthy fats (olive oil, avocado, nuts), and lean protein. Eat carbohydrates with protein or fat to blunt glucose spikes.", "HbA1c": "A low-glycemic, high-fiber diet has the strongest evidence for reducing HbA1c. Prioritize non-starchy vegetables, legumes, whole grains, and fatty fish. Minimize white bread, rice, sugary drinks, and processed snacks. A low-carbohydrate pattern has additional evidence in prostate cancer specifically.", "EstAvgGlucose": "Same as HbA1c. Reduce refined carbohydrates and added sugar, increase fiber and healthy fats. Time larger carbohydrate meals around training.", "TotalCholesterol": "Increase soluble fiber (oats, beans, lentils, apples). Use olive oil instead of butter. Eat fatty fish 2-3x per week. Minimize saturated fat from processed meat and high-fat dairy.", "LDL": "Soluble fiber, plant sterols (nuts, seeds, legumes), and replacing saturated fat with unsaturated fat (olive oil, fish, avocado) have the strongest dietary evidence for LDL reduction.", "HDL": "Olive oil, avocado, nuts, and fatty fish raise HDL. Minimize refined carbohydrates and trans fats. Aerobic exercise is the primary driver but diet compounds the effect.", "Triglycerides": "Reduce added sugar and refined carbohydrates. Increase omega-3 fatty acids from fatty fish. Minimize alcohol. A low-carbohydrate pattern is the most effective dietary approach for triglycerides.", "Potassium": "Low potassium (hypokalemia is common on abiraterone): increase avocado, sweet potato, banana, legumes, salmon, spinach. High potassium: reduce these foods and discuss with your oncologist immediately.", "Calcium": "Low calcium: increase dairy or fortified plant milks, leafy greens, sardines with bones, tofu. Do not megadose calcium supplements \u2014 high-dose supplemental calcium is associated with aggressive prostate cancer."};
-var TRAIN_TIPS={"Hemoglobin": {"low": "ANEMIA FLAG: Hemoglobin below normal. Heavy compound loading and high-intensity intervals are contraindicated until this is addressed medically. Drop all work to Zone 1 only, reduce compound loads by 20-25%, and increase RIR target by 2. Discuss with your oncologist before pushing hard again.", "critLow": "CRITICAL ANEMIA: Hemoglobin critically low. Stop high-intensity training entirely. Walk only. Contact your oncologist."}, "Hematocrit": {"low": "Low hematocrit reduces oxygen delivery to muscle. Reduce cardio intensity to Zone 1-2 only and reduce compound loads by 15%. Discuss with your oncologist."}, "Glucose": {"high": "Elevated fasting glucose: increase Zone 2 cardio to 5 sessions per week. Post-meal walks of 10+ minutes have strong evidence for glucose control. Cardio day becomes mandatory.", "critHigh": "Fasting glucose meets clinical diabetes threshold. Significantly increase aerobic volume. Discuss with your doctor."}, "HbA1c": {"high": "Elevated HbA1c: aerobic exercise is the most effective intervention. Add one extra Zone 2 cardio session per week and make the mid-week cardio day mandatory. Target 200+ minutes of Zone 2 weekly.", "critHigh": "HbA1c at diabetic threshold. Significantly increase aerobic volume. Discuss with your doctor before continuing current program."}, "EstAvgGlucose": {"high": "Increase Zone 2 cardio emphasis. Make cardio day mandatory."}, "TotalCholesterol": {"high": "Elevated cholesterol: resistance training is the strongest exercise intervention for lipids. Prioritize lifting days over substitutions.", "critHigh": "High cholesterol: maintain all resistance days without fail."}, "LDL": {"high": "Elevated LDL: resistance training is your most effective exercise tool. Do not skip lifting days.", "critHigh": "High LDL: prioritize resistance days. Discuss with your doctor as statin therapy may be indicated."}, "HDL": {"low": "Low HDL: aerobic exercise is the most effective exercise intervention for raising HDL. Increase Zone 2 cardio minutes and do not skip the cardio recovery day.", "critLow": "Critically low HDL: make all cardio sessions mandatory and discuss cardiovascular risk with your doctor given your ADT status."}, "Triglycerides": {"high": "Elevated triglycerides: both cardio and resistance training help, but dietary carbohydrate reduction has the strongest evidence. Maintain full training program.", "critHigh": "Very high triglycerides: discuss with your doctor. Maintain training but do not increase intensity."}};
+var LAB_REF={"PSA": {"unit": "ng/mL", "low": null, "high": 0.1, "critHigh": 0.2, "label": "PSA", "diet": true, "train": false}, "Hemoglobin": {"unit": "g/dL", "low": 13.5, "high": 17.5, "critLow": 11.0, "label": "Hemoglobin", "diet": false, "train": true}, "WBC": {"unit": "K/uL", "low": 4.5, "high": 11.0, "critLow": 2.0, "critHigh": 20.0, "label": "WBC", "diet": false, "train": false}, "RBC": {"unit": "M/uL", "low": 4.5, "high": 5.9, "label": "RBC", "diet": false, "train": false}, "Hematocrit": {"unit": "%", "low": 41, "high": 53, "critLow": 30, "label": "Hematocrit", "diet": false, "train": true}, "Platelets": {"unit": "K/uL", "low": 150, "high": 400, "critLow": 50, "label": "Platelets", "diet": false, "train": false}, "Glucose": {"unit": "mg/dL", "low": 70, "high": 99, "critHigh": 126, "label": "Fasting Glucose (CMP)", "diet": true, "train": true}, "BUN": {"unit": "mg/dL", "low": 7, "high": 20, "label": "BUN", "diet": false, "train": false}, "Creatinine": {"unit": "mg/dL", "low": 0.74, "high": 1.35, "label": "Creatinine", "note": "creatine", "diet": false, "train": false}, "eGFR": {"unit": "mL/min", "low": 60, "high": 120, "critLow": 30, "label": "eGFR", "note": "creatine", "diet": false, "train": false}, "Sodium": {"unit": "mEq/L", "low": 136, "high": 145, "label": "Sodium", "diet": false, "train": false}, "Potassium": {"unit": "mEq/L", "low": 3.5, "high": 5.0, "critLow": 3.0, "critHigh": 6.0, "label": "Potassium", "diet": true, "train": false}, "Calcium": {"unit": "mg/dL", "low": 8.5, "high": 10.5, "label": "Calcium", "diet": true, "train": false}, "ALT": {"unit": "U/L", "low": null, "high": 56, "critHigh": 100, "label": "ALT (liver)", "diet": false, "train": false}, "AST": {"unit": "U/L", "low": null, "high": 40, "critHigh": 80, "label": "AST (liver)", "diet": false, "train": false}, "TotalCholesterol": {"unit": "mg/dL", "low": null, "high": 200, "critHigh": 240, "label": "Total Cholesterol", "diet": true, "train": true}, "LDL": {"unit": "mg/dL", "low": null, "high": 100, "critHigh": 160, "label": "LDL Cholesterol", "diet": true, "train": true}, "HDL": {"unit": "mg/dL", "low": 40, "high": null, "critLow": 35, "label": "HDL Cholesterol", "diet": true, "train": true}, "Triglycerides": {"unit": "mg/dL", "low": null, "high": 150, "critHigh": 500, "label": "Triglycerides", "diet": true, "train": true}, "HbA1c": {"unit": "%", "low": null, "high": 5.7, "critHigh": 6.5, "label": "HbA1c", "diet": true, "train": true}, "EstAvgGlucose": {"unit": "mg/dL", "low": null, "high": 117, "critHigh": 154, "label": "Est. Avg Glucose", "diet": true, "train": true},
+"TSH": {"unit": "mIU/L", "low": 0.4, "high": 4.0, "critLow": 0.1, "critHigh": 10.0, "label": "TSH (Thyroid)", "diet": false, "train": true},
+"FreeT4": {"unit": "ng/dL", "low": 0.8, "high": 1.8, "label": "Free T4", "diet": false, "train": false},
+"FreeT3": {"unit": "pg/mL", "low": 2.3, "high": 4.2, "label": "Free T3", "diet": false, "train": false},
+"VitaminD": {"unit": "ng/mL", "low": 30, "high": 100, "critLow": 12, "label": "Vitamin D (25-OH)", "diet": true, "train": true},
+"B12": {"unit": "pg/mL", "low": 200, "high": 900, "critLow": 150, "label": "Vitamin B12", "diet": true, "train": false},
+"Folate": {"unit": "ng/mL", "low": 2.7, "high": 17.0, "critLow": 2.0, "label": "Folate", "diet": true, "train": false},
+"SerumIron": {"unit": "ug/dL", "low": 60, "high": 170, "critLow": 30, "label": "Serum Iron", "diet": true, "train": true},
+"Ferritin": {"unit": "ng/mL", "low": 12, "high": 300, "critLow": 7, "label": "Ferritin", "diet": true, "train": true},
+"TIBC": {"unit": "ug/dL", "low": 250, "high": 370, "label": "TIBC", "diet": false, "train": false},
+"hsCRP": {"unit": "mg/L", "low": null, "high": 1.0, "critHigh": 3.0, "label": "hsCRP (Inflammation)", "diet": true, "train": true},
+"UricAcid": {"unit": "mg/dL", "low": 2.5, "high": 7.0, "critHigh": 9.0, "label": "Uric Acid", "diet": true, "train": false},
+"Magnesium": {"unit": "mg/dL", "low": 1.7, "high": 2.2, "critLow": 1.2, "label": "Magnesium", "diet": true, "train": true},
+"FastingInsulin": {"unit": "uIU/mL", "low": null, "high": 25, "critHigh": 35, "label": "Fasting Insulin", "diet": true, "train": true},
+"TestosteroneTotal": {"unit": "ng/dL", "low": 300, "high": 1000, "critLow": 150, "label": "Testosterone (Total)", "diet": false, "train": true},
+"TestosteroneFree": {"unit": "pg/mL", "low": 50, "high": 210, "label": "Testosterone (Free)", "diet": false, "train": true},
+"DHEAS": {"unit": "ug/dL", "low": 80, "high": 560, "label": "DHEA-S", "diet": false, "train": false},
+"Estradiol": {"unit": "pg/mL", "low": null, "high": null, "label": "Estradiol (E2)", "diet": false, "train": false},
+"FSH": {"unit": "mIU/mL", "low": null, "high": null, "label": "FSH", "diet": false, "train": false},
+"LH": {"unit": "mIU/mL", "low": null, "high": null, "label": "LH", "diet": false, "train": false},
+"Progesterone": {"unit": "ng/mL", "low": null, "high": null, "label": "Progesterone", "diet": false, "train": false},
+"AlkPhos": {"unit": "U/L", "low": 44, "high": 147, "critHigh": 300, "label": "Alkaline Phosphatase", "diet": false, "train": false}};
+var PANELS={"CBC": ["Hemoglobin", "WBC", "RBC", "Hematocrit", "Platelets"], "CMP": ["Glucose", "BUN", "Creatinine", "eGFR", "Sodium", "Potassium", "Calcium", "ALT", "AST", "AlkPhos"], "Lipids": ["TotalCholesterol", "LDL", "HDL", "Triglycerides"], "Metabolic": ["HbA1c", "EstAvgGlucose", "FastingInsulin", "UricAcid"], "Thyroid": ["TSH", "FreeT4", "FreeT3"], "Iron": ["SerumIron", "Ferritin", "TIBC"], "Vitamins": ["VitaminD", "B12", "Folate", "Magnesium"], "Hormones": ["TestosteroneTotal", "TestosteroneFree", "DHEAS", "Estradiol", "FSH", "LH", "Progesterone"], "Inflammation": ["hsCRP"], "Cancer": ["PSA"]};
+var DIET_TIPS={"PSA": "Low-carbohydrate dietary patterns have shown slower PSA doubling time in clinical trials. Emphasize fatty fish (salmon, sardines), cooked tomatoes with olive oil, cruciferous vegetables daily, and minimize processed meats and high-fat dairy.", "Glucose": "Reduce refined carbohydrates and added sugar. Increase fiber (legumes, vegetables, oats), healthy fats (olive oil, avocado, nuts), and lean protein. Eat carbohydrates with protein or fat to blunt glucose spikes.", "HbA1c": "A low-glycemic, high-fiber diet has the strongest evidence for reducing HbA1c. Prioritize non-starchy vegetables, legumes, whole grains, and fatty fish. Minimize white bread, rice, sugary drinks, and processed snacks. A low-carbohydrate pattern has additional evidence in prostate cancer specifically.", "EstAvgGlucose": "Same as HbA1c. Reduce refined carbohydrates and added sugar, increase fiber and healthy fats. Time larger carbohydrate meals around training.", "TotalCholesterol": "Increase soluble fiber (oats, beans, lentils, apples). Use olive oil instead of butter. Eat fatty fish 2-3x per week. Minimize saturated fat from processed meat and high-fat dairy.", "LDL": "Soluble fiber, plant sterols (nuts, seeds, legumes), and replacing saturated fat with unsaturated fat (olive oil, fish, avocado) have the strongest dietary evidence for LDL reduction.", "HDL": "Olive oil, avocado, nuts, and fatty fish raise HDL. Minimize refined carbohydrates and trans fats. Aerobic exercise is the primary driver but diet compounds the effect.", "Triglycerides": "Reduce added sugar and refined carbohydrates. Increase omega-3 fatty acids from fatty fish. Minimize alcohol. A low-carbohydrate pattern is the most effective dietary approach for triglycerides.", "Potassium": "Low potassium (hypokalemia is common on abiraterone): increase avocado, sweet potato, banana, legumes, salmon, spinach. High potassium: reduce these foods and discuss with your oncologist immediately.", "Calcium": "Low calcium: increase dairy or fortified plant milks, leafy greens, sardines with bones, tofu. Do not megadose calcium supplements.",
+"VitaminD": "Low Vitamin D: increase fatty fish, egg yolks, fortified dairy or plant milks. Most people also need a supplement (1000-4000 IU D3/day). Have your level rechecked in 3 months.",
+"B12": "Low B12: increase animal proteins, eggs, dairy. Vegetarians and vegans nearly always need a supplement. B12 deficiency causes neurological symptoms and anemia.",
+"Folate": "Low folate: increase leafy greens, legumes, fortified grains. Critical for women of childbearing age. Supplement with methylfolate if MTHFR variant is known.",
+"SerumIron": "Low iron: increase red meat, poultry, seafood, legumes, fortified cereals. Pair plant iron with vitamin C to improve absorption. High iron: reduce supplemental iron and discuss with your doctor.",
+"Ferritin": "Low ferritin indicates depleted iron stores even if hemoglobin is normal. Increase dietary iron. Women with heavy periods are at high risk. High ferritin may indicate inflammation or hemochromatosis.",
+"hsCRP": "Elevated hsCRP signals systemic inflammation. Increase omega-3s (fatty fish, walnuts), colorful vegetables, and fiber. Minimize ultra-processed foods, refined carbs, and sugar.",
+"UricAcid": "High uric acid increases gout and cardiovascular risk. Reduce organ meats, shellfish, sugary drinks, and alcohol. Increase water intake to 64+ oz/day.",
+"Magnesium": "Low magnesium: increase dark leafy greens, nuts, seeds, legumes, whole grains. Magnesium supports muscle function, sleep quality, and blood pressure.",
+"FastingInsulin": "Elevated fasting insulin indicates insulin resistance. Reduce refined carbohydrates and sugar, increase fiber and protein, prioritize resistance training and Zone 2 cardio."};
+var TRAIN_TIPS={"Hemoglobin": {"low": "ANEMIA FLAG: Hemoglobin below normal. Heavy compound loading and high-intensity intervals are contraindicated until this is addressed medically. Drop all work to Zone 1 only, reduce compound loads by 20-25%, and increase RIR target by 2. Discuss with your oncologist before pushing hard again.", "critLow": "CRITICAL ANEMIA: Hemoglobin critically low. Stop high-intensity training entirely. Walk only. Contact your oncologist."}, "Hematocrit": {"low": "Low hematocrit reduces oxygen delivery to muscle. Reduce cardio intensity to Zone 1-2 only and reduce compound loads by 15%. Discuss with your oncologist."}, "Glucose": {"high": "Elevated fasting glucose: increase Zone 2 cardio to 5 sessions per week. Post-meal walks of 10+ minutes have strong evidence for glucose control. Cardio day becomes mandatory.", "critHigh": "Fasting glucose meets clinical diabetes threshold. Significantly increase aerobic volume. Discuss with your doctor."}, "HbA1c": {"high": "Elevated HbA1c: aerobic exercise is the most effective intervention. Add one extra Zone 2 cardio session per week and make the mid-week cardio day mandatory. Target 200+ minutes of Zone 2 weekly.", "critHigh": "HbA1c at diabetic threshold. Significantly increase aerobic volume. Discuss with your doctor before continuing current program."}, "EstAvgGlucose": {"high": "Increase Zone 2 cardio emphasis. Make cardio day mandatory."}, "TotalCholesterol": {"high": "Elevated cholesterol: resistance training is the strongest exercise intervention for lipids. Prioritize lifting days over substitutions.", "critHigh": "High cholesterol: maintain all resistance days without fail."}, "LDL": {"high": "Elevated LDL: resistance training is your most effective exercise tool. Do not skip lifting days.", "critHigh": "High LDL: prioritize resistance days. Discuss with your doctor as statin therapy may be indicated."}, "HDL": {"low": "Low HDL: aerobic exercise is the most effective exercise intervention for raising HDL. Increase Zone 2 cardio minutes and do not skip the cardio recovery day.", "critLow": "Critically low HDL: make all cardio sessions mandatory and discuss cardiovascular risk with your doctor given your ADT status."}, "Triglycerides": {"high": "Elevated triglycerides: both cardio and resistance training help, but dietary carbohydrate reduction has the strongest evidence. Maintain full training program.", "critHigh": "Very high triglycerides: discuss with your doctor. Maintain training but do not increase intensity."},
+"TSH": {"high": "Elevated TSH suggests hypothyroidism, which reduces aerobic capacity and recovery. Reduce training volume by 20-30% until thyroid function is treated. Discuss with your doctor.", "critHigh": "Severely elevated TSH: limit to light movement only. Discuss with your doctor urgently.", "low": "Suppressed TSH may suggest hyperthyroidism. Avoid high-intensity training until evaluated. Elevated heart rate risk."},
+"VitaminD": {"low": "Low Vitamin D impairs muscle function, bone density, and recovery. Reduce heavy loading until levels normalize. Bone-density exercises (squat, deadlift, OHP) remain important but increase RIR target by 1.", "critLow": "Critically low Vitamin D: high fracture risk. Reduce bone-loading exercises until levels are treated. Discuss with your doctor."},
+"SerumIron": {"low": "Low iron reduces oxygen delivery and endurance capacity. Reduce cardio intensity to Zone 1-2 only. Treat the deficiency before returning to full training."},
+"Ferritin": {"low": "Low ferritin (even with normal hemoglobin) impairs endurance and recovery. Reduce high-intensity cardio until iron stores are restored."},
+"hsCRP": {"high": "Elevated hsCRP indicates systemic inflammation. Reduce training volume by 20-30%, prioritize recovery, and increase Zone 2 over high-intensity work.", "critHigh": "High hsCRP: significant inflammation. Drop to recovery-only work (Zone 1 walks, mobility). Discuss with your doctor."},
+"TestosteroneTotal": {"low": "Low testosterone reduces muscle protein synthesis, recovery, and energy. Prioritize sleep, reduce training stress, and discuss with your doctor.", "critLow": "Critically low testosterone: resistance training adaptations are significantly impaired. Discuss hormone evaluation with your doctor."},
+"Magnesium": {"low": "Low magnesium impairs muscle contraction and recovery. Supplement and increase dietary sources. Can cause cramping and sleep disruption.", "critLow": "Critically low magnesium: discuss with your doctor before high-intensity training. Cardiac arrhythmia risk."},
+"FastingInsulin": {"high": "Elevated fasting insulin: increase Zone 2 cardio to 5 sessions/week, add post-meal walks. Resistance training is your second most effective tool for insulin sensitivity."}};
 var _activePanel="CBC";
 
 function getTCHDLRatio(entry){
