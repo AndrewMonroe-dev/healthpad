@@ -551,6 +551,17 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       </div>
       <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
       <small class="help">Export regularly. Data is stored on this device.</small>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line2);">
+        <div class="note dim" style="margin-bottom:10px;">Delete all data and restart onboarding. Export a backup first if you want to keep anything.</div>
+        <button class="btn sm" style="background:linear-gradient(135deg,#8a1a12,#c0281e);touch-action:manipulation;" onclick="confirmReset()">Reset App &amp; Start Over</button>
+        <div id="resetConfirm" style="display:none;margin-top:12px;padding:14px;border:1.5px solid var(--red);border-radius:12px;background:rgba(192,40,30,.08);">
+          <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:10px;">This deletes everything permanently. Are you sure?</div>
+          <div class="btn-row">
+            <button class="btn sm" style="background:linear-gradient(135deg,#8a1a12,#c0281e);touch-action:manipulation;" onclick="executeReset()">Yes, Delete Everything</button>
+            <button class="btn sm dark" style="touch-action:manipulation;" onclick="cancelReset()">Cancel</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="sec">
       <div class="sec-h">The Plan At A Glance</div>
@@ -2501,6 +2512,41 @@ function snoozeProgression(type){
   snooze(keyMap[type]||"add_day",2);
   document.getElementById("progressionBanner").style.display="none";
   toast("Suggestion snoozed for 2 weeks.");
+}
+
+
+/* ============ RESET ============ */
+function confirmReset(){
+  var c=document.getElementById("resetConfirm");
+  if(c)c.style.display=c.style.display==="none"?"block":"none";
+}
+function cancelReset(){
+  var c=document.getElementById("resetConfirm");
+  if(c)c.style.display="none";
+}
+function executeReset(){
+  // Clear localStorage entirely
+  try{localStorage.removeItem("healthpad_db");}catch(e){}
+  try{localStorage.removeItem("hp_dp");}catch(e){}
+  // Reset DB to factory defaults
+  DB={weights:[],nutrition:[],rhr:[],bp:[],workouts:[],prs:{},readiness:[],
+      oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false},
+      goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},
+      milestones:[],program:null};
+  save();
+  // Hide confirm box
+  var c=document.getElementById("resetConfirm");
+  if(c)c.style.display="none";
+  // Re-init UI
+  renderHome();
+  renderBPSection();
+  loadBPPromptPref();
+  loadMedStack();
+  loadGoalSettings();
+  loadUserName();
+  nav("home");
+  toast("App reset. Starting onboarding...");
+  setTimeout(obShow, 800);
 }
 
 /* ============ INIT ============ */
