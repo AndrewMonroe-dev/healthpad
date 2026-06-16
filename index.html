@@ -389,6 +389,20 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     </div>
 
     <div class="sec">
+      <div class="sec-h">Daily Steps</div>
+      <div class="note dim" style="margin-bottom:10px;">Enter from your watch or phone. Adjusts your daily calorie target based on how active you were. 8,000+ steps on a cardio day earns cardio credit.</div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div style="flex:1;min-width:100px;">
+          <label class="fld">Today's Steps</label>
+          <input type="number" id="inSteps" inputmode="numeric" placeholder="e.g. 8500">
+        </div>
+        <button class="btn sm ghost" onclick="saveSteps()" style="align-self:flex-end;">Record Steps</button>
+      </div>
+      <div class="note dim" id="stepsEcho" style="margin-top:10px;"></div>
+      <div id="stepsHistory" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="sec">
       <div class="sec-h">Blood Pressure <span class="tag" id="bpStatusTag"></span></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <div class="note dim" style="margin:0;max-width:78%;">Log both numbers each time you measure. The 14-day average drives workout adjustments — one reading never changes your program.</div>
@@ -707,7 +721,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 
       <div id="obStep9" class="ob-step" style="display:none;">
         <div class="ob-q">How active are you outside the gym?</div>
-        <div class="note dim" style="color:rgba(255,255,255,.45);margin-bottom:18px;font-size:13px;">Be honest — overestimating is the most common calorie mistake.</div>
+        <div class="note dim" style="color:rgba(255,255,255,.45);margin-bottom:18px;font-size:13px;">Be honest — overestimating is the most common calorie mistake. Your daily step count will fine-tune this automatically once you start logging.</div>
         <div class="ob-opts">
           <div class="ob-opt" data-grp="activity" data-v="1.2">Sedentary — desk job, mostly sitting</div>
           <div class="ob-opt" data-grp="activity" data-v="1.375">Lightly active — on my feet some, light daily movement</div>
@@ -890,7 +904,7 @@ var SPLIT_HEAVY=[
 ];
 
 /* ============ STATE ============ */
-var DB={weights:[],nutrition:[],rhr:[],bp:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,stepBaseline:null},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -962,7 +976,7 @@ function nav(v){
   if(v==="prog")renderProg();
   if(v==="setup")renderSetup();
   if(v==="labs"){renderLabs();}
-  if(v==="log"){renderBPSection();loadBPPromptPref();}
+  if(v==="log"){renderBPSection();renderStepsSection();loadBPPromptPref();}
   if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();}
   window.scrollTo(0,0);
   el.style.animation="none"; void el.offsetWidth;
@@ -1318,6 +1332,18 @@ function renderTrain(){
 
   var stateCls="", stateTxt="";
   if(isDeload()){stateCls="deload";stateTxt="Deload week — volume cut ~50%, progression paused. Recover.";}
+  if(d&&d.cardio&&hasCardioStepCredit&&hasCardioStepCredit()){
+    setTimeout(function(){
+      var wa=document.getElementById("workoutArea");
+      if(wa&&!wa.querySelector(".step-credit")){
+        var cc=document.createElement("div");
+        cc.className="adapt-panel step-credit";
+        cc.style.cssText="background:rgba(45,138,53,.12);border-color:var(--good);margin-bottom:12px;";
+        cc.innerHTML="✅ "+todaySteps().toLocaleString()+" steps today — cardio day credit earned. Zone 2 confirmed.";
+        wa.insertBefore(cc,wa.firstChild);
+      }
+    },50);
+  }
   else if(labHold){stateCls="held";var critItems=allAdj.filter(function(a){return a.sev==="crit";});
     if(critItems.length)stateTxt=critItems.map(function(a){return a.label+": "+a.msg;}).join(" | ");
     else stateTxt="Hold active — low energy or critical flag. Volume trimmed, load reduced.";}
@@ -1441,10 +1467,14 @@ function renderLog(){
   var _pt2=(DB.settings&&DB.settings.proteinTarget)||PROTEIN_TARGET;
   setRing("ringProLog",pro/_pt2);
   document.getElementById("calLogVal").textContent=(cal||0);
-  document.getElementById("calSubLog").textContent="of "+((DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250);
-  var _ct=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
-  setRing("ringCalLog",cal/_ct);
-  renderNutFlags(nt);
+  var _baseCal=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
+  var _stepAdj=stepCalAdjustment?stepCalAdjustment():0;
+  var _adjCal=_baseCal+_stepAdj;
+  var _adjLbl=_stepAdj>0?"of "+_adjCal+" kcal (+"+_stepAdj+" steps)":
+    _stepAdj<0?"of "+_adjCal+" kcal ("+_stepAdj+" steps)":"of "+_adjCal+" kcal";
+  document.getElementById("calSubLog").textContent=_adjLbl;
+  setRing("ringCalLog",cal/_adjCal);
+  renderNutFlags(nt,_adjCal);
 }
 
 function saveWeight(){
@@ -1502,7 +1532,7 @@ function getNutTargets(){
   };
 }
 
-function renderNutFlags(nt){
+function renderNutFlags(nt,adjCalTarget){
   var area=document.getElementById("nutFlagArea");
   if(!area)return;
   if(!nt){area.innerHTML="";return;}
@@ -1848,7 +1878,7 @@ function getBPTrainAdj(){
   } else if(tier==="stage1"){
     adjs.push({sev:"warn",label:"BP Stage 1 HTN",msg:"14-day avg "+avg.s+"/"+avg.d+" mmHg. RPE ceiling 7. One fewer set per compound lift. Rest 2-3 min. Zone 2 cardio mandatory. No Valsalva."});
   } else if(tier==="stage2"){
-    adjs.push({sev:"crit",label:"BP Stage 2 — HIGH PRIORITY",msg:"14-day avg "+avg.s+"/"+avg.d+" mmHg. Loads capped at 70% 1RM. Sets reduced to 2. Isometrics 5 sec max. Rest 3 min min. All cardio days mandatory Zone 2, 40+ min. Discuss with your oncology team."});
+    // removed — replaced by updated getBPTrainAdj above
   }
   return adjs.length?adjs:null;
 }
@@ -2735,7 +2765,7 @@ function executeReset(){
   try{localStorage.removeItem("healthpad_db");}catch(e){}
   try{localStorage.removeItem("hp_dp");}catch(e){}
   // Reset DB to factory defaults
-  DB={weights:[],nutrition:[],rhr:[],bp:[],workouts:[],prs:{},readiness:[],
+  DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],
       oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false},
       goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},
       milestones:[],program:null};
@@ -2864,11 +2894,94 @@ function recalcCaloriesFromCurrentWeight(){
   save();
 }
 
+
+/* ============ STEPS ============ */
+var STEPS_CARDIO_THRESHOLD=8000;
+var STEPS_KCAL_PER_STEP=0.045;
+
+function saveSteps(){
+  var v=parseInt(document.getElementById("inSteps").value);
+  if(isNaN(v)||v<0||v>100000){toast("Enter a valid step count");return;}
+  DB.steps=DB.steps||[];
+  DB.steps=DB.steps.filter(function(x){return x.d!==todayStr();});
+  DB.steps.push({d:todayStr(),s:v});
+  if(!DB.settings.stepBaseline&&DB.steps.length>=7){
+    var sum=DB.steps.slice(0,14).reduce(function(a,b){return a+b.s;},0);
+    DB.settings.stepBaseline=Math.round(sum/Math.min(DB.steps.length,14));
+  }
+  save();
+  document.getElementById("inSteps").value="";
+  toast("Steps recorded");
+  renderStepsSection();
+  renderLog();
+}
+
+function todaySteps(){
+  DB.steps=DB.steps||[];
+  var t=DB.steps.filter(function(x){return x.d===todayStr();});
+  return t.length?t[0].s:null;
+}
+
+function stepCalAdjustment(){
+  var today=todaySteps();
+  if(today===null)return 0;
+  var baseline=DB.settings.stepBaseline||7500;
+  return Math.round((today-baseline)*STEPS_KCAL_PER_STEP);
+}
+
+function stepBaseline7dayAvg(){
+  DB.steps=DB.steps||[];
+  var cutoff=new Date();cutoff.setDate(cutoff.getDate()-7);
+  var recent=DB.steps.filter(function(x){return new Date(x.d+"T00:00:00")>=cutoff;});
+  if(!recent.length)return null;
+  return Math.round(recent.reduce(function(a,b){return a+b.s;},0)/recent.length);
+}
+
+function hasCardioStepCredit(){
+  var today=todaySteps();
+  return today!==null&&today>=STEPS_CARDIO_THRESHOLD;
+}
+
+function renderStepsSection(){
+  DB.steps=DB.steps||[];
+  var today=todaySteps();
+  var baseline=DB.settings.stepBaseline||stepBaseline7dayAvg()||7500;
+  var adj=stepCalAdjustment();
+  var echo=document.getElementById("stepsEcho");
+  if(echo){
+    if(today!==null){
+      var adjTxt=adj>0?"+"+adj+" kcal (more activity)":adj<0?adj+" kcal (less activity)":"on par with baseline";
+      var cardioTxt=today>=STEPS_CARDIO_THRESHOLD?" • ✅ Cardio day credit earned.":"";
+      echo.innerHTML="Today: <strong>"+today.toLocaleString()+" steps</strong> — "+adjTxt+
+        " vs baseline of "+baseline.toLocaleString()+"."+cardioTxt;
+    } else {
+      var avg7=stepBaseline7dayAvg();
+      echo.textContent=avg7?"No steps logged yet today. 7-day avg: "+avg7.toLocaleString()+".":"Log steps daily for 7 days to establish your baseline.";
+    }
+  }
+  var hist=document.getElementById("stepsHistory");
+  if(hist){
+    var recent=(DB.steps||[]).slice(-7).reverse();
+    if(!recent.length){hist.innerHTML="";return;}
+    var rows=recent.map(function(x){
+      var clr=x.s>=STEPS_CARDIO_THRESHOLD?"var(--good)":x.s>=5000?"var(--gold)":"var(--dim)";
+      var pct=Math.min(100,Math.round(x.s/(baseline||7500)*100));
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">'+
+        '<span style="opacity:.7;">'+x.d+'</span>'+
+        '<span style="font-weight:600;color:'+clr+';">'+x.s.toLocaleString()+'</span>'+
+        '<span style="opacity:.5;font-size:11px;">'+pct+'%</span>'+
+        '</div>';
+    }).join("");
+    hist.innerHTML='<div style="font-size:11px;opacity:.6;margin-bottom:4px;">Last 7 days</div>'+rows;
+  }
+}
+
 /* ============ INIT ============ */
 load();
 setTimeout(function(){document.getElementById("splash").classList.add("hide");},3200);
 renderHome();
 renderBPSection();
+renderStepsSection();
 loadBPPromptPref();
 loadMedStack();
 loadGoalSettings();
@@ -3041,7 +3154,7 @@ function renderLabEntry(){
     var r=LAB_REF[k];if(!r)return;
     var v=last[k]!==undefined?last[k]:"";
     h+='<div class="lab-marker"><label>'+r.label+'</label><input type="number" inputmode="decimal" step="0.01" id="lab_'+k+'" value="'+(v||"")+'" placeholder="&mdash;"><span class="unit">'+r.unit+'</span></div>';
-    if(r.note)h+='<div class="lab-note">&#9888; '+r.note+' may affect this value &mdash; mention to your oncology team</div>';
+    if(r.note)h+='<div class="lab-note">&#9888; '+r.note+' may affect this lab value.</div>';
   });
   h+='</div>';
   document.getElementById("labEntryArea").innerHTML=h;
