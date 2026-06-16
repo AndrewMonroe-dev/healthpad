@@ -73,13 +73,13 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
 .toggle-sw input:checked + .toggle-track .toggle-thumb{left:21px;}
 /* QUOTE MODAL */
-.quote-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:10000;display:flex;align-items:center;justify-content:center;padding:28px;cursor:pointer;animation:qfade .4s ease;}
+.quote-overlay{position:fixed;inset:0;background:rgba(10,6,4,.93);z-index:10000;display:flex;align-items:center;justify-content:center;padding:28px;cursor:pointer;animation:qfade .4s ease;}
 @keyframes qfade{from{opacity:0;}to{opacity:1;}}
 .quote-card{max-width:360px;width:100%;text-align:center;pointer-events:none;}
-.quote-mark{font-size:52px;line-height:.8;color:var(--gold);opacity:.6;font-family:Georgia,serif;margin-bottom:8px;}
-.quote-text{font-family:var(--serif);font-size:clamp(16px,4vw,21px);color:var(--fg);line-height:1.55;font-style:italic;margin-bottom:18px;}
-.quote-author{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;}
-.quote-dismiss{margin-top:22px;font-size:11px;color:var(--faint);letter-spacing:1.5px;}
+.quote-mark{font-size:52px;line-height:.8;color:#e0c279;opacity:.75;font-family:Georgia,serif;margin-bottom:8px;}
+.quote-text{font-family:var(--serif);font-size:clamp(17px,4vw,22px);color:#ffffff;line-height:1.6;font-style:italic;margin-bottom:18px;text-shadow:0 1px 8px rgba(0,0,0,.6);}
+.quote-author{font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:#e0c279;font-weight:700;}
+.quote-dismiss{margin-top:24px;font-size:11px;color:rgba(255,255,255,.4);letter-spacing:1.5px;}
 .ring-sub{font-size:10px;color:var(--faint);margin-top:2px;}
 
 .hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;}
@@ -222,13 +222,13 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 .pill.added{background:rgba(45,138,53,.1);color:#1e6b24;border:1px solid rgba(45,138,53,.3);font-size:9px;padding:3px 8px;}
 .pill.held{background:rgba(192,40,30,.1);color:var(--red-deep);border:1px solid rgba(192,40,30,.3);font-size:9px;padding:3px 8px;}
 .bonebar{background:rgba(154,110,40,.08);border:1px solid rgba(154,110,40,.28);color:var(--gold);font-size:12px;padding:8px 11px;border-radius:10px;margin-top:8px;font-weight:600;}
-.splash{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 40%,#2c2018 0%,#120e0b 100%);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .7s ease;}
+.splash{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 38%,#8a1a12 0%,#c0281e 45%,#6b1208 100%);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .7s ease;}
 .splash.hide{opacity:0;pointer-events:none;}
 .splash-badge{width:220px;height:220px;border-radius:50%;background:#ffffff;display:flex;align-items:center;justify-content:center;margin-bottom:30px;box-shadow:0 18px 50px rgba(0,0,0,0.5),0 0 0 1px rgba(203,162,76,0.35),0 0 0 9px rgba(255,255,255,0.04);opacity:0;transform:scale(0.7);animation:badgeIn .55s cubic-bezier(.22,1,.36,1) .15s forwards;}
 .splash-logo{width:200px;height:200px;opacity:0;transform:scale(0.15);animation:leafGrow 1.6s cubic-bezier(.34,1.46,.5,1) .45s forwards;transform-origin:50% 50%;border-radius:50%;}
 @keyframes badgeIn{to{opacity:1;transform:scale(1);}}
 @keyframes leafGrow{0%{opacity:0;transform:scale(0.15);}25%{opacity:1;}100%{opacity:1;transform:scale(1);}}
-.splash-name{font-family:var(--serif);font-size:38px;letter-spacing:1px;color:#f4eee4;font-weight:600;opacity:0;animation:fadeUpIn 0.8s ease 2.15s forwards;text-shadow:0 2px 14px rgba(0,0,0,0.55);}
+.splash-name{font-family:var(--serif);font-size:38px;letter-spacing:1px;color:#ffffff;font-weight:600;opacity:0;animation:fadeUpIn 0.8s ease 2.15s forwards;text-shadow:0 2px 18px rgba(0,0,0,0.5);}
 .splash-name .gold{color:#e0c279;}
 .splash-tag{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:#e0c279;margin-top:11px;opacity:0;animation:fadeUpIn 0.8s ease 2.6s forwards;}
 @keyframes fadeUpIn{0%{opacity:0;transform:translateY(10px);}100%{opacity:1;transform:translateY(0);}}
@@ -277,7 +277,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill gold" id="ringWeight" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg>
-          <div class="ring-center"><div class="ring-val sm" id="homeToGo">&mdash;</div><div class="ring-lbl">lbs to 200</div></div>
+          <div class="ring-center"><div class="ring-val sm" id="homeToGo">&mdash;</div><div class="ring-lbl" id="weightRingLbl">to goal</div></div>
         </div>
       </div>
       <div class="ringcard">
@@ -787,22 +787,59 @@ function renderHome(){
   var lw=lastWeight();
   document.getElementById("hdrWeight").textContent=lw?lw.toFixed(1):"\u2014";
   var startW=DB.weights.length?DB.weights[0].w:lw;
+  var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
+  var goalName=(DB.goal&&DB.goal.name)||"";
+  // Set weight ring label based on goal type
+  var wLbl=document.getElementById("weightRingLbl");
+  if(wLbl){
+    if(goalType==="weight_loss")wLbl.textContent="lbs to goal";
+    else if(goalType==="muscle")wLbl.textContent="lbs gained";
+    else if(goalType==="recomp")wLbl.textContent="lbs tracked";
+    else wLbl.textContent="lbs logged";
+  }
   if(lw){
-    var toGo=Math.max(0,lw-GOAL_WEIGHT);
-    countUp("homeToGo",toGo,1,"");
-    var lost=startW-lw, need=startW-GOAL_WEIGHT;
-    var wpct=need>0?Math.max(0,Math.min(1,lost/need)):0;
-    setRing("ringWeight",wpct);
-    if(DB.weights.length>=2){
-      var first=DB.weights[0], last2=DB.weights[DB.weights.length-1];
-      var wkSpan=Math.max(1,(new Date(last2.d)-new Date(first.d))/(1000*60*60*24*7));
-      var rate=(first.w-last2.w)/wkSpan;
-      var rem=last2.w-GOAL_WEIGHT;
-      if(rate>0.05){
-        var wksLeft=rem/rate;var proj=new Date();proj.setDate(proj.getDate()+Math.round(wksLeft*7));
-        document.getElementById("paceNote").textContent="Losing ~"+rate.toFixed(2)+" lb/wk \u2014 on pace to reach "+GOAL_WEIGHT+" lb around "+proj.toLocaleDateString("en-US",{month:"short",year:"numeric"})+". Target: 1\u20131.5 lb/wk.";
-      } else {document.getElementById("paceNote").textContent="Not enough downward trend yet \u2014 log daily and trust the weekly average.";}
-    } else {document.getElementById("paceNote").textContent="Keep logging \u2014 pace projection appears after a few weigh-ins.";}
+    if(goalType==="weight_loss"||goalType==="recomp"){
+      var toGo=Math.max(0,lw-GOAL_WEIGHT);
+      countUp("homeToGo",toGo,1,"");
+      var lost=startW-lw, need=startW-GOAL_WEIGHT;
+      var wpct=need>0?Math.max(0,Math.min(1,lost/need)):0;
+      setRing("ringWeight",wpct);
+      if(DB.weights.length>=2){
+        var first=DB.weights[0], last2=DB.weights[DB.weights.length-1];
+        var wkSpan=Math.max(1,(new Date(last2.d)-new Date(first.d))/(1000*60*60*24*7));
+        var rate=(first.w-last2.w)/wkSpan;
+        var rem=last2.w-GOAL_WEIGHT;
+        if(goalType==="weight_loss"&&rate>0.05){
+          var wksLeft=rem/rate;var proj=new Date();proj.setDate(proj.getDate()+Math.round(wksLeft*7));
+          var tgtTxt=goalName?goalName:"your goal weight";
+          document.getElementById("paceNote").textContent="Losing ~"+rate.toFixed(2)+" lb/wk \u2014 on pace to reach "+tgtTxt+" around "+proj.toLocaleDateString("en-US",{month:"short",year:"numeric"})+". Target: 1\u20131.5 lb/wk.";
+        } else if(goalType==="weight_loss"){
+          document.getElementById("paceNote").textContent="Not enough downward trend yet \u2014 log daily and trust the weekly average.";
+        } else {
+          document.getElementById("paceNote").textContent="Weight holding steady. Strength gains alongside stable weight = recomp working.";
+        }
+      } else {document.getElementById("paceNote").textContent="Keep logging \u2014 your trend appears after a few weigh-ins.";}
+    } else if(goalType==="muscle"){
+      var gained=Math.max(0,lw-startW);
+      countUp("homeToGo",gained,1,"");
+      var gpct=startW>0?Math.min(1,gained/(startW*0.05)):0; // 5% bodyweight gain = full ring
+      setRing("ringWeight",gpct);
+      if(DB.weights.length>=2){
+        var first2=DB.weights[0],last3=DB.weights[DB.weights.length-1];
+        var wk2=Math.max(1,(new Date(last3.d)-new Date(first2.d))/(1000*60*60*24*7));
+        var rateUp=(last3.w-first2.w)/wk2;
+        if(rateUp>0.05){
+          document.getElementById("paceNote").textContent="Gaining ~"+rateUp.toFixed(2)+" lb/wk. Target 0.25\u20130.5 lb/wk for lean muscle gain.";
+        } else {
+          document.getElementById("paceNote").textContent="Weight holding. Check calorie surplus and protein target in your log.";
+        }
+      } else {document.getElementById("paceNote").textContent="Keep logging \u2014 your gain trend appears after a few weigh-ins.";}
+    } else {
+      // Other goals — just show current weight, neutral ring
+      document.getElementById("homeToGo").textContent=lw.toFixed(1);
+      setRing("ringWeight",0.5);
+      document.getElementById("paceNote").textContent="Weight: "+lw.toFixed(1)+" lb. Log daily to track your trend.";
+    }
   } else {
     document.getElementById("homeToGo").textContent="\u2014";
     document.getElementById("paceNote").textContent="Log your first weigh-in to start tracking.";
@@ -1097,7 +1134,12 @@ function renderLog(){
   var ph=currentPhase();
   document.getElementById("calTargetTag").textContent="Target "+ph.cal+" kcal";
   var lw=lastWeight();
-  document.getElementById("weightEcho").textContent=lw?("Last: "+lw.toFixed(1)+" lb \u2022 "+(lw-GOAL_WEIGHT).toFixed(1)+" lb to 200."):"No weight logged yet.";
+  var _gt=(DB.goal&&DB.goal.type)||"weight_loss";
+  var _gn=(DB.goal&&DB.goal.name)||"goal weight";
+  var _echoTxt=lw?("Last: "+lw.toFixed(1)+" lb"):"No weight logged yet.";
+  if(lw&&(_gt==="weight_loss"||_gt==="recomp"))_echoTxt+=" \u2022 "+(lw-GOAL_WEIGHT).toFixed(1)+" lb to "+_gn+".";
+  else if(lw&&_gt==="muscle"&&DB.weights.length>1)_echoTxt+=" \u2022 +"+(lw-DB.weights[0].w).toFixed(1)+" lb since start.";
+  document.getElementById("weightEcho").textContent=_echoTxt;
   var nt=todayNutrition();var pro=nt?nt.pro:0,cal=nt?nt.cal:0;
   document.getElementById("proGramsLog").textContent=(pro||0);
   document.getElementById("proSubLog").textContent="of "+PROTEIN_TARGET+" g";
