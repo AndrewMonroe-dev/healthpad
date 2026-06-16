@@ -66,8 +66,12 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ring-fill.gold{stroke:var(--gold);filter:drop-shadow(0 0 5px rgba(154,110,40,.28));}
 .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
 .ring-val{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1;}
-.ring-val.sm{font-size:24px;}
-.ring-lbl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-top:3px;font-weight:600;}
+.ring-val.sm{font-size:28px;}
+.ring-lbl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-top:4px;font-weight:600;}
+/* MED TAGS */
+.med-tag{display:inline-flex;align-items:center;padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--surf);color:var(--ink2);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+.med-tag.sel{border-color:var(--red);background:rgba(192,40,30,.10);color:var(--ink);}
+.med-tag.sel::before{content:"✓ ";}
 /* PROGRESSION BANNER */
 .prog-banner{margin:0 16px 0;padding:16px 18px;border-radius:14px;border:1.5px solid var(--gold);background:rgba(203,162,76,.10);}
 .prog-banner-title{font-size:14px;font-weight:700;color:var(--gold);letter-spacing:.5px;margin-bottom:6px;}
@@ -107,14 +111,14 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .quote-text{font-family:var(--serif);font-size:clamp(17px,4vw,22px);color:#ffffff;line-height:1.6;font-style:italic;margin-bottom:18px;text-shadow:0 1px 8px rgba(0,0,0,.6);}
 .quote-author{font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:#e0c279;font-weight:700;}
 .quote-dismiss{margin-top:24px;font-size:11px;color:rgba(255,255,255,.4);letter-spacing:1.5px;}
-.ring-sub{font-size:9px;color:var(--faint);margin-top:2px;line-height:1.2;max-width:85px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ring-sub{font-size:9px;color:var(--faint);margin-top:2px;line-height:1.2;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;}
 .hero .ring{width:210px;height:210px;}
 .hero-date{font-size:13px;color:var(--gold);font-family:var(--serif);font-style:italic;margin-top:12px;}
 .ringrow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
 .ringcard{background:var(--surf);border:1px solid var(--line2);box-shadow:0 1px 4px rgba(0,0,0,0.07);border-radius:var(--r);padding:16px 10px 14px;display:flex;flex-direction:column;align-items:center;}
-.ringcard .ring{width:118px;height:118px;}
+.ringcard .ring{width:148px;height:148px;}
 
 /* PILLS */
 .phase-pill{display:inline-flex;align-items:center;background:linear-gradient(135deg,var(--red),var(--red-deep));color:#fff;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:7px 15px;border-radius:20px;font-weight:700;box-shadow:0 4px 14px rgba(224,56,46,.25);}
@@ -300,7 +304,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     <div class="ringrow">
       <div class="ringcard">
         <div class="ring">
-          <svg viewBox="0 0 130 130" width="118" height="118">
+          <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill gold" id="ringWeight" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg>
@@ -309,7 +313,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       </div>
       <div class="ringcard">
         <div class="ring">
-          <svg viewBox="0 0 130 130" width="118" height="118">
+          <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill red" id="ringPro" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg>
@@ -442,13 +446,13 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="sec-h">End-of-Day Nutrition <span class="tag" id="calTargetTag"></span></div>
       <div class="ringrow" style="margin-top:2px;margin-bottom:8px;">
         <div class="ringcard">
-          <div class="ring"><svg viewBox="0 0 130 130" width="128" height="128">
+          <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill red" id="ringProLog" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg><div class="ring-center"><div class="ring-val sm" id="proGramsLog">0</div><div class="ring-sub" id="proSubLog">of 210 g</div><div class="ring-lbl">protein</div></div></div>
         </div>
         <div class="ringcard">
-          <div class="ring"><svg viewBox="0 0 130 130" width="128" height="128">
+          <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill gold" id="ringCalLog" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg><div class="ring-center"><div class="ring-val sm" id="calLogVal">0</div><div class="ring-sub" id="calSubLog">of 2250</div><div class="ring-lbl">kcal</div></div></div>
@@ -539,10 +543,12 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="note dim" id="goalSettingsEcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
-      <div class="sec-h">Medication Stack</div>
-      <div class="note dim" style="margin-bottom:8px;">Your current medications. Keeps workout flags in context. Update when prescriptions change.</div>
-      <textarea id="inMedStack" rows="6" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;" placeholder="e.g. Metformin 500mg twice daily&#10;Lisinopril 10mg daily&#10;Atorvastatin 20mg nightly&#10;Vitamin D 2000 IU daily"></textarea>
-      <button class="btn sm" style="margin-top:8px;" onclick="saveMedStack()">Save Medications</button>
+      <div class="sec-h">Medication Categories</div>
+      <div class="note dim" style="margin-bottom:12px;">Select any categories that apply. Optional — used in a future update to contextualize training and lab flags. Tap a tag to toggle.</div>
+      <div id="medTagArea" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
+      <div class="note dim" style="margin-bottom:6px;font-size:11px;letter-spacing:.5px;text-transform:uppercase;">Additional Notes (optional)</div>
+      <textarea id="inMedStack" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;" placeholder="Specific medications, dosages, or notes for your own reference"></textarea>
+      <button class="btn sm" style="margin-top:8px;" onclick="saveMedStack()">Save</button>
       <div class="note dim" id="medStackEcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
@@ -915,7 +921,7 @@ var SPLIT_HEAVY=[
 ];
 
 /* ============ STATE ============ */
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,stepBaseline:null,weightReaction:true},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[]},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -988,7 +994,7 @@ function nav(v){
   if(v==="setup")renderSetup();
   if(v==="labs"){renderLabs();}
   if(v==="log"){renderBPSection();renderStepsSection();loadBPPromptPref();loadWeightReactionPref();}
-  if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();}
+  if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();renderMedTags();}
   window.scrollTo(0,0);
   el.style.animation="none"; void el.offsetWidth;
   el.style.animation="slideIn"+(dir>0?"R":"L")+" .34s cubic-bezier(.22,.9,.3,1)";
@@ -1951,6 +1957,45 @@ function renderBPSection(){
 }
 
 /* ============ MED STACK ============ */
+/* ============ MEDICATION CATEGORIES ============ */
+var MED_CATEGORIES=[
+  {id:"beta_blocker",     label:"Beta Blockers"},
+  {id:"ace_arb",          label:"ACE Inhibitors / ARBs"},
+  {id:"statin",           label:"Statins"},
+  {id:"corticosteroid",   label:"Corticosteroids"},
+  {id:"glp1",             label:"GLP-1 Agonists"},
+  {id:"diuretic",         label:"Diuretics"},
+  {id:"thyroid",          label:"Thyroid Medications"},
+  {id:"hormone_adt",      label:"ADT / Hormone Suppression"},
+  {id:"ssri_snri",        label:"SSRIs / SNRIs"},
+  {id:"blood_thinner",    label:"Blood Thinners"},
+  {id:"insulin",          label:"Insulin / Diabetes Meds"},
+  {id:"immunosuppressant",label:"Immunosuppressants"},
+  {id:"pain_nsaid",       label:"NSAIDs / Pain Meds"},
+  {id:"stimulant",        label:"Stimulants / ADHD Meds"},
+  {id:"other",            label:"Other"}
+];
+
+function renderMedTags(){
+  var area=document.getElementById("medTagArea");
+  if(!area)return;
+  var sel=(DB.settings&&DB.settings.medCategories)||[];
+  area.innerHTML=MED_CATEGORIES.map(function(c){
+    var on=sel.indexOf(c.id)>-1;
+    return '<div class="med-tag'+(on?' sel':'')+'" onclick="toggleMedTag(&quot;'+c.id+'&quot;)" data-id="'+c.id+'">'+c.label+'</div>';
+  }).join("");
+}
+
+function toggleMedTag(id){
+  DB.settings=DB.settings||{};
+  DB.settings.medCategories=DB.settings.medCategories||[];
+  var idx=DB.settings.medCategories.indexOf(id);
+  if(idx>-1){DB.settings.medCategories.splice(idx,1);}
+  else{DB.settings.medCategories.push(id);}
+  save();
+  renderMedTags();
+}
+
 function saveMedStack(){
   var v=document.getElementById("inMedStack").value.trim();
   DB.settings=DB.settings||{};
@@ -1963,6 +2008,7 @@ function saveMedStack(){
 function loadMedStack(){
   var el=document.getElementById("inMedStack");
   if(el&&DB.settings&&DB.settings.medStack){el.value=DB.settings.medStack;}
+  renderMedTags();
 }
 
 /* ============ BP DAILY PROMPT ============ */
@@ -2812,7 +2858,7 @@ function executeReset(){
   try{localStorage.removeItem("hp_dp");}catch(e){}
   // Reset DB to factory defaults
   DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],
-      oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,weightReaction:true},
+      oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,weightReaction:true,medCategories:[]},
       goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},
       milestones:[],program:null};
   save();
