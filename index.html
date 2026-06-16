@@ -6,10 +6,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="HealthPad">
-<meta name="theme-color" content="#f0eeeb">
+<meta name="theme-color" content="#c0281e">
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="HealthPad">
 <title>HealthPad</title>
 <style>
 :root{
@@ -579,6 +582,19 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     <button class="btn" onclick="saveLabEntry()">Save Lab Results</button>
     <div id="labFlagsArea" style="margin-top:14px;"></div>
     <div id="labChartsArea" style="margin-top:14px;"></div>
+  </div>
+
+  <!-- ANDROID INSTALL BANNER -->
+  <div id="androidInstallBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:4000;padding:14px 16px;background:linear-gradient(135deg,#8a1a12,#c0281e);box-shadow:0 -2px 12px rgba(0,0,0,.4);">
+    <div style="display:flex;align-items:center;gap:12px;max-width:480px;margin:0 auto;">
+      <img src="apple-touch-icon.png" style="width:40px;height:40px;border-radius:8px;flex-shrink:0;" alt="">
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:#fff;">Install HealthPad</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.75);">Add to your home screen for the full app experience.</div>
+      </div>
+      <button id="androidInstallBtn" style="background:#fff;color:#c0281e;border:none;border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;touch-action:manipulation;white-space:nowrap;">Install</button>
+      <button onclick="dismissInstallBanner()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:22px;cursor:pointer;padding:4px;touch-action:manipulation;line-height:1;">&times;</button>
+    </div>
   </div>
 
   <!-- ONBOARDING -->
@@ -2617,6 +2633,57 @@ function executeReset(){
   setTimeout(obShow, 800);
 }
 
+
+/* ============ ANDROID PWA INSTALL ============ */
+var _deferredInstallPrompt=null;
+
+window.addEventListener("beforeinstallprompt",function(e){
+  e.preventDefault();
+  _deferredInstallPrompt=e;
+  // Only show on Android (not iOS — iOS has its own flow via safari share button)
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(!isIOS){
+    // Check if already installed
+    if(window.matchMedia("(display-mode: standalone)").matches)return;
+    // Check if user dismissed before
+    try{if(localStorage.getItem("hp_install_dismissed")==="1")return;}catch(ex){}
+    setTimeout(function(){
+      var b=document.getElementById("androidInstallBanner");
+      if(b)b.style.display="block";
+    },4000);
+  }
+});
+
+window.addEventListener("appinstalled",function(){
+  var b=document.getElementById("androidInstallBanner");
+  if(b)b.style.display="none";
+  _deferredInstallPrompt=null;
+  toast("HealthPad installed successfully.");
+});
+
+document.addEventListener("DOMContentLoaded",function(){
+  var btn=document.getElementById("androidInstallBtn");
+  if(btn){
+    btn.addEventListener("click",function(){
+      if(!_deferredInstallPrompt)return;
+      _deferredInstallPrompt.prompt();
+      _deferredInstallPrompt.userChoice.then(function(result){
+        if(result.outcome==="accepted"){
+          var b=document.getElementById("androidInstallBanner");
+          if(b)b.style.display="none";
+        }
+        _deferredInstallPrompt=null;
+      });
+    });
+  }
+});
+
+function dismissInstallBanner(){
+  var b=document.getElementById("androidInstallBanner");
+  if(b)b.style.display="none";
+  try{localStorage.setItem("hp_install_dismissed","1");}catch(e){}
+}
+
 /* ============ INIT ============ */
 load();
 setTimeout(function(){document.getElementById("splash").classList.add("hide");},3200);
@@ -2632,20 +2699,36 @@ setTimeout(function(){
   setTimeout(checkBPPrompt,2000);
   setTimeout(loadAndShowQuote,200);
 },3400);
-// PWA: minimal inline service worker for installability/offline shell
+// PWA: service worker with offline shell caching — meets Chrome install criteria
 if("serviceWorker" in navigator){
   try{
-    var swCode="self.addEventListener('install',function(e){self.skipWaiting();});self.addEventListener('fetch',function(e){});";
+    var swCode=[
+      "var CACHE='healthpad-v1';",
+      "var SHELL=['./index.html','./manifest.json','./apple-touch-icon.png','./quotes.json'];",
+      "self.addEventListener('install',function(e){",
+      "  self.skipWaiting();",
+      "  e.waitUntil(caches.open(CACHE).then(function(c){",
+      "    return Promise.allSettled(SHELL.map(function(u){return c.add(u).catch(function(){});}));",
+      "  }));",
+      "});",
+      "self.addEventListener('activate',function(e){",
+      "  e.waitUntil(caches.keys().then(function(keys){",
+      "    return Promise.all(keys.filter(function(k){return k!==CACHE;}).map(function(k){return caches.delete(k);}));",
+      "  }));",
+      "  self.clients.claim();",
+      "});",
+      "self.addEventListener('fetch',function(e){",
+      "  if(e.request.method!=='GET')return;",
+      "  e.respondWith(caches.match(e.request).then(function(cached){",
+      "    return cached||fetch(e.request).catch(function(){return cached;});",
+      "  }));",
+      "});"
+    ].join("\n");
     var swBlob=new Blob([swCode],{type:"application/javascript"});
-    navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(function(){});
+    var swUrl=URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(function(){});
   }catch(e){}
 }
-// inline manifest
-try{
-  var manifest={name:"HealthPad",short_name:"Ledger",start_url:".",display:"standalone",background_color:"#191512",theme_color:"var(--red)",icons:[]};
-  var mblob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
-  var mlink=document.createElement("link");mlink.rel="manifest";mlink.href=URL.createObjectURL(mblob);document.head.appendChild(mlink);
-}catch(e){}
 
 function syncORMsFromLive(){
   var updated=0;
