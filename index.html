@@ -69,9 +69,20 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ob-step{}
 .ob-q{font-size:19px;font-weight:700;color:#ffffff;line-height:1.4;margin-bottom:22px;}
 .ob-opts{display:flex;flex-direction:column;gap:10px;}
-.ob-opt{padding:15px 18px;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;color:rgba(255,255,255,.85);font-size:15px;cursor:pointer;transition:all .15s;font-weight:500;}
-.ob-opt:hover{border-color:#e0c279;color:#ffffff;}
-.ob-opt.sel{border-color:#e0c279;background:rgba(224,194,121,.12);color:#ffffff;font-weight:700;}
+.ob-opt{
+  display:block;width:100%;padding:17px 20px;
+  border:1.5px solid rgba(255,255,255,.18);border-radius:14px;
+  color:rgba(255,255,255,.85);font-size:16px;font-weight:500;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  user-select:none;-webkit-user-select:none;
+  transition:background .1s,border-color .1s,transform .08s;
+  text-align:left;background:rgba(255,255,255,.04);
+}
+.ob-opt:active{transform:scale(.97);background:rgba(224,194,121,.18);border-color:#e0c279;}
+.ob-opt.sel{border-color:#e0c279;background:rgba(224,194,121,.14);color:#ffffff;font-weight:700;}
+.ob-opt.flash{background:rgba(224,194,121,.28);border-color:#e0c279;}
 /* TOGGLE SWITCH */
 .toggle-sw{display:inline-flex;align-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .toggle-sw input{display:none;}
@@ -619,8 +630,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       </div>
       <!-- Nav buttons -->
       <div style="display:flex;gap:12px;margin-top:32px;">
-        <button id="obBack" class="btn dark" style="flex:1;display:none;" onclick="obPrev()">Back</button>
-        <button id="obNext" class="btn" style="flex:2;" onclick="obNext()">Next</button>
+        <button id="obBack" class="btn dark" style="flex:1;display:none;touch-action:manipulation;" onclick="obPrev()">Back</button>
+        <button id="obNext" class="btn" style="flex:2;touch-action:manipulation;" onclick="obNext()">Next</button>
       </div>
       <div id="obError" style="color:#ff6b6b;font-size:13px;text-align:center;margin-top:12px;min-height:18px;"></div>
     </div>
@@ -1909,13 +1920,13 @@ function obNext(){
 }
 function obPrev(){if(OB.step>1){OB.step--;obRender();}}
 
-// Click handlers wired via delegation
-document.addEventListener("click",function(e){
-  var opt=e.target.closest(".ob-opt");
-  if(!opt)return;
+// Touch/click handlers — touchstart for instant iOS response, click as fallback
+function handleObOptTap(opt){
   var grp=opt.dataset.grp,v=opt.dataset.v;
+  // Flash feedback
+  opt.classList.add("flash");
+  setTimeout(function(){opt.classList.remove("flash");},120);
   if(opt.classList.contains("ob-multi")){
-    // Multi-select (step 5)
     if(v==="none"){
       OB.answers.limits=["none"];
     } else {
@@ -1929,6 +1940,20 @@ document.addEventListener("click",function(e){
     OB.answers[grp]=v;
   }
   obRender();
+}
+var _obLastTouch=0;
+document.addEventListener("touchstart",function(e){
+  var opt=e.target.closest(".ob-opt");
+  if(!opt)return;
+  _obLastTouch=Date.now();
+  handleObOptTap(opt);
+},{passive:true});
+document.addEventListener("click",function(e){
+  var opt=e.target.closest(".ob-opt");
+  if(!opt)return;
+  // Suppress if touchstart already handled it within 500ms
+  if(Date.now()-_obLastTouch<500)return;
+  handleObOptTap(opt);
 });
 
 function obFinish(){
