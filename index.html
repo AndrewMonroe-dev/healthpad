@@ -1483,11 +1483,14 @@ function renderLog(){
 function saveWeight(){
   var v=parseFloat(document.getElementById("inWeight").value);
   if(isNaN(v)){toast("Enter a weight");return;}
+  var prev=lastWeight();
   DB.weights=DB.weights.filter(function(x){return x.d!==todayStr();});
   DB.weights.push({d:todayStr(),w:v});
   DB.weights.sort(function(a,b){return new Date(a.d)-new Date(b.d);});
   recalcCaloriesFromCurrentWeight();
-  save();document.getElementById("inWeight").value="";renderLog();toast("Weight recorded — calorie target updated");trySheetSync();
+  save();document.getElementById("inWeight").value="";renderLog();trySheetSync();
+  if(prev!==null&&prev!==undefined){showWeightReaction(prev-v,v,prev);}
+  else{toast("First weigh-in logged. Let the journey begin.");}
 }
 function saveRHR(){
   var v=parseInt(document.getElementById("inRHR").value);
@@ -2979,6 +2982,54 @@ function renderStepsSection(){
   }
 }
 
+
+/* ============ WEIGHT REACTIONS ============ */
+var _weightReactions=null;
+
+function loadWeightReactions(cb){
+  if(_weightReactions){cb(_weightReactions);return;}
+  fetch("weight_reactions.json?v="+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(data){_weightReactions=data;cb(data);})
+    .catch(function(){
+      cb({
+        praise:["Down. Keep going.","The scale is cooperating. Keep it up."],
+        scorn:["The scale just sighed.","Bold strategy, champ."]
+      });
+    });
+}
+
+function showWeightReaction(lost,newW,prevW){
+  loadWeightReactions(function(data){
+    var isPraise=lost>0;
+    var list=isPraise?data.praise:data.scorn;
+    var msg=list[Math.floor(Math.random()*list.length)];
+    var delta=Math.abs(lost).toFixed(1);
+    var arrow=isPraise?"\u2193":"\u2191";
+    var deltaColor=isPraise?"var(--good)":"var(--red)";
+    var icon=isPraise?"&#x1F389;":"&#x1F440;";
+    var overlay=document.createElement("div");
+    overlay.className="quote-overlay";
+    overlay.innerHTML=
+      '<div class="quote-card" style="max-width:380px;">'+
+        '<div style="font-size:44px;margin-bottom:10px;">'+icon+'</div>'+
+        '<div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;'+
+          'color:'+deltaColor+';font-weight:700;margin-bottom:16px;">'+
+          arrow+' '+delta+' lb \u2014 '+newW.toFixed(1)+' lb'+
+        '</div>'+
+        '<div class="quote-text" style="font-size:clamp(15px,3.8vw,19px);'+
+          'font-style:normal;font-family:var(--font);">'+msg+'</div>'+
+        '<div class="quote-dismiss" style="margin-top:20px;">Tap anywhere to continue</div>'+
+      '</div>';
+    overlay.addEventListener("click",function(){
+      overlay.style.transition="opacity .25s";
+      overlay.style.opacity="0";
+      setTimeout(function(){if(overlay.parentNode)overlay.parentNode.removeChild(overlay);},260);
+    });
+    document.body.appendChild(overlay);
+  });
+}
+
 /* ============ INIT ============ */
 load();
 setTimeout(function(){document.getElementById("splash").classList.add("hide");},3200);
@@ -2986,6 +3037,7 @@ renderHome();
 renderBPSection();
 renderStepsSection();
 loadBPPromptPref();
+loadWeightReactions(function(){});
 loadMedStack();
 loadGoalSettings();
 loadUserName();
