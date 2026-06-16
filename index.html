@@ -731,7 +731,22 @@ var DEFAULT_1RM={
  "Cable Crunch":0,"Decline Crunch":0,"Hanging Leg Raise":0,"Ab Wheel Rollout":0,
  "Pallof Press":0,"Plank":0,"Side Plank":0,"Landmine Rotation":0,
  // Functional / Cardio-adjacent
- "Sled Push":0,"Farmers Carry":0,"Battle Ropes":0,"Box Jump":0,"Step-Up":0
+ "Sled Push":0,"Farmers Carry":0,"Battle Ropes":0,"Box Jump":0,"Step-Up":0,
+ // Bodyweight
+ "Push-Up":0,"Close-Grip Push-Up":0,"Wide Push-Up":0,"Decline Push-Up":0,
+ "Diamond Push-Up":0,"Pike Push-Up":0,"Archer Push-Up":0,
+ "Pull-Up":0,"Chin-Up":0,"Inverted Row":0,"Australian Pull-Up":0,
+ "Bodyweight Squat":0,"Jump Squat":0,"Bulgarian Split Squat BW":0,
+ "Reverse Lunge":0,"Forward Lunge":0,"Lateral Lunge":0,
+ "Pistol Squat":0,"Step-Up BW":0,
+ "Glute Bridge BW":0,"Single-Leg Glute Bridge":0,"Hip Thrust BW":0,
+ "Good Morning BW":0,"Single-Leg Hip Hinge":0,"Nordic Curl BW":0,
+ "Calf Raise BW":0,"Single-Leg Calf Raise":0,
+ "Dip BW":0,"Bench Dip":0,"Tricep Push-Up":0,
+ "Hollow Body Hold":0,"L-Sit":0,"Tuck Hold":0,
+ "Plank":0,"Side Plank":0,"RKC Plank":0,
+ "Hanging Knee Raise":0,"Hanging Leg Raise":0,"V-Up":0,
+ "Mountain Climber":0,"Bear Crawl":0,"Burpee":0
 };
 
 /* Weekly templates. Day idx 0..6 Mon..Sun */
@@ -1088,6 +1103,9 @@ var ADAPT_UNLOCKS={
  "Upper Heavy A":[{n:"Cable Tricep Pressdown",s:3,lo:12,hi:12},{n:"Close-Grip Bench Press",s:3,lo:6,hi:8},{n:"Face Pull",s:3,lo:15,hi:20},{n:"Cable Straight-Arm Pulldown",s:3,lo:10,hi:12}],
  "Lower Heavy B":[{n:"Seated Calf Raise",s:3,lo:12,hi:15},{n:"Lying Leg Curl",s:3,lo:8,hi:10},{n:"Adductor Machine",s:3,lo:12,hi:15}],
  "Upper Heavy B":[{n:"Rear Delt Fly",s:3,lo:15,hi:20},{n:"Reverse Pec Deck",s:3,lo:12,hi:15},{n:"Upright Row",s:3,lo:8,hi:10},{n:"Cable Curl",s:3,lo:10,hi:12}],
+ "Full Body A":[{n:"Jump Squat",s:3,lo:10,hi:15},{n:"Diamond Push-Up",s:3,lo:8,hi:15},{n:"Australian Pull-Up",s:3,lo:8,hi:15},{n:"Hollow Body Hold",s:3,lo:20,hi:40}],
+ "Full Body B":[{n:"Reverse Lunge",s:3,lo:10,hi:15},{n:"Decline Push-Up",s:3,lo:8,hi:15},{n:"Hanging Knee Raise",s:3,lo:10,hi:15},{n:"Single-Leg Calf Raise",s:3,lo:15,hi:25}],
+ "Full Body C":[{n:"Bulgarian Split Squat BW",s:3,lo:8,hi:12},{n:"Archer Push-Up",s:3,lo:5,hi:10},{n:"V-Up",s:3,lo:10,hi:15},{n:"Mountain Climber",s:3,lo:20,hi:30}],
  "Lower Heavy B":[{n:"Seated Leg Curl",s:3,lo:10,hi:12}],
  "Upper Heavy B":[{n:"Cable Lateral Raise",s:3,lo:15,hi:20}]
 };
@@ -1175,7 +1193,16 @@ function computeAdaptive(ex,holdToday,pauseVolume,wip,fatigueTier){
   }
 
   var loadR=load?Math.round(load/5)*5:0;
-  var loadStr=load?("~"+loadR+" lb"):"set by feel";
+  var bwExNames=["Push-Up","Close-Grip Push-Up","Wide Push-Up","Decline Push-Up","Diamond Push-Up",
+    "Pike Push-Up","Archer Push-Up","Pull-Up","Chin-Up","Inverted Row","Australian Pull-Up",
+    "Bodyweight Squat","Jump Squat","Bulgarian Split Squat BW","Reverse Lunge","Forward Lunge",
+    "Lateral Lunge","Pistol Squat","Step-Up BW","Glute Bridge BW","Single-Leg Glute Bridge",
+    "Hip Thrust BW","Good Morning BW","Single-Leg Hip Hinge","Nordic Curl BW","Calf Raise BW",
+    "Single-Leg Calf Raise","Dip BW","Bench Dip","Tricep Push-Up","Hollow Body Hold","L-Sit",
+    "Tuck Hold","Plank","Side Plank","RKC Plank","Hanging Knee Raise","Hanging Leg Raise",
+    "V-Up","Mountain Climber","Bear Crawl","Burpee"];
+  var isBW=bwExNames.indexOf(ex.n)>-1;
+  var loadStr=load?("~"+loadR+" lb"):isBW?"bodyweight":"set by feel";
   return {
     sets:sets,lo:adjLo,hi:adjHi,
     loadStr:loadStr,rec:rec,est:Math.round(est),
@@ -2128,8 +2155,44 @@ function buildFullBody(days,goal,equip,limits){
   var hasBack=limits.indexOf("lower_back")>-1;
   var hasShoulder=limits.indexOf("shoulder")>-1;
   var isStr=goal==="strength";
-  var isCard=goal==="vo2max"||goal==="heart"||goal==="endurance";
 
+  // ── BODYWEIGHT-ONLY PROGRAM ───────────────────────────────────
+  if(bwOnly){
+    // Squat pattern
+    var bwSquat=hasKnee?ex("Glute Bridge BW",3,15,20):ex("Bodyweight Squat",3,15,25);
+    // Hinge
+    var bwHinge=hasBack?ex("Glute Bridge BW",3,15,20):ex("Single-Leg Hip Hinge",3,10,15);
+    // Push (horizontal)
+    var bwPushH=hasShoulder?ex("Decline Push-Up",3,8,15):ex("Push-Up",3,10,20);
+    // Push (vertical)
+    var bwPushV=hasShoulder?ex("Wide Push-Up",3,8,15):ex("Pike Push-Up",3,8,15);
+    // Pull
+    var bwPull=ex("Inverted Row",3,8,15);
+    // Lunge
+    var bwLunge=hasKnee?ex("Glute Bridge BW",3,15,20):ex("Reverse Lunge",3,10,15);
+    // Core
+    var bwCore=ex("Hollow Body Hold",3,20,40);
+    var bwPlank=ex("Plank",3,20,45);
+    var bwGlute=ex("Single-Leg Glute Bridge",3,12,20);
+    var bwCalf=ex("Single-Leg Calf Raise",3,15,25);
+    var bwDip=ex("Bench Dip",3,10,20);
+
+    var dayA={day:"Full Body A",rest:false,ex:[bwSquat,bwPushH,bwPull,bwLunge,bwCore]};
+    var dayB={day:"Full Body B",rest:false,ex:[bwHinge,bwPushV,bwPull,bwGlute,bwPlank]};
+    var dayC={day:"Full Body C",rest:false,ex:[bwSquat,bwPushH,bwDip,bwLunge,bwCalf]};
+    var cardioDay={day:"Cardio + Core",rest:false,cardio:true,ex:[]};
+    var restDay={day:"Rest",rest:true,ex:[]};
+
+    var split=[];
+    if(days===2){split=[dayA,restDay,restDay,dayB,restDay,restDay,restDay];}
+    else if(days===3){split=[dayA,restDay,dayB,restDay,dayC,restDay,restDay];}
+    else{split=[dayA,restDay,dayB,cardioDay,dayC,restDay,restDay];}
+
+    var phases=buildPhases(goal,"FB");
+    return {splitType:"FB",split:split,phases:phases,bwOnly:true};
+  }
+
+  // ── WEIGHTED PROGRAMS ─────────────────────────────────────────
   // Squat pattern
   var squat=hasKnee?ex("Goblet Squat",3,10,15):
     hasBar?ex("Barbell Back Squat",3,isStr?5:8,isStr?5:12,true):
@@ -2139,7 +2202,7 @@ function buildFullBody(days,goal,equip,limits){
     hasBar?ex("Trap-Bar Deadlift",3,isStr?4:6,isStr?5:8,true):
     dbOnly?ex("DB Romanian Deadlift",3,10,12):ex("Single-Leg Hip Hinge",3,10,12);
   // Push
-  var push=hasShoulder?ex("Low-to-High Cable Fly",3,12,15):
+  var push=hasShoulder?ex("Push-Up",3,10,20):
     hasBar?ex("Barbell Bench Press",3,isStr?5:8,isStr?5:10):
     dbOnly?ex("DB Bench Press",3,8,12):ex("Push-Up",3,10,20);
   // Pull
@@ -2147,12 +2210,12 @@ function buildFullBody(days,goal,equip,limits){
     equip==="full"?ex("Seated Cable Row",3,10,12):
     dbOnly?ex("Single-Arm DB Row",3,10,12):ex("Inverted Row",3,8,15);
   // Press
-  var press=hasShoulder?ex("DB Lateral Raise",3,12,20):
+  var press=hasShoulder?ex("Lateral Lunge",3,10,15):
     hasBar?ex("Barbell Overhead Press",3,isStr?5:8,isStr?5:8,true):
     dbOnly?ex("DB Shoulder Press",3,10,12):ex("Pike Push-Up",3,8,15);
 
-  var dayA={day:"Full Body A",rest:false,ex:[squat,push,pull,press,ex("Standing Calf Raise",3,12,20)]};
-  var dayB={day:"Full Body B",rest:false,ex:[hinge,push,pull,ex("DB Lateral Raise",3,12,15),ex("EZ-Bar Curl",3,10,12)]};
+  var dayA={day:"Full Body A",rest:false,ex:[squat,push,pull,press,ex(dbOnly?"Single-Leg Calf Raise":"Standing Calf Raise",3,12,20)]};
+  var dayB={day:"Full Body B",rest:false,ex:[hinge,push,pull,ex(dbOnly?"DB Lateral Raise":"Reverse Lunge",3,12,15),ex(dbOnly?"DB Skull Crusher":"Bench Dip",3,10,12)]};
   var cardioDay={day:"Cardio + Core",rest:false,cardio:true,ex:[]};
   var restDay={day:"Rest",rest:true,ex:[]};
 
@@ -2166,6 +2229,11 @@ function buildFullBody(days,goal,equip,limits){
 }
 
 function buildUpperLower(days,goal,exp,equip,limits){
+  // Bodyweight-only users should always get a full-body program
+  // Upper/Lower splits require at least dumbbells for meaningful upper body
+  if(equip==="bodyweight"){
+    return buildFullBody(Math.min(days,4),goal,equip,limits);
+  }
   var hasBar=equip==="full"||equip==="barbell";
   var fullGym=equip==="full";
   var dbOnly=equip==="dumbbells";
