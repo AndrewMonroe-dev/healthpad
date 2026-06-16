@@ -66,8 +66,8 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ring-fill.gold{stroke:var(--gold);filter:drop-shadow(0 0 5px rgba(154,110,40,.28));}
 .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
 .ring-val{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1;}
-.ring-val.sm{font-size:30px;}
-.ring-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);margin-top:5px;font-weight:600;}
+.ring-val.sm{font-size:24px;}
+.ring-lbl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-top:3px;font-weight:600;}
 /* PROGRESSION BANNER */
 .prog-banner{margin:0 16px 0;padding:16px 18px;border-radius:14px;border:1.5px solid var(--gold);background:rgba(203,162,76,.10);}
 .prog-banner-title{font-size:14px;font-weight:700;color:var(--gold);letter-spacing:.5px;margin-bottom:6px;}
@@ -107,7 +107,7 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .quote-text{font-family:var(--serif);font-size:clamp(17px,4vw,22px);color:#ffffff;line-height:1.6;font-style:italic;margin-bottom:18px;text-shadow:0 1px 8px rgba(0,0,0,.6);}
 .quote-author{font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:#e0c279;font-weight:700;}
 .quote-dismiss{margin-top:24px;font-size:11px;color:rgba(255,255,255,.4);letter-spacing:1.5px;}
-.ring-sub{font-size:10px;color:var(--faint);margin-top:2px;}
+.ring-sub{font-size:9px;color:var(--faint);margin-top:2px;line-height:1.2;max-width:85px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;}
 .hero .ring{width:210px;height:210px;}
@@ -442,16 +442,17 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="sec-h">End-of-Day Nutrition <span class="tag" id="calTargetTag"></span></div>
       <div class="ringrow" style="margin-top:2px;margin-bottom:8px;">
         <div class="ringcard">
-          <div class="ring"><svg viewBox="0 0 130 130" width="112" height="112">
+          <div class="ring"><svg viewBox="0 0 130 130" width="128" height="128">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill red" id="ringProLog" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg><div class="ring-center"><div class="ring-val sm" id="proGramsLog">0</div><div class="ring-sub" id="proSubLog">of 210 g</div><div class="ring-lbl">protein</div></div></div>
         </div>
         <div class="ringcard">
-          <div class="ring"><svg viewBox="0 0 130 130" width="112" height="112">
+          <div class="ring"><svg viewBox="0 0 130 130" width="128" height="128">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill gold" id="ringCalLog" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg><div class="ring-center"><div class="ring-val sm" id="calLogVal">0</div><div class="ring-sub" id="calSubLog">of 2250</div><div class="ring-lbl">kcal</div></div></div>
+          <div id="calStepNote" style="display:none;font-size:10px;color:var(--faint);text-align:center;margin-top:4px;"></div>
         </div>
       </div>
       <label class="fld">Calories</label>
@@ -1471,7 +1472,7 @@ function renderLog(){
   var _gt=(DB.goal&&DB.goal.type)||"weight_loss";
   var _gn=(DB.goal&&DB.goal.name)||"goal weight";
   var _echoTxt=lw?("Last: "+lw.toFixed(1)+" lb"):"No weight logged yet.";
-  if(lw&&(_gt==="weight_loss"||_gt==="recomp"))_echoTxt+=" \u2022 "+(lw-GOAL_WEIGHT).toFixed(1)+" lb to "+_gn+".";
+  if(lw&&(_gt==="weight_loss"||_gt==="recomp")){var _tw=DB.goal&&DB.goal.targetWeight?DB.goal.targetWeight:null;if(_tw)_echoTxt+=" \u2022 "+(lw-_tw).toFixed(1)+" lb to "+_tw+" lbs.";}
   else if(lw&&_gt==="muscle"&&DB.weights.length>1)_echoTxt+=" \u2022 +"+(lw-DB.weights[0].w).toFixed(1)+" lb since start.";
   document.getElementById("weightEcho").textContent=_echoTxt;
   var nt=todayNutrition();var pro=nt?nt.pro:0,cal=nt?nt.cal:0;
@@ -1483,9 +1484,9 @@ function renderLog(){
   var _baseCal=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
   var _stepAdj=stepCalAdjustment?stepCalAdjustment():0;
   var _adjCal=_baseCal+_stepAdj;
-  var _adjLbl=_stepAdj>0?"of "+_adjCal+" kcal (+"+_stepAdj+" steps)":
-    _stepAdj<0?"of "+_adjCal+" kcal ("+_stepAdj+" steps)":"of "+_adjCal+" kcal";
-  document.getElementById("calSubLog").textContent=_adjLbl;
+  document.getElementById("calSubLog").textContent="of "+_adjCal+" kcal";
+  var _sn=document.getElementById("calStepNote");
+  if(_sn){_sn.textContent=_stepAdj>0?"+"+_stepAdj+" kcal (steps)":_stepAdj<0?_stepAdj+" kcal (steps)":"";_sn.style.display=_stepAdj!==0?"block":"none";}
   setRing("ringCalLog",cal/_adjCal);
   renderNutFlags(nt,_adjCal);
 }
@@ -1571,7 +1572,7 @@ function renderNutFlags(nt,adjCalTarget){
   if(nt.satFat&&nt.satFat>tgt.satFatMax)
     flags.push({sev:"info",msg:"Saturated fat ("+nt.satFat+"g) is above the "+tgt.satFatMax+"g target. Swap in olive oil, avocado, and fish where possible."});
   if(nt.sodium&&nt.sodium>tgt.sodiumMax)
-    flags.push({sev:"warn",msg:"Sodium ("+nt.sodium+"mg) exceeds the "+tgt.sodiumMax+"mg target. High sodium worsens blood pressure — worth watching given your BP data."});
+    flags.push({sev:"warn",msg:"Sodium ("+nt.sodium+"mg) exceeds the "+tgt.sodiumMax+"mg target. High sodium raises blood pressure — aim to stay under "+tgt.sodiumMax+"mg daily."});
   if(nt.water&&nt.water<tgt.waterMin)
     flags.push({sev:"info",msg:"Water ("+nt.water+"oz) is below 64oz. Hydration supports performance, kidney function, and blood pressure."});
   if(nt.veg!==undefined&&nt.veg<tgt.vegMin)
