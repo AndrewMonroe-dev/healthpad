@@ -1328,22 +1328,12 @@ function renderTrain(){
   var bpAdj=getBPTrainAdj?getBPTrainAdj():null;
   var allAdj=(labAdj||[]).concat(bpAdj||[]);
   var labHold=allAdj.some(function(a){return a.sev==="crit";});
+  var _bpAvgRT=bp14dayAvg?bp14dayAvg():null;
+  var _bpTier2=_bpAvgRT?bpTier(_bpAvgRT):"normal";
   if(labHold)holdToday=true;
 
   var stateCls="", stateTxt="";
   if(isDeload()){stateCls="deload";stateTxt="Deload week — volume cut ~50%, progression paused. Recover.";}
-  if(d&&d.cardio&&hasCardioStepCredit&&hasCardioStepCredit()){
-    setTimeout(function(){
-      var wa=document.getElementById("workoutArea");
-      if(wa&&!wa.querySelector(".step-credit")){
-        var cc=document.createElement("div");
-        cc.className="adapt-panel step-credit";
-        cc.style.cssText="background:rgba(45,138,53,.12);border-color:var(--good);margin-bottom:12px;";
-        cc.innerHTML="✅ "+todaySteps().toLocaleString()+" steps today — cardio day credit earned. Zone 2 confirmed.";
-        wa.insertBefore(cc,wa.firstChild);
-      }
-    },50);
-  }
   else if(labHold){stateCls="held";var critItems=allAdj.filter(function(a){return a.sev==="crit";});
     if(critItems.length)stateTxt=critItems.map(function(a){return a.label+": "+a.msg;}).join(" | ");
     else stateTxt="Hold active — low energy or critical flag. Volume trimmed, load reduced.";}
@@ -1355,6 +1345,19 @@ function renderTrain(){
   else if(todayFat==="low"){stateCls="held";stateTxt="Energy flag: low — sets reduced by 1, load pulled back ~5%, rep range compressed. Move well, not heavy.";}
   else if(todayFat==="mod"){stateCls="";stateTxt="Energy flag: moderate — baseline targets. Consistent effort.";}
   else{stateCls="";stateTxt="Adaptive: active — targets climbing on your logged data. Week "+(wip+1)+" in phase.";}
+  // Cardio step credit — separate block, never part of the status chain
+  if(d&&d.cardio&&hasCardioStepCredit&&hasCardioStepCredit()){
+    setTimeout(function(){
+      var wa=document.getElementById("workoutArea");
+      if(wa&&!wa.querySelector(".step-credit")){
+        var cc=document.createElement("div");
+        cc.className="adapt-panel step-credit";
+        cc.style.cssText="background:rgba(45,138,53,.12);border-color:var(--good);margin-bottom:12px;";
+        cc.innerHTML="✅ "+todaySteps().toLocaleString()+" steps today — cardio day credit earned. Zone 2 confirmed.";
+        wa.insertBefore(cc,wa.firstChild);
+      }
+    },80);
+  }
 
   var exList=d.ex.slice();
   if(!holdToday&&!isDeload()){
