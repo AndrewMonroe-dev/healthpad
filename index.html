@@ -72,6 +72,14 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .toggle-sw input:checked + .toggle-track{background:var(--red);}
 .toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
 .toggle-sw input:checked + .toggle-track .toggle-thumb{left:21px;}
+/* QUOTE MODAL */
+.quote-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:10000;display:flex;align-items:center;justify-content:center;padding:28px;cursor:pointer;animation:qfade .4s ease;}
+@keyframes qfade{from{opacity:0;}to{opacity:1;}}
+.quote-card{max-width:360px;width:100%;text-align:center;pointer-events:none;}
+.quote-mark{font-size:52px;line-height:.8;color:var(--gold);opacity:.6;font-family:Georgia,serif;margin-bottom:8px;}
+.quote-text{font-family:var(--serif);font-size:clamp(16px,4vw,21px);color:var(--fg);line-height:1.55;font-style:italic;margin-bottom:18px;}
+.quote-author{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;}
+.quote-dismiss{margin-top:22px;font-size:11px;color:var(--faint);letter-spacing:1.5px;}
 .ring-sub{font-size:10px;color:var(--faint);margin-top:2px;}
 
 .hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;}
@@ -1696,6 +1704,38 @@ function loadUserName(){
   if(el&&DB.settings&&DB.settings.userName)el.value=DB.settings.userName;
 }
 
+
+/* ============ MOTIVATIONAL QUOTE ============ */
+function showQuote(quotes){
+  if(!quotes||!quotes.length)return;
+  var q=quotes[Math.floor(Math.random()*quotes.length)];
+  var overlay=document.createElement("div");
+  overlay.className="quote-overlay";
+  overlay.innerHTML=
+    '<div class="quote-card">'+
+      '<div class="quote-mark">“</div>'+
+      '<div class="quote-text">'+q.q+'</div>'+
+      '<div class="quote-author">— '+q.a+'</div>'+
+      '<div class="quote-dismiss">Tap anywhere to continue</div>'+
+    '</div>';
+  overlay.addEventListener("click",function(){
+    overlay.style.transition="opacity .25s";
+    overlay.style.opacity="0";
+    setTimeout(function(){if(overlay.parentNode)overlay.parentNode.removeChild(overlay);},260);
+  });
+  document.body.appendChild(overlay);
+}
+
+function loadAndShowQuote(){
+  fetch("quotes.json?v="+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(data){showQuote(data);})
+    .catch(function(){
+      // Offline fallback — one built-in quote
+      showQuote([{q:"One day or day one. You decide.",a:"Anonymous"}]);
+    });
+}
+
 /* ============ INIT ============ */
 load();
 setTimeout(function(){document.getElementById("splash").classList.add("hide");},3200);
@@ -1707,6 +1747,7 @@ loadGoalSettings();
 loadUserName();
 setTimeout(checkDietPopup,4000);
 setTimeout(checkBPPrompt,5200);
+setTimeout(loadAndShowQuote,3400);
 // PWA: minimal inline service worker for installability/offline shell
 if("serviceWorker" in navigator){
   try{
