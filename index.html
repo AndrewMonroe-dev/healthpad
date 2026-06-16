@@ -1318,7 +1318,11 @@ function renderTrain(){
 
   var stateCls="", stateTxt="";
   if(isDeload()){stateCls="deload";stateTxt="Deload week — volume cut ~50%, progression paused. Recover.";}
-  else if(labHold){stateCls="held";var critItems=allAdj.filter(function(a){return a.sev==="crit";});stateTxt=critItems.map(function(a){return a.label+": "+a.msg;}).join(" | ");}
+  else if(labHold){stateCls="held";var critItems=allAdj.filter(function(a){return a.sev==="crit";});
+    if(critItems.length)stateTxt=critItems.map(function(a){return a.label+": "+a.msg;}).join(" | ");
+    else stateTxt="Hold active — low energy or critical flag. Volume trimmed, load reduced.";}
+  else if(_bpTier2==="stage2"){stateCls="held";stateTxt="BP Stage 2 HTN: load reduced to ~65% 1RM, sets trimmed. Keep training — exercise is treatment for hypertension, not contraindicated.";}
+  else if(_bpTier2==="stage1"){stateCls="";stateTxt="BP Stage 1 HTN: load at ~75% 1RM, compound sets reduced. Zone 2 cardio mandatory. Keep training.";}
   else if(holdToday){stateCls="held";stateTxt="Held — low energy logged. Volume trimmed and load progression paused for today.";}
   else if(pauseVolume){stateCls="";stateTxt="Volume ramp paused — recent low-energy trend. Loads still progress on performance.";}
   else if(todayFat==="good"){stateCls="";stateTxt="Energy flag: high — rep ceilings raised +1, RIR tightened. Push today.";}
