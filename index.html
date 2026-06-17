@@ -129,6 +129,12 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .hero .ring{width:210px;height:210px;}
 .hero-date{font-size:13px;color:var(--gold);font-family:var(--serif);font-style:italic;margin-top:12px;}
 .ringrow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+.ringrow-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px;}
+.ringrow-3 .ringcard{padding:12px 4px 10px;}
+.ringrow-3 .ringcard .ring{width:96px;height:96px;}
+.ringrow-3 .ring-val.sm{font-size:18px;}
+.ringrow-3 .ring-sub{font-size:10px;}
+.ringrow-3 .ring-lbl{font-size:10px;}
 .ringcard{background:var(--surf);border:1px solid var(--line2);box-shadow:0 1px 4px rgba(0,0,0,0.07);border-radius:var(--r);padding:16px 10px 14px;display:flex;flex-direction:column;align-items:center;}
 .ringcard .ring{width:148px;height:148px;}
 
@@ -380,19 +386,39 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
   <div class="view" id="v-foods">
     <div class="sec">
       <div class="sec-h">Today's Nutrition <span class="tag" id="calTargetTagFoods"></span></div>
-      <div class="ringrow" style="margin-top:2px;margin-bottom:8px;">
+      <div class="ringrow" id="ringRowTwo" style="margin-top:2px;margin-bottom:8px;">
         <div class="ringcard">
           <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill red" id="ringProLog" cx="65" cy="65" r="54" stroke-width="11"/>
-          </svg><div class="ring-center"><div class="ring-val sm" id="proGramsLog">0</div><div class="ring-sub" id="proSubLog">of 210 g</div><div class="ring-lbl">protein</div></div></div>
+          </svg><div class="ring-center"><div class="ring-val sm" id="proGramsLog">0</div><div class="ring-sub" id="proSubLog">of 210 g</div><div class="ring-lbl" id="proRingLbl">protein</div></div></div>
         </div>
         <div class="ringcard">
           <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill gold" id="ringCalLog" cx="65" cy="65" r="54" stroke-width="11"/>
-          </svg><div class="ring-center"><div class="ring-val sm" id="calLogVal">0</div><div class="ring-sub" id="calSubLog">of 2250</div><div class="ring-lbl">kcal</div></div></div>
+          </svg><div class="ring-center"><div class="ring-val sm" id="calLogVal">0</div><div class="ring-sub" id="calSubLog">of 2250</div><div class="ring-lbl" id="calRingLbl">kcal</div></div></div>
           <div id="calStepNote" style="display:none;font-size:10px;color:var(--faint);text-align:center;margin-top:4px;"></div>
+        </div>
+      </div>
+      <div class="ringrow-3" id="ringRowThree" style="display:none;margin-bottom:8px;">
+        <div class="ringcard">
+          <div class="ring"><svg viewBox="0 0 130 130" width="96" height="96">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill red" id="ringProMacro" cx="65" cy="65" r="54" stroke-width="11"/>
+          </svg><div class="ring-center"><div class="ring-val sm" id="proGramsMacro">0</div><div class="ring-sub" id="proSubMacro">of 0g</div><div class="ring-lbl">protein</div></div></div>
+        </div>
+        <div class="ringcard">
+          <div class="ring"><svg viewBox="0 0 130 130" width="96" height="96">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill gold" id="ringCarbMacro" cx="65" cy="65" r="54" stroke-width="11"/>
+          </svg><div class="ring-center"><div class="ring-val sm" id="carbGramsMacro">0</div><div class="ring-sub" id="carbSubMacro">of 0g</div><div class="ring-lbl">carbs</div></div></div>
+        </div>
+        <div class="ringcard">
+          <div class="ring"><svg viewBox="0 0 130 130" width="96" height="96">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill" id="ringFatMacro" cx="65" cy="65" r="54" stroke-width="11" style="stroke:#7a8fb0;"/>
+          </svg><div class="ring-center"><div class="ring-val sm" id="fatGramsMacro">0</div><div class="ring-sub" id="fatSubMacro">of 0g</div><div class="ring-lbl">fat</div></div></div>
         </div>
       </div>
       <div id="foodLogList" style="margin-bottom:10px;"></div>
@@ -599,6 +625,33 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <input type="date" id="inGoalStart" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:14px;width:100%;">
       <button class="btn sm" onclick="saveGoalSettings()">Save Goal</button>
       <div class="note dim" id="goalSettingsEcho" style="margin-top:6px;"></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h">Tracking Style</div>
+      <div class="note dim" style="margin-bottom:12px;">Choose what the Foods tab tracks you against. This changes the main rings and daily guidance on that tab.</div>
+      <label class="fld">Daily Tracking Mode</label>
+      <select id="inTrackingStyle" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:14px;margin-bottom:12px;" onchange="toggleTrackingStyleFields()">
+        <option value="calories">Calories + Protein</option>
+        <option value="macros">Macros (Protein / Carb / Fat)</option>
+        <option value="points">Points (estimated, SmartPoints-style)</option>
+      </select>
+      <div id="pointsBudgetFields" style="display:none;">
+        <div class="note dim" style="margin-bottom:10px;background:rgba(203,162,76,.10);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;">Points here use an unofficial, commonly-cited approximation of WW's SmartPoints formula (calories, saturated fat, sugar, protein). It will not exactly match your real WW app \u2014 treat it as a reasonable estimate, not a substitute for WW's own tracker.</div>
+        <label class="fld">Daily Points Budget</label>
+        <input type="number" inputmode="numeric" id="inPointsBudget" placeholder="auto-estimated from your calorie target" style="margin-bottom:6px;">
+        <div class="note dim" id="pointsBudgetEstimateNote" style="margin-bottom:10px;"></div>
+      </div>
+      <div id="macroRatioFields" style="display:none;">
+        <div class="note dim" style="margin-bottom:10px;">Targets are grams per day, derived from your calorie target using the ratio below. Defaults to 30% protein / 40% carb / 30% fat \u2014 adjust to taste. Must add up to 100%.</div>
+        <div class="row3" style="margin-top:0;">
+          <div><label class="fld">Protein %</label><input type="number" inputmode="numeric" id="inMacroProPct" placeholder="30" oninput="updateMacroRatioNote()"></div>
+          <div><label class="fld">Carb %</label><input type="number" inputmode="numeric" id="inMacroCarbPct" placeholder="40" oninput="updateMacroRatioNote()"></div>
+          <div><label class="fld">Fat %</label><input type="number" inputmode="numeric" id="inMacroFatPct" placeholder="30" oninput="updateMacroRatioNote()"></div>
+        </div>
+        <div class="note dim" id="macroRatioNote" style="margin-top:8px;margin-bottom:10px;"></div>
+      </div>
+      <button class="btn sm" onclick="saveTrackingStyle()">Save Tracking Style</button>
+      <div class="note dim" id="trackingStyleEcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
       <div class="sec-h">Medication Categories</div>
@@ -982,7 +1035,7 @@ var SPLIT_HEAVY=[
 ];
 
 /* ============ STATE ============ */
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:""},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -991,6 +1044,11 @@ function load(){
   if(!DB.oneRM||Object.keys(DB.oneRM).length===0){DB.oneRM=Object.assign({},DEFAULT_1RM);}
   if(!DB.settings)DB.settings={sheetUrl:""};
   if(DB.settings.fdcKey===undefined)DB.settings.fdcKey="";
+  if(DB.settings.trackingStyle===undefined)DB.settings.trackingStyle="calories";
+  if(DB.settings.pointsBudgetOverride===undefined)DB.settings.pointsBudgetOverride=null;
+  if(DB.settings.macroProPct===undefined)DB.settings.macroProPct=30;
+  if(DB.settings.macroCarbPct===undefined)DB.settings.macroCarbPct=40;
+  if(DB.settings.macroFatPct===undefined)DB.settings.macroFatPct=30;
   if(!DB.foodLog)DB.foodLog=[];
   if(!DB.myFoods)DB.myFoods=[];
 }
@@ -1564,21 +1622,62 @@ function renderLog(){
 }
 function renderFoodsTab(){
   var ph=currentPhase();
-  var ctt=document.getElementById("calTargetTagFoods");
-  if(ctt)ctt.textContent="Target "+ph.cal+" kcal";
-  var nt=todayNutrition();var pro=nt?nt.pro:0,cal=nt?nt.cal:0;
+  var nt=todayNutrition();var pro=nt?nt.pro:0,cal=nt?nt.cal:0,pts=nt?nt.points:0,carb=nt?nt.carb:0,fat=nt?nt.fat:0;
+  var style=getTrackingStyle();
+  var rowTwo=document.getElementById("ringRowTwo");
+  var rowThree=document.getElementById("ringRowThree");
+
+  if(style==="macros"){
+    if(rowTwo)rowTwo.style.display="none";
+    if(rowThree)rowThree.style.display="grid";
+    var mt=getMacroTargets();
+    var ctt=document.getElementById("calTargetTagFoods");
+    if(ctt)ctt.textContent=mt.proG+"P / "+mt.carbG+"C / "+mt.fatG+"F";
+    document.getElementById("proGramsMacro").textContent=(pro||0);
+    document.getElementById("proSubMacro").textContent="of "+mt.proG+"g";
+    setRing("ringProMacro",mt.proG>0?pro/mt.proG:0);
+    document.getElementById("carbGramsMacro").textContent=(carb||0);
+    document.getElementById("carbSubMacro").textContent="of "+mt.carbG+"g";
+    setRing("ringCarbMacro",mt.carbG>0?carb/mt.carbG:0);
+    document.getElementById("fatGramsMacro").textContent=(fat||0);
+    document.getElementById("fatSubMacro").textContent="of "+mt.fatG+"g";
+    setRing("ringFatMacro",mt.fatG>0?fat/mt.fatG:0);
+    renderFoodLogList();
+    return;
+  }
+
+  if(rowTwo)rowTwo.style.display="grid";
+  if(rowThree)rowThree.style.display="none";
+
   document.getElementById("proGramsLog").textContent=(pro||0);
   document.getElementById("proSubLog").textContent="of "+PROTEIN_TARGET+" g";
   var _pt2=(DB.settings&&DB.settings.proteinTarget)||PROTEIN_TARGET;
   setRing("ringProLog",pro/_pt2);
-  document.getElementById("calLogVal").textContent=(cal||0);
-  var _baseCal=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
-  var _stepAdj=stepCalAdjustment?stepCalAdjustment():0;
-  var _adjCal=_baseCal+_stepAdj;
-  document.getElementById("calSubLog").textContent="of "+_adjCal+" kcal";
+  var lbl=document.getElementById("proRingLbl");if(lbl)lbl.textContent="protein";
+
+  var ctt=document.getElementById("calTargetTagFoods");
+  var calLbl=document.getElementById("calRingLbl");
   var _sn=document.getElementById("calStepNote");
-  if(_sn){_sn.textContent=_stepAdj>0?"+"+_stepAdj+" kcal (steps)":_stepAdj<0?_stepAdj+" kcal (steps)":"";_sn.style.display=_stepAdj!==0?"block":"none";}
-  setRing("ringCalLog",cal/_adjCal);
+
+  if(style==="points"){
+    var budget=getPointsBudget();
+    if(ctt)ctt.textContent="Target "+budget+" pts";
+    document.getElementById("calLogVal").textContent=(pts||0);
+    document.getElementById("calSubLog").textContent="of "+budget+" pts";
+    if(calLbl)calLbl.textContent="points";
+    if(_sn)_sn.style.display="none";
+    setRing("ringCalLog",budget>0?pts/budget:0);
+  } else {
+    if(ctt)ctt.textContent="Target "+ph.cal+" kcal";
+    document.getElementById("calLogVal").textContent=(cal||0);
+    var _baseCal=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
+    var _stepAdj=stepCalAdjustment?stepCalAdjustment():0;
+    var _adjCal=_baseCal+_stepAdj;
+    document.getElementById("calSubLog").textContent="of "+_adjCal+" kcal";
+    if(calLbl)calLbl.textContent="kcal";
+    if(_sn){_sn.textContent=_stepAdj>0?"+"+_stepAdj+" kcal (steps)":_stepAdj<0?_stepAdj+" kcal (steps)":"";_sn.style.display=_stepAdj!==0?"block":"none";}
+    setRing("ringCalLog",cal/_adjCal);
+  }
   renderFoodLogList();
 }
 
@@ -1640,6 +1739,40 @@ function renderNutFlags(nt,adjCalTarget){
   var area=document.getElementById("nutFlagArea");
   if(!area)return;
   if(!nt){area.innerHTML="";return;}
+
+  if(getTrackingStyle()==="points"){
+    var budget=getPointsBudget();
+    var pts=nt.points||0;
+    var remaining=budget-pts;
+    if(pts>budget){
+      area.innerHTML='<div class="adapt-panel" style="background:rgba(192,40,30,.10);border-color:var(--red);margin-top:0;">\u26a0 '+pts+' of '+budget+' points used \u2014 '+(pts-budget)+' over budget today.</div>';
+    } else if(remaining<=Math.max(2,Math.round(budget*0.1))){
+      area.innerHTML='<div class="adapt-panel" style="background:rgba(203,162,76,.10);border-color:var(--gold);margin-top:0;">'+remaining+' point'+(remaining===1?"":"s")+' left today ('+pts+' of '+budget+' used).</div>';
+    } else {
+      area.innerHTML='<div class="adapt-panel" style="background:rgba(45,138,53,.12);border-color:var(--good);margin-top:0;">&#10003; '+pts+' of '+budget+' points used \u2014 '+remaining+' remaining.</div>';
+    }
+    return;
+  }
+
+  if(getTrackingStyle()==="macros"){
+    var mt=getMacroTargets();
+    var pro=nt.pro||0,carb=nt.carb||0,fat=nt.fat||0;
+    var rows=[
+      {label:"Protein",val:pro,tgt:mt.proG},
+      {label:"Carbs",val:carb,tgt:mt.carbG},
+      {label:"Fat",val:fat,tgt:mt.fatG}
+    ];
+    var html=rows.map(function(r){
+      var pct=r.tgt>0?r.val/r.tgt:0;
+      var over=pct>1.15,under=pct<0.85;
+      var bg=over?"rgba(192,40,30,.10)":under?"rgba(203,162,76,.10)":"rgba(45,138,53,.12)";
+      var bc=over?"var(--red)":under?"var(--gold)":"var(--good)";
+      return '<div class="adapt-panel" style="background:'+bg+';border-color:'+bc+';margin-bottom:6px;">'+r.label+': '+r.val+'g of '+r.tgt+'g target'+(over?" \u2014 over":under?" \u2014 under":" \u2014 on target")+'</div>';
+    }).join("");
+    area.innerHTML=html;
+    return;
+  }
+
   var tgt=getNutTargets();
   var flags=[];
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
@@ -1677,7 +1810,38 @@ function renderNutFlags(nt,adjCalTarget){
   }).join("");
 }
 function lastWeight(){return DB.weights.length?DB.weights[DB.weights.length-1].w:null;}
-var NUT_FIELDS=["cal","pro","carb","fat","fiber","sugar","satFat","sodium","water","veg","potassium","calcium"];
+function getPointsBudget(){
+  if(DB.settings&&DB.settings.pointsBudgetOverride!==null&&DB.settings.pointsBudgetOverride!==undefined&&DB.settings.pointsBudgetOverride!=="")
+    return Math.round(DB.settings.pointsBudgetOverride);
+  var ph=currentPhase();
+  var cal=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
+  // Rough estimate: ~30 calories per point for a reasonably balanced diet (commonly cited range is 20-50, varies by food quality).
+  // This is a derived approximation from your existing evidence-based calorie target, not an official WW number.
+  return Math.round(cal/30);
+}
+function getTrackingStyle(){return (DB.settings&&DB.settings.trackingStyle)||"calories";}
+function getMacroTargets(){
+  var ph=currentPhase();
+  var cal=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
+  var proPct=(DB.settings&&DB.settings.macroProPct!==undefined)?DB.settings.macroProPct:30;
+  var carbPct=(DB.settings&&DB.settings.macroCarbPct!==undefined)?DB.settings.macroCarbPct:40;
+  var fatPct=(DB.settings&&DB.settings.macroFatPct!==undefined)?DB.settings.macroFatPct:30;
+  // Protein and carbs are ~4 kcal/g, fat is ~9 kcal/g — standard Atwater conversion factors.
+  return {
+    cal:cal,
+    proPct:proPct,carbPct:carbPct,fatPct:fatPct,
+    proG:Math.round(cal*(proPct/100)/4),
+    carbG:Math.round(cal*(carbPct/100)/4),
+    fatG:Math.round(cal*(fatPct/100)/9)
+  };
+}
+function calcPoints(cal,satFat,sugar,pro){
+  // Unofficial, widely-corroborated reverse-engineered approximation of WW's SmartPoints formula.
+  // Real WW PersonalPoints values are personalized and unpublished -- this is a reasonable estimate, not an exact match.
+  var p=(cal||0)*0.0305+(satFat||0)*0.275+(sugar||0)*0.12-(pro||0)*0.098;
+  return Math.max(0,Math.round(p));
+}
+var NUT_FIELDS=["cal","pro","carb","fat","fiber","sugar","satFat","sodium","water","veg","potassium","calcium","points"];
 function todaysFoodEntries(){
   var t=todayStr();
   return DB.foodLog.filter(function(e){return e.d===t;});
@@ -1686,7 +1850,11 @@ function sumFoodEntries(entries){
   var sums={};
   NUT_FIELDS.forEach(function(f){sums[f]=0;});
   entries.forEach(function(e){
-    NUT_FIELDS.forEach(function(f){sums[f]+=(e[f]||0);});
+    NUT_FIELDS.forEach(function(f){
+      var v=e[f];
+      if(f==="points"&&v===undefined)v=calcPoints(e.cal,e.satFat,e.sugar,e.pro); // back-fill for entries logged before points existed
+      sums[f]+=(v||0);
+    });
   });
   return sums;
 }
@@ -2049,6 +2217,7 @@ function renderSetup(){
   document.getElementById("ormBtnRow").innerHTML='<div class="btn-row"><button class="btn sm ghost" onclick="saveOneRMs()">Save 1RMs</button><button class="btn sm dark" onclick="syncORMsFromLive()">Sync from Live Data</button></div>';
   document.getElementById("inSheetUrl").value=DB.settings.sheetUrl||"";
   var fdcInput=document.getElementById("inFdcKey");if(fdcInput)fdcInput.value=DB.settings.fdcKey||"";
+  loadTrackingStyle();
   // phase overview — goal-aware
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
   var goalName=(DB.goal&&DB.goal.name)||"";
@@ -2790,6 +2959,69 @@ function loadGoalSettings(){
   if(gd)gd.value=g.targetDate||"";
   if(gs)gs.value=g.startDate||"";
   renderMilestoneEditor();
+}
+function toggleTrackingStyleFields(){
+  var sel=document.getElementById("inTrackingStyle");
+  var fields=document.getElementById("pointsBudgetFields");
+  var macroFields=document.getElementById("macroRatioFields");
+  if(!sel)return;
+  if(fields)fields.style.display=sel.value==="points"?"block":"none";
+  if(macroFields)macroFields.style.display=sel.value==="macros"?"block":"none";
+  var note=document.getElementById("pointsBudgetEstimateNote");
+  if(note){
+    var ph=currentPhase();
+    var cal=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
+    var est=Math.round(cal/30);
+    note.textContent="Auto-estimate from your "+cal+" kcal target: ~"+est+" points/day. Leave blank to use this, or enter your own number from the WW app.";
+  }
+  updateMacroRatioNote();
+}
+function updateMacroRatioNote(){
+  var note=document.getElementById("macroRatioNote");
+  if(!note)return;
+  var p=parseFloat(document.getElementById("inMacroProPct").value)||0;
+  var c=parseFloat(document.getElementById("inMacroCarbPct").value)||0;
+  var f=parseFloat(document.getElementById("inMacroFatPct").value)||0;
+  var sum=p+c+f;
+  var ph=currentPhase();
+  var cal=(DB.settings&&DB.settings.currentCalTarget)||ph.cal||2250;
+  if(sum!==100){
+    note.innerHTML='<span style="color:var(--red);">Adds up to '+sum+'%, not 100%. Adjust before saving.</span>';
+  } else {
+    var proG=Math.round(cal*(p/100)/4),carbG=Math.round(cal*(c/100)/4),fatG=Math.round(cal*(f/100)/9);
+    note.textContent="At "+cal+" kcal: "+proG+"g protein, "+carbG+"g carbs, "+fatG+"g fat daily.";
+  }
+}
+function saveTrackingStyle(){
+  var sel=document.getElementById("inTrackingStyle");
+  var budgetInput=document.getElementById("inPointsBudget");
+  var mode=sel?sel.value:"calories";
+  if(mode==="macros"){
+    var p=parseFloat(document.getElementById("inMacroProPct").value)||0;
+    var c=parseFloat(document.getElementById("inMacroCarbPct").value)||0;
+    var f=parseFloat(document.getElementById("inMacroFatPct").value)||0;
+    if(p+c+f!==100){toast("Protein/Carb/Fat % must add up to 100");return;}
+    DB.settings.macroProPct=p;DB.settings.macroCarbPct=c;DB.settings.macroFatPct=f;
+  }
+  DB.settings.trackingStyle=mode;
+  var bVal=budgetInput?budgetInput.value.trim():"";
+  DB.settings.pointsBudgetOverride=bVal===""?null:parseInt(bVal);
+  save();
+  document.getElementById("trackingStyleEcho").textContent="Tracking style saved.";
+  setTimeout(function(){document.getElementById("trackingStyleEcho").textContent="";},2000);
+  renderFoodsTab();
+  renderProg();
+}
+function loadTrackingStyle(){
+  var sel=document.getElementById("inTrackingStyle");
+  var budgetInput=document.getElementById("inPointsBudget");
+  if(sel)sel.value=getTrackingStyle();
+  if(budgetInput)budgetInput.value=(DB.settings&&DB.settings.pointsBudgetOverride!==null&&DB.settings.pointsBudgetOverride!==undefined)?DB.settings.pointsBudgetOverride:"";
+  var setVal=function(id,v){var el=document.getElementById(id);if(el)el.value=v;};
+  setVal("inMacroProPct",(DB.settings&&DB.settings.macroProPct!==undefined)?DB.settings.macroProPct:30);
+  setVal("inMacroCarbPct",(DB.settings&&DB.settings.macroCarbPct!==undefined)?DB.settings.macroCarbPct:40);
+  setVal("inMacroFatPct",(DB.settings&&DB.settings.macroFatPct!==undefined)?DB.settings.macroFatPct:30);
+  toggleTrackingStyleFields();
 }
 
 function renderMilestoneEditor(){
@@ -3918,10 +4150,11 @@ function renderFoodLogList(){
   var entries=todaysFoodEntries();
   if(!entries.length){area.innerHTML='<div class="note dim">No food logged yet today.</div>';return;}
   area.innerHTML=entries.map(function(e){
+    var pts=e.points!==undefined?e.points:calcPoints(e.cal,e.satFat,e.sugar,e.pro);
     return '<div class="ex" data-id="'+e.id+'">'+
       '<div class="ex-h" onclick="toggleEx(this)">'+
         '<div><div class="ex-name">'+e.name+'</div>'+
-        '<div class="ex-target">'+(e.cal||0)+' kcal \u2022 '+(e.pro||0)+'g protein \u2022 '+e.qty+' '+e.unit+'</div></div>'+
+        '<div class="ex-target">'+(e.cal||0)+' kcal \u2022 '+(e.pro||0)+'g protein \u2022 '+pts+' pts \u2022 '+e.qty+' '+e.unit+'</div></div>'+
         '<div style="display:flex;align-items:center;gap:8px;">'+
           '<button class="btn sm dark" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="event.stopPropagation();removeFoodEntry('+e.id+')">Remove</button>'+
           '<span style="color:var(--faint);">\u25be</span>'+
@@ -3938,6 +4171,7 @@ function renderFoodLogList(){
         '<div class="nut-row"><span>Veg Servings</span><span>'+(e.veg||0)+'</span></div>'+
         '<div class="nut-row"><span>Potassium</span><span>'+(e.potassium||0)+'mg</span></div>'+
         '<div class="nut-row"><span>Calcium</span><span>'+(e.calcium||0)+'mg</span></div>'+
+        '<div class="nut-row"><span>Points (est.)</span><span>'+pts+'</span></div>'+
       '</div></div>';
   }).join("");
 }
@@ -4062,6 +4296,7 @@ function showNewFoodForm(prefill,sourceMeta){
     '<div class="row3" style="margin-top:6px;">'+
       '<div><label class="fld">Potassium mg <span style="opacity:.55;font-weight:400;">(optional)</span></label><input id="nfPotassium" type="number" inputmode="numeric" placeholder="mg"></div>'+
       '<div><label class="fld">Calcium mg <span style="opacity:.55;font-weight:400;">(optional)</span></label><input id="nfCalcium" type="number" inputmode="numeric" placeholder="mg"></div>'+
+      '<div><label class="fld">Points <span style="opacity:.55;font-weight:400;">(est.)</span></label><input id="nfPoints" type="number" inputmode="numeric" placeholder="0" readonly style="opacity:.75;"></div>'+
     '</div>'+
     '<button class="btn sm" style="width:100%;margin-top:14px;" onclick="saveNewFood()">Log It</button>'+
     '</div></div>';
@@ -4080,9 +4315,22 @@ function showNewFoodForm(prefill,sourceMeta){
       var unitSel=document.getElementById("nfRecalcUnit");
       if(unitSel&&sourceMeta.servingG)unitSel.value="serving"; // default to the labeled serving when one exists
       recalcNewFoodFromSource();
+    } else {
+      updateNfPointsDisplay();
     }
+    // Manual edits to any points-relevant field should keep the points preview live too
+    ["nfCal","nfSatFat","nfSugar","nfPro"].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el)el.addEventListener("input",updateNfPointsDisplay);
+    });
     if(ni)ni.focus();
   },50);
+}
+function updateNfPointsDisplay(){
+  var g=function(id){return parseFloat(document.getElementById(id).value)||0;};
+  var ptsField=document.getElementById("nfPoints");
+  if(!ptsField)return;
+  ptsField.value=calcPoints(g("nfCal"),g("nfSatFat"),g("nfSugar"),g("nfPro"));
 }
 function recalcNewFoodFromSource(){
   if(!_nfSourceData)return;
@@ -4122,27 +4370,35 @@ function recalcNewFoodFromSource(){
   setVal("nfCal",food.cal);setVal("nfPro",food.pro);setVal("nfCarb",food.carb);setVal("nfFat",food.fat);
   setVal("nfFiber",food.fiber);setVal("nfSugar",food.sugar);setVal("nfSatFat",food.satFat);
   setVal("nfSodium",food.sodium);setVal("nfPotassium",food.potassium);setVal("nfCalcium",food.calcium);
+  updateNfPointsDisplay();
 }
 function saveNewFood(){
   var name=(document.getElementById("nfName").value||"").trim();
   if(!name){toast("Enter a food name");return;}
+  var cal=parseInt(document.getElementById("nfCal").value)||0;
+  var pro=parseInt(document.getElementById("nfPro").value)||0;
+  var sugar=parseInt(document.getElementById("nfSugar").value)||0;
+  var satFat=parseInt(document.getElementById("nfSatFat").value)||0;
+  var ptsField=document.getElementById("nfPoints");
+  var points=ptsField&&ptsField.value!==""?parseInt(ptsField.value):calcPoints(cal,satFat,sugar,pro);
   var f={
     id:Date.now(),
     name:name,
     qty:parseFloat(document.getElementById("nfQty").value)||1,
     unit:(document.getElementById("nfUnit").value||"serving").trim(),
-    cal:parseInt(document.getElementById("nfCal").value)||0,
-    pro:parseInt(document.getElementById("nfPro").value)||0,
+    cal:cal,
+    pro:pro,
     carb:parseInt(document.getElementById("nfCarb").value)||0,
     fat:parseInt(document.getElementById("nfFat").value)||0,
     fiber:parseInt(document.getElementById("nfFiber").value)||0,
-    sugar:parseInt(document.getElementById("nfSugar").value)||0,
-    satFat:parseInt(document.getElementById("nfSatFat").value)||0,
+    sugar:sugar,
+    satFat:satFat,
     sodium:parseInt(document.getElementById("nfSodium").value)||0,
     water:parseInt(document.getElementById("nfWater").value)||0,
     veg:parseInt(document.getElementById("nfVeg").value)||0,
     potassium:parseInt(document.getElementById("nfPotassium").value)||0,
     calcium:parseInt(document.getElementById("nfCalcium").value)||0,
+    points:points,
     lastUsed:Date.now()
   };
   // De-dupe by case-insensitive name match \u2014 update the existing saved food instead of creating a duplicate
@@ -4243,6 +4499,7 @@ safeBoot(loadWeightReactionPref,"loadWeightReactionPref");
 safeBoot(function(){loadWeightReactions(function(){});},"loadWeightReactions");
 safeBoot(loadMedStack,"loadMedStack");
 safeBoot(loadGoalSettings,"loadGoalSettings");
+safeBoot(loadTrackingStyle,"loadTrackingStyle");
 safeBoot(loadUserName,"loadUserName");
 safeBoot(function(){
   setTimeout(function(){
