@@ -1616,7 +1616,8 @@ function getNutTargets(){
     sugarMax:goalType==="weight_loss"||goalType==="heart"?36:50,
     satFatMax:goalType==="heart"?13:20,
     sodiumMax:goalType==="heart"||goalType==="heart"?1500:2300,
-    waterMin:64, vegMin:3
+    waterMin:64, vegMin:3,
+    potassiumMin:3400, calciumMin:1000
   };
 }
 
@@ -1661,7 +1662,7 @@ function renderNutFlags(nt,adjCalTarget){
   }).join("");
 }
 function lastWeight(){return DB.weights.length?DB.weights[DB.weights.length-1].w:null;}
-var NUT_FIELDS=["cal","pro","carb","fat","fiber","sugar","satFat","sodium","water","veg"];
+var NUT_FIELDS=["cal","pro","carb","fat","fiber","sugar","satFat","sodium","water","veg","potassium","calcium"];
 function todaysFoodEntries(){
   var t=todayStr();
   return DB.foodLog.filter(function(e){return e.d===t;});
@@ -1859,6 +1860,136 @@ function populateLifts(){
   var cur=sel.value;
   sel.innerHTML=lifts.map(function(l){return '<option'+(l===cur?' selected':'')+'>'+l+'</option>';}).join("");
 }
+
+/* ============ WEEKLY NUTRITION RECAP ============ */
+function getWeeklyNutritionRecap(){
+  var now=new Date();var weekAgo=new Date();weekAgo.setDate(now.getDate()-7);
+  var inWk=function(d){return new Date(d)>=weekAgo;};
+  var nut=DB.nutrition.filter(function(x){return inWk(x.d);});
+  if(nut.length<3)return null; // not enough days logged for a meaningful weekly read
+  var avg=function(key){return nut.reduce(function(s,x){return s+(x[key]||0);},0)/nut.length;};
+  var a={
+    cal:avg("cal"),pro:avg("pro"),carb:avg("carb"),fat:avg("fat"),
+    fiber:avg("fiber"),sugar:avg("sugar"),satFat:avg("satFat"),sodium:avg("sodium"),
+    water:avg("water"),veg:avg("veg"),potassium:avg("potassium"),calcium:avg("calcium")
+  };
+  var tgt=getNutTargets();
+  var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
+  var goalLabel={weight_loss:"weight loss",muscle:"muscle gain",vo2max:"VO2 max",
+    heart:"heart health",strength:"strength",recomp:"recomposition",endurance:"endurance",custom:"your goal"}[goalType]||"your goal";
+
+  var good=[],bad=[];
+
+  // Protein
+  if(a.pro>=tgt.proMin)good.push("Protein averaged "+Math.round(a.pro)+"g/day, hitting your "+tgt.proMin+"g target. This is doing real work for muscle retention and recovery.");
+  else bad.push("Protein averaged "+Math.round(a.pro)+"g/day, below your "+tgt.proMin+"g target. This is the metric most worth tightening up next week.");
+
+  // Calories
+  if(a.cal>=tgt.calLow&&a.cal<=tgt.calHigh)good.push("Calories averaged "+Math.round(a.cal)+" kcal/day, right in your "+goalLabel+" range.");
+  else if(a.cal>tgt.calHigh)bad.push("Calories averaged "+Math.round(a.cal)+" kcal/day, above your "+tgt.calHigh+" kcal target for "+goalLabel+".");
+  else if(a.cal<tgt.calLow&&goalType!=="weight_loss")bad.push("Calories averaged "+Math.round(a.cal)+" kcal/day, below your "+tgt.calLow+" kcal minimum for "+goalLabel+".");
+
+  // Fiber
+  if(a.fiber>=tgt.fiberGood)good.push("Fiber averaged "+Math.round(a.fiber)+"g/day, well above the minimum. Strong week for gut and metabolic health.");
+  else if(a.fiber<tgt.fiberMin)bad.push("Fiber averaged "+Math.round(a.fiber)+"g/day, below the "+tgt.fiberMin+"g minimum. More vegetables, legumes, or whole grains would help.");
+
+  // Sugar
+  if(a.sugar>0&&a.sugar<=tgt.sugarMax*0.7)good.push("Added sugar averaged "+Math.round(a.sugar)+"g/day, comfortably under your "+tgt.sugarMax+"g ceiling.");
+  else if(a.sugar>tgt.sugarMax)bad.push("Added sugar averaged "+Math.round(a.sugar)+"g/day, above your "+tgt.sugarMax+"g target for "+goalLabel+".");
+
+  // Sat fat
+  if(a.satFat>tgt.satFatMax)bad.push("Saturated fat averaged "+Math.round(a.satFat)+"g/day, above the "+tgt.satFatMax+"g target.");
+
+  // Sodium
+  if(a.sodium>0&&a.sodium<=tgt.sodiumMax)good.push("Sodium averaged "+Math.round(a.sodium)+"mg/day, within your "+tgt.sodiumMax+"mg target.");
+  else if(a.sodium>tgt.sodiumMax)bad.push("Sodium averaged "+Math.round(a.sodium)+"mg/day, above the "+tgt.sodiumMax+"mg target. Worth a look at where it's coming from.");
+
+  // Water
+  if(a.water>=tgt.waterMin)good.push("Water averaged "+Math.round(a.water)+"oz/day, meeting the "+tgt.waterMin+"oz target.");
+  else if(a.water>0)bad.push("Water averaged "+Math.round(a.water)+"oz/day, below the "+tgt.waterMin+"oz target.");
+
+  // Veg servings
+  if(a.veg>=tgt.vegMin)good.push("Vegetables averaged "+a.veg.toFixed(1)+" servings/day, meeting the 3+ target.");
+  else if(a.veg>0)bad.push("Vegetables averaged "+a.veg.toFixed(1)+" servings/day, below the 3+ target.");
+
+  // Potassium — only flag if it was actually logged for at least some days, and frame carefully given medication context
+  var daysWithPotassium=nut.filter(function(x){return x.potassium>0;}).length;
+  if(daysWithPotassium>=2){
+    if(a.potassium>=tgt.potassiumMin)good.push("Dietary potassium averaged "+Math.round(a.potassium)+"mg/day on days logged, meeting the general "+tgt.potassiumMin+"mg target.");
+    else bad.push("Dietary potassium averaged "+Math.round(a.potassium)+"mg/day on days logged, below the general "+tgt.potassiumMin+"mg target. Worth noting alongside your Labs tab potassium trend rather than treating this number alone as the full picture.");
+  }
+
+  // Calcium
+  var daysWithCalcium=nut.filter(function(x){return x.calcium>0;}).length;
+  if(daysWithCalcium>=2){
+    if(a.calcium>=tgt.calciumMin)good.push("Dietary calcium averaged "+Math.round(a.calcium)+"mg/day on days logged, meeting the "+tgt.calciumMin+"mg target.");
+    else bad.push("Dietary calcium averaged "+Math.round(a.calcium)+"mg/day on days logged, below the "+tgt.calciumMin+"mg target.");
+  }
+
+  return {daysLogged:nut.length,good:good,bad:bad,goalLabel:goalLabel};
+}
+
+function renderWeeklyRecapCard(targetElId){
+  var el=document.getElementById(targetElId);
+  if(!el)return;
+  var r=getWeeklyNutritionRecap();
+  if(!r){el.innerHTML='<div class="note dim">Log at least 3 days of food this week to see a recap.</div>';return;}
+  var html='<div class="note dim" style="margin-bottom:8px;">Based on '+r.daysLogged+' day'+(r.daysLogged===1?"":"s")+' logged this week, for '+r.goalLabel+'.</div>';
+  if(r.good.length){
+    html+='<div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--good);margin-bottom:6px;">Going well</div>';
+    html+=r.good.map(function(g){return '<div class="adapt-panel" style="background:rgba(45,138,53,.10);border-color:var(--good);margin-bottom:6px;">&#10003; '+g+'</div>';}).join("");
+  }
+  if(r.bad.length){
+    html+='<div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin:10px 0 6px;">Worth a look</div>';
+    html+=r.bad.map(function(b){return '<div class="adapt-panel" style="background:rgba(203,162,76,.10);border-color:var(--gold);margin-bottom:6px;">&#9888; '+b+'</div>';}).join("");
+  }
+  if(!r.good.length&&!r.bad.length){
+    html+='<div class="adapt-panel" style="background:rgba(45,138,53,.10);border-color:var(--good);">Logged consistently, nothing notably off target this week.</div>';
+  }
+  el.innerHTML=html;
+}
+
+function shouldShowWeeklyRecapPopup(){
+  var now=new Date();
+  if(now.getDay()!==0)return false; // only on/after Sunday
+  var lastShown=null;
+  try{lastShown=localStorage.getItem("hp_recap_shown_week");}catch(e){}
+  var thisWeekKey=now.getFullYear()+"-W"+getISOWeekNum(now);
+  return lastShown!==thisWeekKey;
+}
+function getISOWeekNum(d){
+  var date=new Date(d.getTime());
+  date.setHours(0,0,0,0);
+  date.setDate(date.getDate()+3-((date.getDay()+6)%7));
+  var week1=new Date(date.getFullYear(),0,4);
+  return 1+Math.round(((date.getTime()-week1.getTime())/86400000-3+((week1.getDay()+6)%7))/7);
+}
+function maybeShowWeeklyRecapPopup(){
+  if(!shouldShowWeeklyRecapPopup())return;
+  var r=getWeeklyNutritionRecap();
+  if(!r)return; // nothing meaningful to show, don't interrupt for an empty recap
+  var now=new Date();
+  var modal=document.createElement("div");
+  modal.id="weeklyRecapModal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
+  modal.innerHTML=
+    '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:80vh;overflow-y:auto;display:flex;flex-direction:column;color:var(--ink);padding-bottom:20px;">'+
+    '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
+      '<div style="font-weight:700;font-size:16px;">Your Week in Nutrition</div>'+
+      '<button onclick="dismissWeeklyRecapPopup()" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
+    '</div>'+
+    '<div id="weeklyRecapPopupBody" style="padding:14px 16px;"></div>'+
+    '<div style="padding:0 16px;"><button class="btn sm" style="width:100%;" onclick="dismissWeeklyRecapPopup()">Got it</button></div>'+
+    '</div>';
+  document.body.appendChild(modal);
+  renderWeeklyRecapCard("weeklyRecapPopupBody");
+}
+function dismissWeeklyRecapPopup(){
+  var m=document.getElementById("weeklyRecapModal");if(m)m.remove();
+  var now=new Date();
+  var thisWeekKey=now.getFullYear()+"-W"+getISOWeekNum(now);
+  try{localStorage.setItem("hp_recap_shown_week",thisWeekKey);}catch(e){}
+}
 function drawStrength(){
   var box=document.getElementById("strengthChart");
   var lift=document.getElementById("liftSelect").value;
@@ -2000,6 +2131,147 @@ function importData(e){
   var f=e.target.files[0];if(!f)return;var r=new FileReader();
   r.onload=function(){try{DB=JSON.parse(r.result);save();toast("Data imported");nav("home");}catch(err){toast("Invalid file");}};
   r.readAsText(f);
+}
+
+/* ============ OPEN FOOD FACTS INTEGRATION ============
+   Note: browsers block JS from setting a custom User-Agent header on fetch()
+   (it's a forbidden header, silently ignored) -- OFF's request for a custom
+   User-Agent per their docs can't be honored from client-side code. Nothing
+   to fix here, just a known platform limitation. */
+var _offCallTimestamps=[];
+function offRateLimitOK(){
+  var now=Date.now();
+  _offCallTimestamps=_offCallTimestamps.filter(function(t){return now-t<60000;});
+  if(_offCallTimestamps.length>=8)return false; // stay under OFF's documented 10/min, leave headroom
+  _offCallTimestamps.push(now);
+  return true;
+}
+function offNutrimentsToFood(name,nutriments,qty,unit){
+  var n=nutriments||{};
+  var per100=function(key){return n[key+"_100g"]!==undefined?n[key+"_100g"]:0;};
+  // OFF data is per 100g/100ml by default; scale to the requested qty if unit is grams-ish, otherwise leave at per-100g and let the person adjust qty.
+  var scale=1;
+  if(unit&&(unit.toLowerCase()==="g"||unit.toLowerCase()==="ml")&&qty)scale=qty/100;
+  function val(key){return Math.round(per100(key)*scale);}
+  return {
+    name:name,
+    qty:qty||100,
+    unit:unit||"g",
+    cal:val("energy-kcal"),
+    pro:val("proteins"),
+    carb:val("carbohydrates"),
+    fat:val("fat"),
+    fiber:val("fiber"),
+    sugar:val("sugars"),
+    satFat:val("saturated-fat"),
+    sodium:Math.round(per100("sodium")*1000*scale), // OFF reports sodium in g, convert to mg
+    potassium:Math.round(per100("potassium")*1000*scale),
+    calcium:Math.round(per100("calcium")*1000*scale)
+  };
+}
+function searchOFFByName(query){
+  if(!offRateLimitOK()){toast("Searching too fast \u2014 wait a moment and try again");return;}
+  var area=document.getElementById("offSearchArea");
+  if(area)area.innerHTML='<div class="note dim">Searching Open Food Facts\u2026</div>';
+  var url="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(query)+
+    "&search_simple=1&action=process&json=1&page_size=8&fields=product_name,nutriments,code";
+  fetch(url)
+    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+    .then(function(data){
+      var products=(data&&data.products)||[];
+      if(!area)return;
+      if(!products.length){area.innerHTML='<div class="note dim">No Open Food Facts results for "'+query.replace(/</g,"&lt;")+'".</div>';return;}
+      area.innerHTML='<div class="note dim" style="margin-bottom:8px;">Open Food Facts results (per 100g \u2014 review before logging):</div>'+
+        products.filter(function(p){return p.product_name;}).map(function(p,i){
+          return '<div class="add-ex-row" onclick="useOFFResult('+i+')" style="padding:12px 4px;border-bottom:1px solid var(--border);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;">'+
+            p.product_name+'<div style="font-size:12px;color:var(--faint);font-weight:400;">'+
+            (p.nutriments&&p.nutriments["energy-kcal_100g"]!==undefined?Math.round(p.nutriments["energy-kcal_100g"])+" kcal/100g":"no calorie data")+'</div></div>';
+        }).join("");
+      _offLastResults=products.filter(function(p){return p.product_name;});
+    })
+    .catch(function(){
+      if(area)area.innerHTML='<div class="note dim">Open Food Facts search failed \u2014 check connection and try again.</div>';
+    });
+}
+var _offLastResults=[];
+function useOFFResult(i){
+  var p=_offLastResults[i];if(!p)return;
+  var food=offNutrimentsToFood(p.product_name,p.nutriments,100,"g");
+  var m=document.getElementById("addFoodModal");if(m)m.remove();
+  showNewFoodForm(food);
+}
+function lookupOFFByBarcode(code){
+  if(!offRateLimitOK()){toast("Too many lookups \u2014 wait a moment and try again");return;}
+  var url="https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json?fields=product_name,nutriments";
+  fetch(url)
+    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+    .then(function(data){
+      closeBarcodeScanner();
+      if(data&&data.product&&data.product.product_name){
+        var food=offNutrimentsToFood(data.product.product_name,data.product.nutriments,100,"g");
+        var m=document.getElementById("addFoodModal");if(m)m.remove();
+        showNewFoodForm(food);
+      }else{
+        toast("Barcode "+code+" not found on Open Food Facts");
+      }
+    })
+    .catch(function(){closeBarcodeScanner();toast("Lookup failed \u2014 check connection and try again");});
+}
+
+/* ============ BARCODE SCANNER ============ */
+var _zxingLoaded=false,_zxingReader=null,_zxingControls=null;
+function loadZXing(cb){
+  if(_zxingLoaded&&window.ZXingBrowser){cb();return;}
+  var s=document.createElement("script");
+  s.src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js";
+  s.onload=function(){_zxingLoaded=true;cb();};
+  s.onerror=function(){toast("Couldn't load barcode scanner \u2014 check connection");closeBarcodeScanner();};
+  document.head.appendChild(s);
+}
+function showBarcodeScanner(){
+  var existingFoodModal=document.getElementById("addFoodModal");if(existingFoodModal)existingFoodModal.remove();
+  var modal=document.createElement("div");
+  modal.id="barcodeScanModal";
+  modal.style.cssText="position:fixed;inset:0;background:#000;z-index:9500;display:flex;flex-direction:column;";
+  modal.innerHTML=
+    '<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.5);">'+
+      '<div style="font-weight:700;font-size:16px;color:#fff;">Scan Barcode</div>'+
+      '<button onclick="closeBarcodeScanner()" style="background:none;border:none;font-size:22px;color:#fff;cursor:pointer;padding:4px;">&#x2715;</button>'+
+    '</div>'+
+    '<div style="flex:1;position:relative;display:flex;align-items:center;justify-content:center;">'+
+      '<video id="barcodeVideo" style="width:100%;height:100%;object-fit:cover;"></video>'+
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">'+
+        '<div style="width:80%;max-width:320px;height:120px;border:2px solid #fff;border-radius:12px;opacity:.7;"></div>'+
+      '</div>'+
+      '<div id="barcodeStatus" style="position:absolute;bottom:24px;left:0;right:0;text-align:center;color:#fff;font-size:13px;">Loading scanner\u2026</div>'+
+    '</div>';
+  document.body.appendChild(modal);
+  loadZXing(function(){
+    var statusEl=document.getElementById("barcodeStatus");
+    try{
+      _zxingReader=new window.ZXingBrowser.BrowserMultiFormatReader();
+      window.ZXingBrowser.BrowserCodeReader.listVideoInputDevices().then(function(devices){
+        if(!devices.length){if(statusEl)statusEl.textContent="No camera found.";return;}
+        var backCam=devices.find(function(d){return /back|rear|environment/i.test(d.label);});
+        var deviceId=(backCam||devices[devices.length-1]).deviceId;
+        if(statusEl)statusEl.textContent="Point at a barcode";
+        _zxingReader.decodeFromVideoDevice(deviceId,"barcodeVideo",function(result,err,controls){
+          _zxingControls=controls;
+          if(result){
+            var code=result.getText();
+            if(statusEl)statusEl.textContent="Found: "+code;
+            try{navigator.vibrate&&navigator.vibrate(80);}catch(e){}
+            controls.stop();
+            lookupOFFByBarcode(code);
+          }
+        });
+      }).catch(function(){if(statusEl)statusEl.textContent="Camera access denied or unavailable.";});
+    }catch(e){if(statusEl)statusEl.textContent="Scanner failed to start.";}
+  });
+}
+function closeBarcodeScanner(){
+  if(_zxingControls){try{_zxingControls.stop();}catch(e){}_zxingControls=null;}
+  var m=document.getElementById("barcodeScanModal");if(m)m.remove();
 }
 
 /* ============ OPEN FOOD FACTS CONNECTIVITY TEST (temporary) ============ */
@@ -3557,20 +3829,39 @@ function showAddFoodModal(){
     '</div>'+
     '<input id="addFoodSearch" type="text" placeholder="Search My Foods..." '+
       'style="margin:12px 16px;padding:10px 14px;background:var(--surf);border:1.5px solid var(--border);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500;">'+
-    '<div style="padding:0 16px 10px;">'+
-      '<button class="btn sm ghost" style="width:100%;" onclick="showNewFoodForm()">+ Log a New Food</button>'+
+    '<div style="padding:0 16px 10px;display:flex;gap:8px;">'+
+      '<button class="btn sm ghost" style="flex:1;" onclick="showNewFoodForm()">+ Log New</button>'+
+      '<button class="btn sm ghost" style="flex:1;" onclick="showBarcodeScanner()">+ Scan Barcode</button>'+
     '</div>'+
+    '<div id="offSearchArea" style="padding:0 16px;"></div>'+
     '<div id="addFoodList" style="overflow-y:auto;flex:1;padding:0 16px 20px;">'+
       (recent.length?recent.map(function(f){
         return '<div class="add-ex-row" data-name="'+f.name.replace(/"/g,"&quot;")+'" data-action="pickFood" data-id="'+f.id+'" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+
           f.name+'<div style="font-size:12px;color:var(--faint);font-weight:400;">'+f.qty+' '+f.unit+' \u2022 '+f.cal+' kcal \u2022 '+f.pro+'g protein</div></div>';
-      }).join(""):'<div class="note dim" style="padding:14px 4px;">No saved foods yet \u2014 log your first one above.</div>')+
+      }).join(""):'<div class="note dim" style="padding:14px 4px;">No saved foods yet \u2014 log your first one, or search above.</div>')+
     '</div></div>';
   document.body.appendChild(modal);
   setTimeout(function(){
     var si=document.getElementById("addFoodSearch");
-    if(si){si.addEventListener("input",function(){filterAddFoodList(si.value);});si.focus();}
+    if(si){si.addEventListener("input",function(){
+      filterAddFoodList(si.value);
+      scheduleOFFSearchPrompt(si.value);
+    });si.focus();}
   },50);
+}
+var _offSearchDebounce=null;
+function scheduleOFFSearchPrompt(q){
+  clearTimeout(_offSearchDebounce);
+  var area=document.getElementById("offSearchArea");
+  if(!area)return;
+  var ql=(q||"").trim();
+  if(ql.length<3){area.innerHTML="";return;}
+  var visibleLocal=Array.prototype.slice.call(document.querySelectorAll("#addFoodList .add-ex-row"))
+    .filter(function(r){return r.style.display!=="none";});
+  if(visibleLocal.length){area.innerHTML="";return;} // local matches exist, no need to suggest OFF
+  _offSearchDebounce=setTimeout(function(){
+    area.innerHTML='<button class="btn sm" style="width:100%;margin-bottom:10px;" onclick="searchOFFByName('+JSON.stringify(ql)+')">Search Open Food Facts for "'+ql.replace(/</g,"&lt;")+'"</button>';
+  },600);
 }
 function filterAddFoodList(q){
   var ql=(q||"").toLowerCase().trim();
@@ -3588,7 +3879,7 @@ function pickFood(id){
   var m=document.getElementById("addFoodModal");if(m)m.remove();
   renderFoodLogList();renderLog();toast(f.name+" added.");trySheetSync();
 }
-function showNewFoodForm(){
+function showNewFoodForm(prefill){
   var modal=document.getElementById("addFoodModal");if(modal)modal.remove();
   var m2=document.createElement("div");
   m2.id="newFoodModal";
@@ -3600,6 +3891,7 @@ function showNewFoodForm(){
       '<button data-close="newFoodModal" onclick="closeExModal(this.dataset.close)" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
     '</div>'+
     '<div style="padding:0 16px;">'+
+    (prefill?'<div class="note dim" style="margin-bottom:10px;background:rgba(203,162,76,.10);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;">From Open Food Facts \u2014 values are per 100g/ml. Adjust quantity and double-check before logging.</div>':'')+
     '<label class="fld">Food name</label><input id="nfName" type="text" placeholder="e.g. Chicken Breast">'+
     '<div class="row3" style="margin-top:6px;">'+
       '<div><label class="fld">Qty</label><input id="nfQty" type="number" inputmode="decimal" placeholder="6"></div>'+
@@ -3621,10 +3913,25 @@ function showNewFoodForm(){
       '<div><label class="fld">Water oz</label><input id="nfWater" type="number" inputmode="numeric" placeholder="oz"></div>'+
       '<div><label class="fld">Veg Servings</label><input id="nfVeg" type="number" inputmode="numeric" placeholder="0"></div>'+
     '</div>'+
+    '<div class="row3" style="margin-top:6px;">'+
+      '<div><label class="fld">Potassium mg <span style="opacity:.55;font-weight:400;">(optional)</span></label><input id="nfPotassium" type="number" inputmode="numeric" placeholder="mg"></div>'+
+      '<div><label class="fld">Calcium mg <span style="opacity:.55;font-weight:400;">(optional)</span></label><input id="nfCalcium" type="number" inputmode="numeric" placeholder="mg"></div>'+
+    '</div>'+
     '<button class="btn sm" style="width:100%;margin-top:14px;" onclick="saveNewFood()">Log It</button>'+
     '</div></div>';
   document.body.appendChild(m2);
-  setTimeout(function(){var ni=document.getElementById("nfName");if(ni)ni.focus();},50);
+  setTimeout(function(){
+    var ni=document.getElementById("nfName");
+    if(prefill){
+      var setVal=function(id,v){var el=document.getElementById(id);if(el&&v!==undefined&&v!==null)el.value=v;};
+      setVal("nfName",prefill.name);setVal("nfQty",prefill.qty);setVal("nfUnit",prefill.unit);
+      setVal("nfCal",prefill.cal);setVal("nfPro",prefill.pro);setVal("nfCarb",prefill.carb);setVal("nfFat",prefill.fat);
+      setVal("nfFiber",prefill.fiber);setVal("nfSugar",prefill.sugar);setVal("nfSatFat",prefill.satFat);
+      setVal("nfSodium",prefill.sodium);setVal("nfWater",prefill.water);setVal("nfVeg",prefill.veg);
+      setVal("nfPotassium",prefill.potassium);setVal("nfCalcium",prefill.calcium);
+    }
+    if(ni)ni.focus();
+  },50);
 }
 function saveNewFood(){
   var name=(document.getElementById("nfName").value||"").trim();
@@ -3644,6 +3951,8 @@ function saveNewFood(){
     sodium:parseInt(document.getElementById("nfSodium").value)||0,
     water:parseInt(document.getElementById("nfWater").value)||0,
     veg:parseInt(document.getElementById("nfVeg").value)||0,
+    potassium:parseInt(document.getElementById("nfPotassium").value)||0,
+    calcium:parseInt(document.getElementById("nfCalcium").value)||0,
     lastUsed:Date.now()
   };
   // De-dupe by case-insensitive name match \u2014 update the existing saved food instead of creating a duplicate
@@ -3749,6 +4058,7 @@ setTimeout(function(){
   setTimeout(checkDietPopup,800);
   setTimeout(checkBPPrompt,2000);
   setTimeout(loadAndShowQuote,200);
+  setTimeout(maybeShowWeeklyRecapPopup,2800);
 },3400);
 // PWA: service worker with offline shell caching — meets Chrome install criteria
 if("serviceWorker" in navigator){
