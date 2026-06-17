@@ -2330,6 +2330,28 @@ document.addEventListener("click",function(e){
   handleObOptTap(opt);
 });
 
+// Delegated handler for exercise list rows
+var _exRowLastTouch=0;
+document.addEventListener("touchstart",function(e){
+  var row=e.target.closest(".add-ex-row");
+  if(!row)return;
+  _exRowLastTouch=Date.now();
+  handleExRowTap(row);
+},{passive:true});
+document.addEventListener("click",function(e){
+  var row=e.target.closest(".add-ex-row");
+  if(!row)return;
+  if(Date.now()-_exRowLastTouch<500)return;
+  handleExRowTap(row);
+});
+function closeExModal(id){var m=document.getElementById(id);if(m)m.remove();}
+function handleExRowTap(row){
+  var name=row.dataset.name;
+  var action=row.dataset.action;
+  if(action==="addEx"){addExToSession(name);}
+  else if(action==="addPermEx"){addPermEx(parseInt(row.dataset.day),name);}
+}
+
 function obFinish(){
   var a=OB.answers;
   DB.goal=DB.goal||{};
@@ -3189,21 +3211,28 @@ function showAddExModal(){
   modal.id="addExModal";
   modal.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
   modal.innerHTML=
-    '<div style="background:var(--panel);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:70vh;display:flex;flex-direction:column;">'+
+    '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:70vh;display:flex;flex-direction:column;color:var(--ink);">'+
     '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
       '<div style="font-weight:700;font-size:16px;">Add Exercise (Today)</div>'+
-      '<button onclick="document.getElementById(&quot;addExModal&quot;).remove()" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
+      '<button data-close="addExModal" onclick="closeExModal(this.dataset.close)" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
     '</div>'+
     '<input id="addExSearch" type="text" placeholder="Search..." '+
-      'style="margin:12px 16px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;font-size:15px;" '+
-      'oninput="filterAddExList(this.value)">'+
+      'style="margin:12px 16px;padding:10px 14px;background:var(--surf);border:1.5px solid var(--border);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500;">'+
     '<div id="addExList" style="overflow-y:auto;flex:1;padding:0 16px 20px;">'+
-      available.map(function(n){return '<div class="add-ex-row" data-name="'+n+'" onclick="addExToSession(&quot;"+n+"&quot;)" style="padding:14px 4px;border-bottom:1px solid var(--line);font-size:15px;cursor:pointer;touch-action:manipulation;">'+n+'</div>';}).join("")+
+      available.map(function(n){return '<div class="add-ex-row" data-name="'+n+'" data-action="addEx" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+n+'</div>';}).join("")+
     '</div></div>';
   document.body.appendChild(modal);
+  // Wire search after DOM insertion
+  setTimeout(function(){
+    var si=document.getElementById("addExSearch");
+    if(si){si.addEventListener("input",function(){filterAddExList(si.value);});si.focus();}
+  },50);
 }
 function filterAddExList(q){
-  document.querySelectorAll("#addExList .add-ex-row").forEach(function(r){r.style.display=r.dataset.name.toLowerCase().indexOf(q.toLowerCase())>-1?"":"none";});
+  var ql=(q||"").toLowerCase().trim();
+  document.querySelectorAll("#addExList .add-ex-row").forEach(function(r){
+    r.style.display=(!ql||r.dataset.name.toLowerCase().indexOf(ql)>-1)?"block":"none";
+  });
 }
 function addExToSession(name){
   var m=document.getElementById("addExModal");if(m)m.remove();
@@ -3246,21 +3275,27 @@ function showAddPermExModal(dayIdx){
   modal.id="addPermExModal";
   modal.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
   modal.innerHTML=
-    '<div style="background:var(--panel);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:70vh;display:flex;flex-direction:column;">'+
+    '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:70vh;display:flex;flex-direction:column;color:var(--ink);">'+
     '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
       '<div style="font-weight:700;font-size:16px;">Add to '+d.day+' (permanent)</div>'+
-      '<button onclick="document.getElementById(&quot;addPermExModal&quot;).remove()" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
+      '<button data-close="addPermExModal" onclick="closeExModal(this.dataset.close)" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
     '</div>'+
     '<input id="addPermExSearch" type="text" placeholder="Search..." '+
-      'style="margin:12px 16px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;font-size:15px;" '+
-      'oninput="filterPermExList(this.value)">'+
+      'style="margin:12px 16px;padding:10px 14px;background:var(--surf);border:1.5px solid var(--border);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500;">'+
     '<div id="addPermExList" style="overflow-y:auto;flex:1;padding:0 16px 20px;">'+
-      available.map(function(n){return '<div class="add-ex-row" data-name="'+n+'" onclick="addPermEx('+dayIdx+',&quot;'+n+'&quot;)" style="padding:14px 4px;border-bottom:1px solid var(--line);font-size:15px;cursor:pointer;touch-action:manipulation;">'+n+'</div>';}).join("")+
+      available.map(function(n){return '<div class="add-ex-row" data-name="'+n+'" data-action="addPermEx" data-day="'+dayIdx+'" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+n+'</div>';}).join("")+
     '</div></div>';
   document.body.appendChild(modal);
+  setTimeout(function(){
+    var si=document.getElementById("addPermExSearch");
+    if(si){si.addEventListener("input",function(){filterPermExList(si.value);});si.focus();}
+  },50);
 }
 function filterPermExList(q){
-  document.querySelectorAll("#addPermExList .add-ex-row").forEach(function(r){r.style.display=r.dataset.name.toLowerCase().indexOf(q.toLowerCase())>-1?"":"none";});
+  var ql=(q||"").toLowerCase().trim();
+  document.querySelectorAll("#addPermExList .add-ex-row").forEach(function(r){
+    r.style.display=(!ql||r.dataset.name.toLowerCase().indexOf(ql)>-1)?"block":"none";
+  });
 }
 function addPermEx(dayIdx,name){
   var m=document.getElementById("addPermExModal");if(m)m.remove();
