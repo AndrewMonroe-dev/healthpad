@@ -3629,7 +3629,7 @@ setTimeout(function(){
 if("serviceWorker" in navigator){
   try{
     var swCode=[
-      "var CACHE='healthpad-v1';",
+      "var CACHE='healthpad-v2';",
       "var SHELL=['./index.html','./manifest.json','./apple-touch-icon.png','./quotes.json'];",
       "self.addEventListener('install',function(e){",
       "  self.skipWaiting();",
@@ -3645,14 +3645,20 @@ if("serviceWorker" in navigator){
       "});",
       "self.addEventListener('fetch',function(e){",
       "  if(e.request.method!=='GET')return;",
-      "  e.respondWith(caches.match(e.request).then(function(cached){",
-      "    return cached||fetch(e.request).catch(function(){return cached;});",
-      "  }));",
+      "  e.respondWith(",
+      "    fetch(e.request).then(function(fresh){",
+      "      caches.open(CACHE).then(function(c){c.put(e.request,fresh.clone()).catch(function(){});});",
+      "      return fresh;",
+      "    }).catch(function(){return caches.match(e.request);})",
+      "  );",
       "});"
     ].join("\n");
     var swBlob=new Blob([swCode],{type:"application/javascript"});
     var swUrl=URL.createObjectURL(swBlob);
     navigator.serviceWorker.register(swUrl).catch(function(){});
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(r){r.update().catch(function(){});});
+    }).catch(function(){});
   }catch(e){}
 }
 
