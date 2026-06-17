@@ -629,12 +629,14 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div id="ormBtnRow"><button class="btn sm ghost" onclick="saveOneRMs()">Save 1RMs</button></div>
     </div>
     <div class="sec">
-      <div class="sec-h">Open Food Facts Test <span class="tag">temporary</span></div>
-      <div class="note dim">One-time connectivity test \u2014 checks whether this app can call the Open Food Facts API directly from your phone. Looks up a known product (Nutella, barcode 3017624010701). Safe to remove once we know the answer.</div>
+      <div class="sec-h">USDA FoodData Central</div>
+      <div class="note dim">Covers generic whole foods (chicken breast, rice, an apple) that Open Food Facts mostly doesn't have, since OFF is built from packaged-product barcode scans. Free key from <span style="color:var(--gold);">fdc.nal.usda.gov/api-key-signup</span> \u2014 tied to your account, never shared publicly.</div>
+      <label class="fld">FDC API Key</label>
+      <input type="password" id="inFdcKey" placeholder="Paste your USDA API key">
       <div class="btn-row" style="margin-top:12px;">
-        <button class="btn sm dark" onclick="testOFFConnection()">Run Test</button>
+        <button class="btn sm dark" onclick="saveFdcKey()">Save Key</button>
       </div>
-      <div id="offTestResult" style="margin-top:10px;"></div>
+      <div class="note dim" id="fdcKeyNote" style="margin-top:10px;"></div>
     </div>
     <div class="sec">
       <div class="sec-h">Google Sheets Sync</div>
@@ -980,7 +982,7 @@ var SPLIT_HEAVY=[
 ];
 
 /* ============ STATE ============ */
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[]},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:""},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -988,6 +990,7 @@ function load(){
   try{var s=localStorage.getItem("healthpad_db");if(s)DB=JSON.parse(s);}catch(e){}
   if(!DB.oneRM||Object.keys(DB.oneRM).length===0){DB.oneRM=Object.assign({},DEFAULT_1RM);}
   if(!DB.settings)DB.settings={sheetUrl:""};
+  if(DB.settings.fdcKey===undefined)DB.settings.fdcKey="";
   if(!DB.foodLog)DB.foodLog=[];
   if(!DB.myFoods)DB.myFoods=[];
 }
@@ -2045,6 +2048,7 @@ function renderSetup(){
   document.getElementById("oneRMList").innerHTML=html;
   document.getElementById("ormBtnRow").innerHTML='<div class="btn-row"><button class="btn sm ghost" onclick="saveOneRMs()">Save 1RMs</button><button class="btn sm dark" onclick="syncORMsFromLive()">Sync from Live Data</button></div>';
   document.getElementById("inSheetUrl").value=DB.settings.sheetUrl||"";
+  var fdcInput=document.getElementById("inFdcKey");if(fdcInput)fdcInput.value=DB.settings.fdcKey||"";
   // phase overview — goal-aware
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
   var goalName=(DB.goal&&DB.goal.name)||"";
@@ -2113,6 +2117,28 @@ function saveOneRMs(){
 }
 function saveSheetUrl(){
   DB.settings.sheetUrl=document.getElementById("inSheetUrl").value.trim();save();toast("URL saved");
+}
+function saveFdcKey(){
+  var key=document.getElementById("inFdcKey").value.trim();
+  DB.settings.fdcKey=key;save();
+  var note=document.getElementById("fdcKeyNote");
+  if(!key){if(note)note.textContent="";toast("Key cleared");return;}
+  toast("Key saved \u2014 checking it works\u2026");
+  if(note)note.textContent="Verifying\u2026";
+  fetch("https://api.nal.usda.gov/fdc/v1/foods/search?api_key="+encodeURIComponent(key)+"&query=apple&pageSize=1")
+    .then(function(r){
+      if(r.status===403)throw new Error("invalid key");
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      return r.json();
+    })
+    .then(function(data){
+      if(note)note.textContent=(data&&data.foods&&data.foods.length)?"\u2713 Key verified \u2014 USDA search is live.":"Key accepted, but the test search returned nothing unexpected \u2014 should still work.";
+    })
+    .catch(function(err){
+      if(note)note.textContent=String(err.message).indexOf("invalid")>-1
+        ?"\u26a0 This key was rejected. Double check it was copied correctly, or generate a new one."
+        :"\u26a0 Couldn't verify right now (network issue) \u2014 the key is saved and will be used regardless.";
+    });
 }
 function copySheetUrl(){
   var url=DB.settings.sheetUrl||"";
@@ -2189,31 +2215,104 @@ function offNutrimentsToFood(name,nutriments,qty,unit){
 function searchOFFByName(query){
   if(!offRateLimitOK()){toast("Searching too fast \u2014 wait a moment and try again");return;}
   var area=document.getElementById("offSearchArea");
-  if(area)area.innerHTML='<div class="note dim">Searching Open Food Facts\u2026</div>';
-  var url="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(query)+
+  if(area)area.innerHTML='<div class="note dim">Searching\u2026</div>';
+  var offUrl="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(query)+
     "&search_simple=1&action=process&json=1&page_size=8&fields=product_name,nutriments,code";
-  fetch(url)
+  var offPromise=fetch(offUrl)
     .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
-    .then(function(data){
-      var products=(data&&data.products)||[];
-      if(!area)return;
-      if(!products.length){area.innerHTML='<div class="note dim">No Open Food Facts results for "'+query.replace(/</g,"&lt;")+'".</div>';return;}
-      area.innerHTML='<div class="note dim" style="margin-bottom:8px;">Open Food Facts results (per 100g \u2014 review before logging):</div>'+
-        products.filter(function(p){return p.product_name;}).map(function(p,i){
-          return '<div class="add-ex-row" onclick="useOFFResult('+i+')" style="padding:12px 4px;border-bottom:1px solid var(--border);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;">'+
-            p.product_name+'<div style="font-size:12px;color:var(--faint);font-weight:400;">'+
-            (p.nutriments&&p.nutriments["energy-kcal_100g"]!==undefined?Math.round(p.nutriments["energy-kcal_100g"])+" kcal/100g":"no calorie data")+'</div></div>';
-        }).join("");
-      _offLastResults=products.filter(function(p){return p.product_name;});
-    })
-    .catch(function(){
-      if(area)area.innerHTML='<div class="note dim">Open Food Facts search failed \u2014 check connection and try again.</div>';
-    });
+    .then(function(data){return ((data&&data.products)||[]).filter(function(p){return p.product_name;});})
+    .catch(function(){return [];});
+  var fdcPromise=searchFDCByName(query);
+
+  Promise.all([offPromise,fdcPromise]).then(function(results){
+    var offResults=results[0],fdcResults=results[1].filter(function(f){return f.description;});
+    _offLastResults=offResults;
+    _fdcLastResults=fdcResults;
+    if(!area)return;
+    if(!offResults.length&&!fdcResults.length){
+      var hint=(DB.settings&&DB.settings.fdcKey)?"":" Add a USDA FoodData Central key in Setup to also search generic whole foods.";
+      area.innerHTML='<div class="note dim">No results for "'+query.replace(/</g,"&lt;")+'".'+hint+'</div>';
+      return;
+    }
+    var html='<div class="note dim" style="margin-bottom:8px;">Results (per 100g \u2014 review before logging):</div>';
+    if(fdcResults.length){
+      html+=fdcResults.map(function(f,i){
+        var cal=f.foodNutrients&&f.foodNutrients.find(function(n){return (n.nutrientName||"").toLowerCase().indexOf("energy")>-1;});
+        return '<div class="add-ex-row" onclick="useFDCResult('+i+')" style="padding:12px 4px;border-bottom:1px solid var(--border);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;">'+
+          f.description+' <span class="tag" style="font-size:10px;">USDA</span>'+
+          '<div style="font-size:12px;color:var(--faint);font-weight:400;">'+
+          (cal?Math.round(cal.value)+" kcal/100g":"no calorie data")+'</div></div>';
+      }).join("");
+    }
+    if(offResults.length){
+      html+=offResults.map(function(p,i){
+        return '<div class="add-ex-row" onclick="useOFFResult('+i+')" style="padding:12px 4px;border-bottom:1px solid var(--border);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;">'+
+          p.product_name+' <span class="tag" style="font-size:10px;">OFF</span>'+
+          '<div style="font-size:12px;color:var(--faint);font-weight:400;">'+
+          (p.nutriments&&p.nutriments["energy-kcal_100g"]!==undefined?Math.round(p.nutriments["energy-kcal_100g"])+" kcal/100g":"no calorie data")+'</div></div>';
+      }).join("");
+    }
+    area.innerHTML=html;
+  }).catch(function(){
+    if(area)area.innerHTML='<div class="note dim">Search failed \u2014 check connection and try again.</div>';
+  });
 }
 var _offLastResults=[];
 function useOFFResult(i){
   var p=_offLastResults[i];if(!p)return;
   var food=offNutrimentsToFood(p.product_name,p.nutriments,100,"g");
+  var m=document.getElementById("addFoodModal");if(m)m.remove();
+  showNewFoodForm(food);
+}
+
+/* ============ USDA FOODDATA CENTRAL INTEGRATION ============ */
+function fdcNutrientsToFood(name,foodNutrients,qty,unit){
+  var byName={};
+  (foodNutrients||[]).forEach(function(n){
+    var nm=(n.nutrientName||"").toLowerCase();
+    byName[nm]=n.value||0;
+  });
+  function find(patterns){
+    for(var i=0;i<patterns.length;i++){
+      var keys=Object.keys(byName);
+      for(var j=0;j<keys.length;j++){if(keys[j].indexOf(patterns[i])>-1)return byName[keys[j]];}
+    }
+    return 0;
+  }
+  // FDC reports per 100g for Foundation/SR Legacy/Branded; scale to requested qty if gram/ml-based
+  var scale=1;
+  if(unit&&(unit.toLowerCase()==="g"||unit.toLowerCase()==="ml")&&qty)scale=qty/100;
+  function val(patterns){return Math.round(find(patterns)*scale);}
+  return {
+    name:name,
+    qty:qty||100,
+    unit:unit||"g",
+    cal:val(["energy"]),
+    pro:val(["protein"]),
+    carb:val(["carbohydrate"]),
+    fat:val(["total lipid","fat"]),
+    fiber:val(["fiber"]),
+    sugar:val(["sugars"]),
+    satFat:val(["fatty acids, total saturated","saturated"]),
+    sodium:val(["sodium"]),
+    potassium:val(["potassium"]),
+    calcium:val(["calcium"])
+  };
+}
+function searchFDCByName(query){
+  var key=DB.settings&&DB.settings.fdcKey;
+  if(!key)return Promise.resolve([]); // no key configured, silently skip this source
+  var url="https://api.nal.usda.gov/fdc/v1/foods/search?api_key="+encodeURIComponent(key)+
+    "&query="+encodeURIComponent(query)+"&pageSize=8&dataType=Foundation,SR%20Legacy,Branded";
+  return fetch(url)
+    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+    .then(function(data){return (data&&data.foods)||[];})
+    .catch(function(){return [];});
+}
+var _fdcLastResults=[];
+function useFDCResult(i){
+  var f=_fdcLastResults[i];if(!f)return;
+  var food=fdcNutrientsToFood(f.description,f.foodNutrients,100,"g");
   var m=document.getElementById("addFoodModal");if(m)m.remove();
   showNewFoodForm(food);
 }
@@ -2306,35 +2405,6 @@ function closeBarcodeScanner(){
   var m=document.getElementById("barcodeScanModal");if(m)m.remove();
 }
 
-/* ============ OPEN FOOD FACTS CONNECTIVITY TEST (temporary) ============ */
-function testOFFConnection(){
-  var el=document.getElementById("offTestResult");
-  el.innerHTML='<div class="note dim">Testing\u2026</div>';
-  var url="https://world.openfoodfacts.org/api/v2/product/3017624010701.json?fields=product_name,nutriments";
-  fetch(url)
-    .then(function(r){
-      if(!r.ok)throw new Error("HTTP "+r.status);
-      return r.json();
-    })
-    .then(function(data){
-      if(data&&data.product&&data.product.product_name){
-        var n=data.product.nutriments||{};
-        el.innerHTML='<div class="lab-flag ok"><b>Success.</b> Direct browser access works.<br>'+
-          'Product: '+data.product.product_name+'<br>'+
-          'Calories/100g: '+(n["energy-kcal_100g"]!==undefined?n["energy-kcal_100g"]:"\u2014")+'<br>'+
-          'Protein/100g: '+(n.proteins_100g!==undefined?n.proteins_100g:"\u2014")+'g</div>';
-      }else{
-        el.innerHTML='<div class="lab-flag warn"><b>Reached the server, but response looked unexpected.</b> Status: '+(data&&data.status_verbose?data.status_verbose:"unknown")+'</div>';
-      }
-    })
-    .catch(function(err){
-      var msg=String(err&&err.message||err);
-      var corsLikely=msg.indexOf("Failed to fetch")>-1||msg.indexOf("NetworkError")>-1||msg.indexOf("Load failed")>-1;
-      el.innerHTML='<div class="lab-flag abnorm"><b>Failed.</b> '+
-        (corsLikely?"This looks like a CORS or network block \u2014 the browser refused the cross-origin request. We'd need a small proxy to relay these calls.":"Error: "+msg)+
-        '</div>';
-    });
-}
 
 /* ============ SHEETS SYNC ============ */
 function trySheetSync(){if(DB.settings.sheetUrl)syncNow(true);}
@@ -3909,7 +3979,7 @@ function scheduleOFFSearchPrompt(q){
     .filter(function(r){return r.style.display!=="none";});
   if(visibleLocal.length){area.innerHTML="";return;} // local matches exist, no need to suggest OFF
   _offSearchDebounce=setTimeout(function(){
-    area.innerHTML='<button class="btn sm" style="width:100%;margin-bottom:10px;" onclick="searchOFFByName('+JSON.stringify(ql)+')">Search Open Food Facts for "'+ql.replace(/</g,"&lt;")+'"</button>';
+    area.innerHTML='<button class="btn sm" style="width:100%;margin-bottom:10px;" onclick="searchOFFByName('+JSON.stringify(ql)+')">Search food databases for "'+ql.replace(/</g,"&lt;")+'"</button>';
   },600);
 }
 function filterAddFoodList(q){
