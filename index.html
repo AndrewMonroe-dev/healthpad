@@ -2189,6 +2189,14 @@ function offRateLimitOK(){
   _offCallTimestamps.push(now);
   return true;
 }
+function parseOFFServingGrams(servingSizeStr){
+  if(!servingSizeStr)return null;
+  var m=String(servingSizeStr).match(/([\d.]+)\s*g\b/i);
+  if(m)return parseFloat(m[1]);
+  var mMl=String(servingSizeStr).match(/([\d.]+)\s*ml\b/i);
+  if(mMl)return parseFloat(mMl[1]); // treat ml as g for liquids (close enough, density ~1 for most tracked liquids)
+  return null;
+}
 function offNutrimentsToFood(name,nutriments,qty,unit){
   var n=nutriments||{};
   var per100=function(key){return n[key+"_100g"]!==undefined?n[key+"_100g"]:0;};
@@ -2217,7 +2225,7 @@ function searchOFFByName(query){
   var area=document.getElementById("offSearchArea");
   if(area)area.innerHTML='<div class="note dim">Searching\u2026</div>';
   var offUrl="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(query)+
-    "&search_simple=1&action=process&json=1&page_size=8&fields=product_name,nutriments,code";
+    "&search_simple=1&action=process&json=1&page_size=8&fields=product_name,nutriments,code,serving_size";
   var offPromise=fetch(offUrl)
     .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
     .then(function(data){return ((data&&data.products)||[]).filter(function(p){return p.product_name;});})
@@ -2261,8 +2269,9 @@ var _offLastResults=[];
 function useOFFResult(i){
   var p=_offLastResults[i];if(!p)return;
   var food=offNutrimentsToFood(p.product_name,p.nutriments,100,"g");
+  var servingG=parseOFFServingGrams(p.serving_size);
   var m=document.getElementById("addFoodModal");if(m)m.remove();
-  showNewFoodForm(food);
+  showNewFoodForm(food,{source:"off",raw:p.nutriments,servingG:servingG,servingLabel:p.serving_size||null});
 }
 
 /* ============ USDA FOODDATA CENTRAL INTEGRATION ============ */
@@ -2313,20 +2322,22 @@ var _fdcLastResults=[];
 function useFDCResult(i){
   var f=_fdcLastResults[i];if(!f)return;
   var food=fdcNutrientsToFood(f.description,f.foodNutrients,100,"g");
+  var servingG=(f.servingSizeUnit&&f.servingSizeUnit.toLowerCase()==="g"&&f.servingSize)?f.servingSize:null;
   var m=document.getElementById("addFoodModal");if(m)m.remove();
-  showNewFoodForm(food);
+  showNewFoodForm(food,{source:"fdc",raw:f.foodNutrients,servingG:servingG,servingLabel:f.householdServingFullText||null});
 }
 function lookupOFFByBarcode(code){
   if(!offRateLimitOK()){toast("Too many lookups \u2014 wait a moment and try again");return;}
-  var url="https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json?fields=product_name,nutriments";
+  var url="https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json?fields=product_name,nutriments,serving_size";
   fetch(url)
     .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
     .then(function(data){
       closeBarcodeScanner();
       if(data&&data.product&&data.product.product_name){
         var food=offNutrimentsToFood(data.product.product_name,data.product.nutriments,100,"g");
+        var servingG=parseOFFServingGrams(data.product.serving_size);
         var m=document.getElementById("addFoodModal");if(m)m.remove();
-        showNewFoodForm(food);
+        showNewFoodForm(food,{source:"off",raw:data.product.nutriments,servingG:servingG,servingLabel:data.product.serving_size||null});
       }else{
         toast("Barcode "+code+" not found on Open Food Facts");
       }
@@ -3946,7 +3957,7 @@ function showAddFoodModal(){
       '<div style="font-weight:700;font-size:16px;">Add Food</div>'+
       '<button data-close="addFoodModal" onclick="closeExModal(this.dataset.close)" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
     '</div>'+
-    '<input id="addFoodSearch" type="text" placeholder="Search My Foods..." '+
+    '<input id="addFoodSearch" type="text" placeholder="Search My Foods + food databases..." '+
       'style="margin:12px 16px;padding:10px 14px;background:var(--surf);border:1.5px solid var(--border);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500;">'+
     '<div style="padding:0 16px 10px;display:flex;gap:8px;">'+
       '<button class="btn sm ghost" style="flex:1;" onclick="showNewFoodForm()">+ Log New</button>'+
@@ -3975,11 +3986,8 @@ function scheduleOFFSearchPrompt(q){
   if(!area)return;
   var ql=(q||"").trim();
   if(ql.length<3){area.innerHTML="";return;}
-  var visibleLocal=Array.prototype.slice.call(document.querySelectorAll("#addFoodList .add-ex-row"))
-    .filter(function(r){return r.style.display!=="none";});
-  if(visibleLocal.length){area.innerHTML="";return;} // local matches exist, no need to suggest OFF
   _offSearchDebounce=setTimeout(function(){
-    area.innerHTML='<button class="btn sm" style="width:100%;margin-bottom:10px;" onclick="searchOFFByName('+JSON.stringify(ql)+')">Search food databases for "'+ql.replace(/</g,"&lt;")+'"</button>';
+    searchOFFByName(ql);
   },600);
 }
 function filterAddFoodList(q){
@@ -3998,11 +4006,29 @@ function pickFood(id){
   var m=document.getElementById("addFoodModal");if(m)m.remove();
   renderFoodLogList();renderFoodsTab();toast(f.name+" added.");trySheetSync();
 }
-function showNewFoodForm(prefill){
+var _nfSourceData=null; // holds raw nutriment data + serving info for live unit recalculation, null for manual entries
+function showNewFoodForm(prefill,sourceMeta){
   var modal=document.getElementById("addFoodModal");if(modal)modal.remove();
+  var existingNf=document.getElementById("newFoodModal");if(existingNf)existingNf.remove();
+  _nfSourceData=sourceMeta||null;
   var m2=document.createElement("div");
   m2.id="newFoodModal";
   m2.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
+  var unitSelectorHtml="";
+  if(sourceMeta){
+    var opts='<option value="g">grams (g)</option><option value="oz">ounces (oz)</option>';
+    if(sourceMeta.servingG){
+      var label=sourceMeta.servingLabel?sourceMeta.servingLabel:("1 serving ("+sourceMeta.servingG+"g)");
+      opts+='<option value="serving">'+label.replace(/</g,"&lt;")+'</option>';
+    }
+    unitSelectorHtml=
+      '<label class="fld">Calculate for</label>'+
+      '<div class="row3" style="margin-top:0;">'+
+        '<select id="nfRecalcUnit" onchange="recalcNewFoodFromSource()" style="flex:1;">'+opts+'</select>'+
+        '<input id="nfRecalcAmount" type="number" inputmode="decimal" value="100" style="flex:1;" oninput="recalcNewFoodFromSource()">'+
+      '</div>'+
+      '<div class="note dim" id="nfRecalcNote" style="margin-top:4px;margin-bottom:10px;"></div>';
+  }
   m2.innerHTML=
     '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;color:var(--ink);padding-bottom:20px;">'+
     '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
@@ -4010,7 +4036,8 @@ function showNewFoodForm(prefill){
       '<button data-close="newFoodModal" onclick="closeExModal(this.dataset.close)" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
     '</div>'+
     '<div style="padding:0 16px;">'+
-    (prefill?'<div class="note dim" style="margin-bottom:10px;background:rgba(203,162,76,.10);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;">From Open Food Facts \u2014 values are per 100g/ml. Adjust quantity and double-check before logging.</div>':'')+
+    (prefill&&sourceMeta?'<div class="note dim" style="margin-bottom:10px;background:rgba(203,162,76,.10);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;">From '+(sourceMeta.source==="fdc"?"USDA FoodData Central":"Open Food Facts")+' \u2014 choose the amount below, values recalculate automatically. Double-check before logging.</div>':'')+
+    unitSelectorHtml+
     '<label class="fld">Food name</label><input id="nfName" type="text" placeholder="e.g. Chicken Breast">'+
     '<div class="row3" style="margin-top:6px;">'+
       '<div><label class="fld">Qty</label><input id="nfQty" type="number" inputmode="decimal" placeholder="6"></div>'+
@@ -4049,8 +4076,52 @@ function showNewFoodForm(prefill){
       setVal("nfSodium",prefill.sodium);setVal("nfWater",prefill.water);setVal("nfVeg",prefill.veg);
       setVal("nfPotassium",prefill.potassium);setVal("nfCalcium",prefill.calcium);
     }
+    if(sourceMeta){
+      var unitSel=document.getElementById("nfRecalcUnit");
+      if(unitSel&&sourceMeta.servingG)unitSel.value="serving"; // default to the labeled serving when one exists
+      recalcNewFoodFromSource();
+    }
     if(ni)ni.focus();
   },50);
+}
+function recalcNewFoodFromSource(){
+  if(!_nfSourceData)return;
+  var unitSel=document.getElementById("nfRecalcUnit");
+  var amountInput=document.getElementById("nfRecalcAmount");
+  if(!unitSel)return;
+  var mode=unitSel.value;
+  var amountField=document.getElementById("nfRecalcAmount").parentNode;
+  var note=document.getElementById("nfRecalcNote");
+  var qtyG,displayQty,displayUnit;
+
+  if(mode==="serving"){
+    qtyG=_nfSourceData.servingG;
+    displayQty=1;displayUnit=_nfSourceData.servingLabel||"serving";
+    if(amountInput)amountInput.style.display="none";
+    if(note)note.textContent="Using the labeled serving size ("+_nfSourceData.servingG+"g).";
+  } else if(mode==="oz"){
+    var ozAmount=parseFloat(amountInput.value)||0;
+    qtyG=ozAmount*28.3495; // exact weight conversion, 1 oz = 28.3495g
+    displayQty=ozAmount;displayUnit="oz";
+    if(amountInput)amountInput.style.display="";
+    if(note)note.textContent=ozAmount+" oz \u2248 "+Math.round(qtyG)+"g, values recalculated from per-100g source data.";
+  } else { // grams
+    var gAmount=parseFloat(amountInput.value)||0;
+    qtyG=gAmount;
+    displayQty=gAmount;displayUnit="g";
+    if(amountInput)amountInput.style.display="";
+    if(note)note.textContent="";
+  }
+
+  var food=_nfSourceData.source==="fdc"
+    ? fdcNutrientsToFood(document.getElementById("nfName").value,_nfSourceData.raw,qtyG,"g")
+    : offNutrimentsToFood(document.getElementById("nfName").value,_nfSourceData.raw,qtyG,"g");
+
+  var setVal=function(id,v){var el=document.getElementById(id);if(el)el.value=v;};
+  setVal("nfQty",displayQty);setVal("nfUnit",displayUnit);
+  setVal("nfCal",food.cal);setVal("nfPro",food.pro);setVal("nfCarb",food.carb);setVal("nfFat",food.fat);
+  setVal("nfFiber",food.fiber);setVal("nfSugar",food.sugar);setVal("nfSatFat",food.satFat);
+  setVal("nfSodium",food.sodium);setVal("nfPotassium",food.potassium);setVal("nfCalcium",food.calcium);
 }
 function saveNewFood(){
   var name=(document.getElementById("nfName").value||"").trim();
@@ -4159,26 +4230,31 @@ function renderAppbarDate(){
 }
 
 /* ============ INIT ============ */
-load();
-renderAppbarDate();
-setTimeout(function(){document.getElementById("splash").classList.add("hide");},3200);
-renderHome();
-renderBPSection();
-renderStepsSection();
-renderRHRHistory();
-loadBPPromptPref();
-loadWeightReactionPref();
-loadWeightReactions(function(){});
-loadMedStack();
-loadGoalSettings();
-loadUserName();
-setTimeout(function(){
-  if(!DB.settings.hasOnboarded){obShow();return;}
-  setTimeout(checkDietPopup,800);
-  setTimeout(checkBPPrompt,2000);
-  setTimeout(loadAndShowQuote,200);
-  setTimeout(maybeShowWeeklyRecapPopup,2800);
-},3400);
+function safeBoot(fn,label){try{fn();}catch(e){try{console.error("Boot step failed: "+label,e);}catch(e2){}}}
+safeBoot(load,"load");
+safeBoot(renderAppbarDate,"renderAppbarDate");
+safeBoot(function(){setTimeout(function(){var s=document.getElementById("splash");if(s)s.classList.add("hide");},3200);},"splashHide");
+safeBoot(renderHome,"renderHome");
+safeBoot(renderBPSection,"renderBPSection");
+safeBoot(renderStepsSection,"renderStepsSection");
+safeBoot(renderRHRHistory,"renderRHRHistory");
+safeBoot(loadBPPromptPref,"loadBPPromptPref");
+safeBoot(loadWeightReactionPref,"loadWeightReactionPref");
+safeBoot(function(){loadWeightReactions(function(){});},"loadWeightReactions");
+safeBoot(loadMedStack,"loadMedStack");
+safeBoot(loadGoalSettings,"loadGoalSettings");
+safeBoot(loadUserName,"loadUserName");
+safeBoot(function(){
+  setTimeout(function(){
+    try{
+      if(!DB.settings.hasOnboarded){obShow();return;}
+      setTimeout(function(){safeBoot(checkDietPopup,"checkDietPopup");},800);
+      setTimeout(function(){safeBoot(checkBPPrompt,"checkBPPrompt");},2000);
+      setTimeout(function(){safeBoot(loadAndShowQuote,"loadAndShowQuote");},200);
+      setTimeout(function(){safeBoot(maybeShowWeeklyRecapPopup,"maybeShowWeeklyRecapPopup");},2800);
+    }catch(e){}
+  },3400);
+},"onboardingGate");
 // PWA: service worker with offline shell caching — meets Chrome install criteria
 if("serviceWorker" in navigator){
   try{
