@@ -180,6 +180,10 @@ select{appearance:none;-webkit-appearance:none;background-image:url("data:image/
 .ex-rec{font-size:12px;color:var(--gold-soft);font-weight:700;margin-top:4px;}
 .ex-body{padding:0 14px 13px;display:none;}
 .ex-body.open{display:block;}
+.nut-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.nut-row:last-child{border-bottom:none;}
+.nut-row span:first-child{color:var(--faint);}
+.nut-row span:last-child{font-weight:600;}
 .setrow{display:grid;grid-template-columns:24px 1fr 1fr 1fr;gap:8px;align-items:center;margin-bottom:8px;}
 .setrow .sn{font-size:13px;color:var(--faint);text-align:center;font-weight:700;}
 .setrow input{padding:10px;text-align:center;font-size:16px;}
@@ -372,6 +376,33 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     </div>
   </div>
 
+  <!-- FOODS -->
+  <div class="view" id="v-foods">
+    <div class="sec">
+      <div class="sec-h">Today's Nutrition <span class="tag" id="calTargetTagFoods"></span></div>
+      <div class="ringrow" style="margin-top:2px;margin-bottom:8px;">
+        <div class="ringcard">
+          <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill red" id="ringProLog" cx="65" cy="65" r="54" stroke-width="11"/>
+          </svg><div class="ring-center"><div class="ring-val sm" id="proGramsLog">0</div><div class="ring-sub" id="proSubLog">of 210 g</div><div class="ring-lbl">protein</div></div></div>
+        </div>
+        <div class="ringcard">
+          <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill gold" id="ringCalLog" cx="65" cy="65" r="54" stroke-width="11"/>
+          </svg><div class="ring-center"><div class="ring-val sm" id="calLogVal">0</div><div class="ring-sub" id="calSubLog">of 2250</div><div class="ring-lbl">kcal</div></div></div>
+          <div id="calStepNote" style="display:none;font-size:10px;color:var(--faint);text-align:center;margin-top:4px;"></div>
+        </div>
+      </div>
+      <div id="foodLogList" style="margin-bottom:10px;"></div>
+      <div class="btn-row">
+        <button class="btn sm" onclick="showAddFoodModal()" style="flex:1;">+ Add Food</button>
+        <button class="btn sm ghost" onclick="showBarcodeScanner()" style="flex:1;">+ Scan Barcode</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TRAIN -->
   <div class="view" id="v-train">
     <div class="sec">
@@ -462,25 +493,13 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     </div>
 
     <div class="sec">
-      <div class="sec-h">End-of-Day Nutrition <span class="tag" id="calTargetTag"></span></div>
-      <div class="ringrow" style="margin-top:2px;margin-bottom:8px;">
-        <div class="ringcard">
-          <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
-            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
-            <circle class="ring-fill red" id="ringProLog" cx="65" cy="65" r="54" stroke-width="11"/>
-          </svg><div class="ring-center"><div class="ring-val sm" id="proGramsLog">0</div><div class="ring-sub" id="proSubLog">of 210 g</div><div class="ring-lbl">protein</div></div></div>
-        </div>
-        <div class="ringcard">
-          <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
-            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
-            <circle class="ring-fill gold" id="ringCalLog" cx="65" cy="65" r="54" stroke-width="11"/>
-          </svg><div class="ring-center"><div class="ring-val sm" id="calLogVal">0</div><div class="ring-sub" id="calSubLog">of 2250</div><div class="ring-lbl">kcal</div></div></div>
-          <div id="calStepNote" style="display:none;font-size:10px;color:var(--faint);text-align:center;margin-top:4px;"></div>
-        </div>
-      </div>
-      <div id="foodLogList" style="margin-bottom:10px;"></div>
-      <button class="btn sm" onclick="showAddFoodModal()">+ Add Food</button>
-      <div id="nutFlagArea" style="margin-top:12px;"></div>
+      <div class="sec-h">Lab Results <span class="tag" id="labDateTag"></span></div>
+      <div class="note dim">Enter results after each bloodwork panel. Abnormal values trigger training adjustments where evidence supports it, and a dietary suggestions popup where diet can help.</div>
+      <div id="labPanelTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 14px;"></div>
+      <div id="labEntryArea"></div>
+      <button class="btn" onclick="saveLabEntry()">Save Lab Results</button>
+      <div id="labFlagsArea" style="margin-top:14px;"></div>
+      <div id="labChartsArea" style="margin-top:14px;"></div>
     </div>
   </div>
 
@@ -529,9 +548,12 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
         <option value="sodium">Sodium</option>
         <option value="water">Water</option>
         <option value="veg">Veg Servings</option>
+        <option value="potassium">Potassium</option>
+        <option value="calcium">Calcium</option>
       </select>
       <div class="chartbox" id="nutChart" style="margin-top:10px;"></div>
       <div class="note dim" id="nutTrendNote" style="margin-top:9px;"></div>
+      <div id="nutFlagArea" style="margin-top:12px;"></div>
     </div>
     <div class="sec">
       <div class="sec-h">Strength Trend</div>
@@ -650,18 +672,6 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="sec-h">The Plan At A Glance</div>
       <div id="phaseOverview"></div>
     </div>
-  </div>
-  <!-- LABS -->
-  <div class="view" id="v-labs">
-    <div class="sec">
-      <div class="sec-h">Lab Results <span class="tag" id="labDateTag"></span></div>
-      <div class="note dim">Enter results after each bloodwork panel. Abnormal values trigger training adjustments where evidence supports it, and a dietary suggestions popup where diet can help.</div>
-    </div>
-    <div id="labPanelTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
-    <div id="labEntryArea"></div>
-    <button class="btn" onclick="saveLabEntry()">Save Lab Results</button>
-    <div id="labFlagsArea" style="margin-top:14px;"></div>
-    <div id="labChartsArea" style="margin-top:14px;"></div>
   </div>
 
   <!-- ANDROID INSTALL BANNER -->
@@ -825,11 +835,11 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 
 <nav class="nav">
   <button class="navb active" data-v="home" onclick="nav('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg><span class="nl">Home</span></button>
+  <button class="navb" data-v="foods" onclick="nav('foods')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v6a2 2 0 1 0 4 0V3M9 9v12M16 3c-1.5 1.5-2 3-2 5s1 4 2 4 2-2 2-4-.5-3.5-2-5zM18 12v9"/></svg><span class="nl">Foods</span></button>
   <button class="navb" data-v="train" onclick="nav('train')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M3.5 9.5v5M17.5 6.5v11M20.5 9.5v5M6.5 12h11"/></svg><span class="nl">Train</span></button>
   <button class="navb" data-v="log" onclick="nav('log')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg><span class="nl">Log</span></button>
   <button class="navb" data-v="prog" onclick="nav('prog')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7"/><path d="M15 8h6v6"/></svg><span class="nl">Progress</span></button>
   <button class="navb" data-v="setup" onclick="nav('setup')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M19 7h1M4 17h1M11 17h9"/><circle cx="16" cy="7" r="2.3"/><circle cx="8" cy="17" r="2.3"/></svg><span class="nl">Setup</span></button>
-  <button class="navb" data-v="labs" onclick="nav('labs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 0-2-2v-4m0 0h18"/></svg><span class="nl">Labs</span></button>
 </nav>
 
 <script>
@@ -1029,22 +1039,22 @@ function defaultDayIdx(){
 /* ============ NAV ============ */
 var currentTab="home";
 function nav(v){
-  var order=["home","train","log","prog","setup","labs"];
+  var order=["home","foods","train","log","prog","setup"];
   var ni=order.indexOf(v),ci=order.indexOf(currentTab);
   var dir=ni>=ci?1:-1;
   document.querySelectorAll(".view").forEach(function(x){x.classList.remove("active");});
   var el=document.getElementById("v-"+v);
   el.classList.add("active");
   document.querySelectorAll(".navb").forEach(function(b){b.classList.toggle("active",b.dataset.v===v);});
-  var titles={home:"Home",train:"Train",log:"Log",prog:"Progress",setup:"Setup",labs:"Lab Results"};
+  var titles={home:"Home",foods:"Foods",train:"Train",log:"Log",prog:"Progress",setup:"Setup"};
   var tt=document.getElementById("appbarTitle"); if(tt)tt.textContent=titles[v]||"";
   if(v==="home")renderHome();
+  if(v==="foods")renderFoodsTab();
   if(v==="train")renderTrain();
   if(v==="log")renderLog();
   if(v==="prog")renderProg();
   if(v==="setup")renderSetup();
-  if(v==="labs"){renderLabs();}
-  if(v==="log"){renderBPSection();renderStepsSection();renderRHRHistory();loadBPPromptPref();loadWeightReactionPref();}
+  if(v==="log"){renderBPSection();renderStepsSection();renderRHRHistory();loadBPPromptPref();loadWeightReactionPref();renderLabs();}
   if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();renderMedTags();}
   window.scrollTo(0,0);
   el.style.animation="none"; void el.offsetWidth;
@@ -1541,8 +1551,6 @@ function updatePR(name,sets){
 
 /* ============ LOG ============ */
 function renderLog(){
-  var ph=currentPhase();
-  document.getElementById("calTargetTag").textContent="Target "+ph.cal+" kcal";
   var lw=lastWeight();
   var _gt=(DB.goal&&DB.goal.type)||"weight_loss";
   var _gn=(DB.goal&&DB.goal.name)||"goal weight";
@@ -1550,6 +1558,11 @@ function renderLog(){
   if(lw&&(_gt==="weight_loss"||_gt==="recomp")){var _tw=DB.goal&&DB.goal.targetWeight?DB.goal.targetWeight:null;if(_tw)_echoTxt+=" \u2022 "+(lw-_tw).toFixed(1)+" lb to "+_tw+" lbs.";}
   else if(lw&&_gt==="muscle"&&DB.weights.length>1)_echoTxt+=" \u2022 +"+(lw-DB.weights[0].w).toFixed(1)+" lb since start.";
   document.getElementById("weightEcho").textContent=_echoTxt;
+}
+function renderFoodsTab(){
+  var ph=currentPhase();
+  var ctt=document.getElementById("calTargetTagFoods");
+  if(ctt)ctt.textContent="Target "+ph.cal+" kcal";
   var nt=todayNutrition();var pro=nt?nt.pro:0,cal=nt?nt.cal:0;
   document.getElementById("proGramsLog").textContent=(pro||0);
   document.getElementById("proSubLog").textContent="of "+PROTEIN_TARGET+" g";
@@ -1563,7 +1576,6 @@ function renderLog(){
   var _sn=document.getElementById("calStepNote");
   if(_sn){_sn.textContent=_stepAdj>0?"+"+_stepAdj+" kcal (steps)":_stepAdj<0?_stepAdj+" kcal (steps)":"";_sn.style.display=_stepAdj!==0?"block":"none";}
   setRing("ringCalLog",cal/_adjCal);
-  renderNutFlags(nt,_adjCal);
   renderFoodLogList();
 }
 
@@ -1820,6 +1832,11 @@ function renderProg(){
   populateLifts();
   drawStrength();
   renderPRs();
+  var _ph=currentPhase();
+  var _nt=todayNutrition();
+  var _baseCalP=(DB.settings&&DB.settings.currentCalTarget)||_ph.cal||2250;
+  var _stepAdjP=stepCalAdjustment?stepCalAdjustment():0;
+  renderNutFlags(_nt,_baseCalP+_stepAdjP);
 }
 function drawWeight(){
   var box=document.getElementById("weightChart");
@@ -3616,6 +3633,7 @@ function saveSteps(){
   toast("Steps recorded");
   renderStepsSection();
   renderLog();
+  renderFoodsTab();
 }
 
 function todaySteps(){
@@ -3804,17 +3822,33 @@ function renderFoodLogList(){
   var entries=todaysFoodEntries();
   if(!entries.length){area.innerHTML='<div class="note dim">No food logged yet today.</div>';return;}
   area.innerHTML=entries.map(function(e){
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">'+
-      '<div><div style="font-size:14px;font-weight:600;">'+e.name+'</div>'+
-      '<div style="font-size:12px;color:var(--faint);">'+e.qty+' '+e.unit+' \u2022 '+e.cal+' kcal \u2022 '+e.pro+'g protein</div></div>'+
-      '<button class="btn sm dark" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="removeFoodEntry('+e.id+')">Remove</button>'+
-      '</div>';
+    return '<div class="ex" data-id="'+e.id+'">'+
+      '<div class="ex-h" onclick="toggleEx(this)">'+
+        '<div><div class="ex-name">'+e.name+'</div>'+
+        '<div class="ex-target">'+(e.cal||0)+' kcal \u2022 '+(e.pro||0)+'g protein \u2022 '+e.qty+' '+e.unit+'</div></div>'+
+        '<div style="display:flex;align-items:center;gap:8px;">'+
+          '<button class="btn sm dark" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="event.stopPropagation();removeFoodEntry('+e.id+')">Remove</button>'+
+          '<span style="color:var(--faint);">\u25be</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="ex-body">'+
+        '<div class="nut-row"><span>Carbs</span><span>'+(e.carb||0)+'g</span></div>'+
+        '<div class="nut-row"><span>Fat</span><span>'+(e.fat||0)+'g</span></div>'+
+        '<div class="nut-row"><span>Fiber</span><span>'+(e.fiber||0)+'g</span></div>'+
+        '<div class="nut-row"><span>Sugar</span><span>'+(e.sugar||0)+'g</span></div>'+
+        '<div class="nut-row"><span>Sat Fat</span><span>'+(e.satFat||0)+'g</span></div>'+
+        '<div class="nut-row"><span>Sodium</span><span>'+(e.sodium||0)+'mg</span></div>'+
+        '<div class="nut-row"><span>Water</span><span>'+(e.water||0)+'oz</span></div>'+
+        '<div class="nut-row"><span>Veg Servings</span><span>'+(e.veg||0)+'</span></div>'+
+        '<div class="nut-row"><span>Potassium</span><span>'+(e.potassium||0)+'mg</span></div>'+
+        '<div class="nut-row"><span>Calcium</span><span>'+(e.calcium||0)+'mg</span></div>'+
+      '</div></div>';
   }).join("");
 }
 function removeFoodEntry(id){
   DB.foodLog=DB.foodLog.filter(function(e){return e.id!==id;});
   syncNutritionAggregate();
-  renderFoodLogList();renderLog();trySheetSync();
+  renderFoodLogList();renderFoodsTab();trySheetSync();
 }
 function showAddFoodModal(){
   var recent=DB.myFoods.slice().sort(function(a,b){return (b.lastUsed||0)-(a.lastUsed||0);});
@@ -3877,7 +3911,7 @@ function pickFood(id){
   DB.foodLog.push(entry);
   syncNutritionAggregate();
   var m=document.getElementById("addFoodModal");if(m)m.remove();
-  renderFoodLogList();renderLog();toast(f.name+" added.");trySheetSync();
+  renderFoodLogList();renderFoodsTab();toast(f.name+" added.");trySheetSync();
 }
 function showNewFoodForm(prefill){
   var modal=document.getElementById("addFoodModal");if(modal)modal.remove();
@@ -3963,7 +3997,7 @@ function saveNewFood(){
   DB.foodLog.push(entry);
   syncNutritionAggregate();
   var m=document.getElementById("newFoodModal");if(m)m.remove();
-  renderFoodLogList();renderLog();toast(name+" logged and saved to My Foods.");trySheetSync();
+  renderFoodLogList();renderFoodsTab();toast(name+" logged and saved to My Foods.");trySheetSync();
 }
 
 /* ============ PROGRAM EXERCISE EDITOR (permanent) ============ */
