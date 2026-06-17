@@ -264,6 +264,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 .adapt-panel{background:rgba(45,138,53,.08);border:1px solid rgba(45,138,53,.3);color:#1e6b24;font-size:13px;padding:10px 12px;border-radius:11px;margin-bottom:10px;font-weight:600;line-height:1.4;}
 .adapt-panel.held{background:rgba(192,40,30,.08);border-color:rgba(192,40,30,.3);color:var(--red-deep);}
 .adapt-panel.deload{background:rgba(154,110,40,.1);border-color:rgba(154,110,40,.35);color:var(--gold);}
+.adapt-panel.info{background:rgba(0,0,0,.04);border-color:var(--line2);color:var(--ink2);font-weight:500;}
 .pill.added{background:rgba(45,138,53,.1);color:#1e6b24;border:1px solid rgba(45,138,53,.3);font-size:9px;padding:3px 8px;}
 .pill.held{background:rgba(192,40,30,.1);color:var(--red-deep);border:1px solid rgba(192,40,30,.3);font-size:9px;padding:3px 8px;}
 .bonebar{background:rgba(154,110,40,.08);border:1px solid rgba(154,110,40,.28);color:var(--gold);font-size:12px;padding:8px 11px;border-radius:10px;margin-top:8px;font-weight:600;}
@@ -595,7 +596,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     </div>
     <div class="sec">
       <div class="sec-h">Medication Categories</div>
-      <div class="note dim" style="margin-bottom:12px;">Select any categories that apply. Optional — used in a future update to contextualize training and lab flags. Tap a tag to toggle.</div>
+      <div class="note dim" style="margin-bottom:12px;">Select any categories that apply. Optional — these add context to training adjustments and lab flags on the Train and Labs tabs. Tap a tag to toggle.</div>
       <div id="medTagArea" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
       <div class="note dim" style="margin-bottom:6px;font-size:11px;letter-spacing:.5px;text-transform:uppercase;">Additional Notes (optional)</div>
       <textarea id="inMedStack" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;" placeholder="Specific medications, dosages, or notes for your own reference"></textarea>
@@ -1438,9 +1439,12 @@ function renderTrain(){
     unlocks.forEach(function(u){if(ds>=ADAPT.unlockEvery&&exList.length<ADAPT.maxExercises&&!exList.some(function(e){return e.n===u.n;})){var uu=Object.assign({},u);uu.added=true;exList.push(uu);}});
   }
   _sessionAdded.forEach(function(ex){exList.push(ex);});
-  exList=exList.filter(function(ex,i){return !_sessionRemoved[i];});
+  exList=exList.filter(function(ex){return !_sessionRemoved[ex.n];});
 
-  document.getElementById("dayNote").innerHTML='<div class="adapt-panel '+stateCls+'">'+stateTxt+'</div><div class="note dim">Log RIR (reps in reserve) on every set. E.g., RIR 2 = you had 2 reps left in the tank.</div>'+(allAdj&&allAdj.length?'<div class="adapt-panel held" style="margin-top:8px;">&#9888; Active adjustments: '+allAdj.map(function(a){return a.label;}).join(", ")+'</div>':'');
+  var flaggedAdj=allAdj.filter(function(a){return a.sev==="crit"||a.sev==="warn";});
+  var infoAdj=allAdj.filter(function(a){return a.sev==="info";});
+  var infoHtml=infoAdj.map(function(a){return '<div class="adapt-panel info">'+a.label+': '+a.msg+'</div>';}).join("");
+  document.getElementById("dayNote").innerHTML='<div class="adapt-panel '+stateCls+'">'+stateTxt+'</div><div class="note dim">Log RIR (reps in reserve) on every set. E.g., RIR 2 = you had 2 reps left in the tank.</div>'+(flaggedAdj.length?'<div class="adapt-panel held" style="margin-top:8px;">&#9888; Active adjustments: '+flaggedAdj.map(function(a){return a.label;}).join(", ")+'</div>':'')+infoHtml;
 
   var html2="";
   exList.forEach(function(ex,ei){
@@ -1463,7 +1467,7 @@ function renderTrain(){
         (a.downtrend?'<div class="ex-rec" style="color:var(--gold);">▼ Strength dipped vs last session — watch recovery</div>':'')+
         '</div>'+
         '<div style="display:flex;align-items:center;gap:8px;">'+
-          '<button class="btn sm dark" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="event.stopPropagation();removeSessionEx('+ei+')">Remove</button>'+
+          '<button class="btn sm dark" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="event.stopPropagation();removeSessionEx(&quot;'+ex.n.replace(/"/g,"&quot;")+'&quot;)">Remove</button>'+
           '<span style="color:var(--faint);">▾</span>'+
         '</div>'+
       '</div>'+
@@ -2158,6 +2162,91 @@ var MED_CATEGORIES=[
   {id:"other",            label:"Other"}
 ];
 
+/* ============ MEDICATION TRAINING CONTEXT ============
+   standalone: shown whenever this category is checked, regardless of labs.
+   labCaveats: extra sentence appended to an existing lab-based adjustment
+   message, only when that lab is currently flagged AND this category is checked. */
+var MED_TRAIN_CONTEXT={
+  beta_blocker:{
+    standalone:"Beta blocker on board: resting and exercise heart rate are pharmacologically blunted. Use RPE and RIR, not heart rate, to judge intensity \u2014 a \"low\" HR at a given effort does not mean the effort was easy.",
+    labCaveats:{}
+  },
+  ace_arb:{
+    standalone:null,
+    labCaveats:{
+      Potassium:{high:" ACE inhibitors / ARBs can raise potassium independently \u2014 discuss this reading with your prescriber before adjusting diet or training around it."}
+    }
+  },
+  statin:{
+    standalone:null,
+    labCaveats:{
+      ALT:{high:" Statins are a common contributor to mild transaminase elevation \u2014 flag this lab pattern to your prescriber rather than assuming it's training-related."},
+      AST:{high:" Statins are a common contributor to mild transaminase elevation \u2014 flag this lab pattern to your prescriber rather than assuming it's training-related."}
+    }
+  },
+  corticosteroid:{
+    standalone:"Corticosteroid on board: this class accelerates bone loss and raises blood glucose, and can mask normal fatigue/soreness signals. Hold strictly to programmed RPE rather than \"pushing through\" feeling unexpectedly good, and treat bone-loading lifts (squat, overhead press, trap-bar deadlift) as non-negotiable rather than optional.",
+    labCaveats:{
+      Glucose:{high:" Corticosteroids commonly elevate glucose independent of diet \u2014 keep the added Zone 2 cardio but don't over-restrict carbohydrates in response to this alone."},
+      HbA1c:{high:" Corticosteroids commonly elevate HbA1c independent of diet \u2014 keep the added Zone 2 cardio but don't over-restrict carbohydrates in response to this alone."}
+    }
+  },
+  glp1:{
+    standalone:"GLP-1 agonist on board: appetite suppression can make it hard to hit protein targets. Prioritize protein at the start of meals when appetite is highest, and watch the weight trend for unintentionally fast loss \u2014 faster than about 1% body weight per week risks disproportionate muscle loss alongside fat loss.",
+    labCaveats:{}
+  },
+  diuretic:{
+    standalone:"Diuretic on board: day-to-day weight and hydration readings are less reliable signals of true fat-loss trend \u2014 lean more on the 7-day rolling average and less on single-day swings.",
+    labCaveats:{
+      Sodium:{low:" Diuretics are a common contributor to low sodium \u2014 flag this to your prescriber, especially if paired with heavy sweating or low-sodium eating."},
+      Potassium:{low:" Diuretics (especially loop and thiazide types) are a common cause of low potassium \u2014 flag this reading to your prescriber."}
+    }
+  },
+  thyroid:{
+    standalone:"Thyroid medication on board: under- or over-replacement can independently affect resting heart rate, weight trend, and recovery capacity. If RHR or weight trend shifts unexpectedly without a clear training or diet cause, it's worth confirming thyroid levels are still well-controlled before assuming it's purely a training response.",
+    labCaveats:{}
+  },
+  hormone_adt:{
+    standalone:"ADT / hormone suppression on board: this context independently increases fracture risk, accelerates muscle loss, and lowers hemoglobin/hematocrit \u2014 bone-loading lifts and resistance training are not optional accessories here, they're the primary defense against the musculoskeletal side effects of this treatment.",
+    labCaveats:{
+      Hemoglobin:{low:" ADT is a well-documented cause of treatment-related anemia \u2014 this drop may be expected rather than a training or recovery problem, but confirm with your oncology team rather than assuming."},
+      Hematocrit:{low:" ADT is a well-documented cause of treatment-related anemia \u2014 this drop may be expected rather than a training or recovery problem, but confirm with your oncology team rather than assuming."}
+    }
+  },
+  ssri_snri:{
+    standalone:null,
+    labCaveats:{}
+  },
+  blood_thinner:{
+    standalone:"Blood thinner on board: bruising and bleeding risk is elevated. Be more conservative with anything that risks impact, falls, or skin trauma, and report any unusual or prolonged bruising to your prescriber.",
+    labCaveats:{}
+  },
+  insulin:{
+    standalone:"Insulin on board: exercise (especially fasted or high-volume sessions) can cause hypoglycemia. Keep fast-acting carbohydrate accessible during training and avoid training during peak insulin action without medical guidance on timing.",
+    labCaveats:{}
+  },
+  immunosuppressant:{
+    standalone:"Immunosuppressant on board: infection risk is elevated and recovery from training stress may be slower than usual. Treat any unusual, prolonged soreness or illness symptoms as a signal to back off rather than push through.",
+    labCaveats:{
+      WBC:{low:" Immunosuppressants commonly lower white blood cell count \u2014 this may be an expected medication effect rather than a training-recovery issue, but confirm with your care team."}
+    }
+  },
+  pain_nsaid:{
+    standalone:"Regular NSAID use on board: chronic NSAID use can mask training-induced pain signals and, with frequent use, is associated with kidney and GI risk. Avoid using NSAIDs purely to push through soreness that would otherwise tell you to back off.",
+    labCaveats:{
+      eGFR:{low:" Regular NSAID use can independently affect kidney function markers \u2014 flag this to your prescriber alongside your supplement and hydration habits."}
+    }
+  },
+  stimulant:{
+    standalone:"Stimulant (e.g. ADHD medication) on board: resting and exercise heart rate may run higher than effort alone would suggest, and appetite may be suppressed at certain times of day. Use RPE/RIR over heart rate for intensity, and consider timing higher-protein meals around when the medication's appetite effect is weakest.",
+    labCaveats:{}
+  },
+  other:{
+    standalone:null,
+    labCaveats:{}
+  }
+};
+
 function renderMedTags(){
   var area=document.getElementById("medTagArea");
   if(!area)return;
@@ -2466,33 +2555,47 @@ function handleObOptTap(opt){
   }
   obRender();
 }
-var _obLastTouch=0;
+var _obTouch=null,_obLastTapTime=0;
 document.addEventListener("touchstart",function(e){
   var opt=e.target.closest(".ob-opt");
   if(!opt)return;
-  _obLastTouch=Date.now();
-  handleObOptTap(opt);
+  var t=e.touches[0];
+  _obTouch={x:t.clientX,y:t.clientY,el:opt};
+},{passive:true});
+document.addEventListener("touchend",function(e){
+  if(!_obTouch)return;
+  var t=e.changedTouches[0];
+  var dx=Math.abs(t.clientX-_obTouch.x),dy=Math.abs(t.clientY-_obTouch.y);
+  var opt=_obTouch.el;_obTouch=null;
+  if(dx<10&&dy<10){_obLastTapTime=Date.now();handleObOptTap(opt);}
 },{passive:true});
 document.addEventListener("click",function(e){
   var opt=e.target.closest(".ob-opt");
   if(!opt)return;
-  // Suppress if touchstart already handled it within 500ms
-  if(Date.now()-_obLastTouch<500)return;
+  if(Date.now()-_obLastTapTime<500)return; // already handled by touchend
   handleObOptTap(opt);
 });
 
-// Delegated handler for exercise list rows
-var _exRowLastTouch=0;
+// Delegated handler for exercise list rows.
+// Uses touchend + movement check so scrolling the list never misfires a selection.
+var _exRowTouch=null,_exRowLastTapTime=0;
 document.addEventListener("touchstart",function(e){
   var row=e.target.closest(".add-ex-row");
   if(!row)return;
-  _exRowLastTouch=Date.now();
-  handleExRowTap(row);
+  var t=e.touches[0];
+  _exRowTouch={x:t.clientX,y:t.clientY,el:row};
+},{passive:true});
+document.addEventListener("touchend",function(e){
+  if(!_exRowTouch)return;
+  var t=e.changedTouches[0];
+  var dx=Math.abs(t.clientX-_exRowTouch.x),dy=Math.abs(t.clientY-_exRowTouch.y);
+  var row=_exRowTouch.el;_exRowTouch=null;
+  if(dx<10&&dy<10){_exRowLastTapTime=Date.now();handleExRowTap(row);}
 },{passive:true});
 document.addEventListener("click",function(e){
   var row=e.target.closest(".add-ex-row");
   if(!row)return;
-  if(Date.now()-_exRowLastTouch<500)return;
+  if(Date.now()-_exRowLastTapTime<500)return; // already handled by touchend
   handleExRowTap(row);
 });
 function closeExModal(id){var m=document.getElementById(id);if(m)m.remove();}
@@ -3327,14 +3430,14 @@ var _sessionRemoved={};
 var _sessionAdded=[];
 var _lastSelDay=null;
 
-function removeSessionEx(ei){
-  _sessionRemoved[ei]=true;
+function removeSessionEx(name){
+  _sessionRemoved[name]=true;
   renderTrain();
 }
 function addSessionSet(ei){
   var split=currentSplit();var d=split[selDay];if(!d)return;
   var exList=d.ex.slice();_sessionAdded.forEach(function(e){exList.push(e);});
-  exList=exList.filter(function(e,i){return !_sessionRemoved[i];});
+  exList=exList.filter(function(e){return !_sessionRemoved[e.n];});
   var ex=exList[ei];if(!ex)return;
   var hold=(currentFatigue()==="low");var pv=(recentLowReadiness()>=2);
   var a=computeAdaptive(ex,hold,pv,weeksIntoPhase(),currentFatigue());
@@ -3344,7 +3447,7 @@ function addSessionSet(ei){
 function removeSessionSet(ei){
   var split=currentSplit();var d=split[selDay];if(!d)return;
   var exList=d.ex.slice();_sessionAdded.forEach(function(e){exList.push(e);});
-  exList=exList.filter(function(e,i){return !_sessionRemoved[i];});
+  exList=exList.filter(function(e){return !_sessionRemoved[e.n];});
   var ex=exList[ei];if(!ex)return;
   var hold=(currentFatigue()==="low");var pv=(recentLowReadiness()>=2);
   var a=computeAdaptive(ex,hold,pv,weeksIntoPhase(),currentFatigue());
@@ -3355,7 +3458,7 @@ function removeSessionSet(ei){
 function showAddExModal(){
   var split=currentSplit();var d=split[selDay];if(!d)return;
   var exList=d.ex.slice();_sessionAdded.forEach(function(e){exList.push(e);});
-  exList=exList.filter(function(e,i){return !_sessionRemoved[i];});
+  exList=exList.filter(function(e){return !_sessionRemoved[e.n];});
   var existing=exList.map(function(e){return e.n;});
   var available=Object.keys(DEFAULT_1RM).sort().filter(function(n){return existing.indexOf(n)===-1;});
   var modal=document.createElement("div");
@@ -3617,16 +3720,35 @@ function getDietFlags(){
   return flags;
 }
 function getLabTrainAdj(){
-  var last=lastLabEntry();if(!last)return null;
+  var last=lastLabEntry();
+  var checked=(DB.settings&&DB.settings.medCategories)||[];
   var adjs=[];
-  Object.keys(TRAIN_TIPS).forEach(function(key){
-    var val=last[key];if(val===undefined)return;
-    var st=getLabStatus(key,val,last);var tips=TRAIN_TIPS[key];
-    var msg=null;
-    if(st==="crit")msg=tips.critLow||tips.critHigh||null;
-    else if(st==="low")msg=tips.low||null;
-    else if(st==="high")msg=tips.high||null;
-    if(msg)adjs.push({key:key,sev:st==="crit"?"crit":"warn",msg:msg,label:LAB_REF[key]?LAB_REF[key].label:key});
+  if(last){
+    Object.keys(TRAIN_TIPS).forEach(function(key){
+      var val=last[key];if(val===undefined)return;
+      var st=getLabStatus(key,val,last);var tips=TRAIN_TIPS[key];
+      var msg=null;
+      if(st==="crit")msg=tips.critLow||tips.critHigh||null;
+      else if(st==="low")msg=tips.low||null;
+      else if(st==="high")msg=tips.high||null;
+      if(msg){
+        var tier=(st==="crit")?"crit":(st==="low"?"low":"high");
+        checked.forEach(function(mid){
+          var mc=MED_TRAIN_CONTEXT[mid];
+          if(mc&&mc.labCaveats&&mc.labCaveats[key]&&mc.labCaveats[key][tier]){
+            msg+=mc.labCaveats[key][tier];
+          }
+        });
+        adjs.push({key:key,sev:st==="crit"?"crit":"warn",msg:msg,label:LAB_REF[key]?LAB_REF[key].label:key});
+      }
+    });
+  }
+  checked.forEach(function(mid){
+    var mc=MED_TRAIN_CONTEXT[mid];
+    if(mc&&mc.standalone){
+      var cat=MED_CATEGORIES.filter(function(c){return c.id===mid;})[0];
+      adjs.push({key:"med_"+mid,sev:"info",msg:mc.standalone,label:cat?cat.label:mid});
+    }
   });
   return adjs.length?adjs:null;
 }
