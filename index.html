@@ -17,6 +17,7 @@
 <style>
 :root{
   --bg:#f0eeeb;--bg2:#e8e5e1;--surf:#ffffff;--surf2:#f7f5f2;--surf3:#ede9e4;
+  --bg-img-opacity:0.10;
   --ink:#1c1c1e;--ink2:#3a3a3c;--faint:#8a8a8e;
   --red:#c0281e;--red-soft:#d93b30;--red-deep:#8a1a12;
   --gold:#9a6e28;--gold-soft:#b8892e;
@@ -28,8 +29,17 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;background:var(--bg);}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:url("STOTAN.jpeg") center center / cover no-repeat;
+  opacity:var(--bg-img-opacity);
+  z-index:0;
+  pointer-events:none;
+}
 body{font-family:var(--font);color:var(--ink);font-size:17.5px;line-height:1.5;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none;-webkit-user-select:none;user-select:none;}
-.app{max-width:560px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;}
+.app{max-width:560px;margin:0 auto;min-height:100vh;background:transparent;position:relative;z-index:1;}
 input,select,textarea{-webkit-user-select:text;user-select:text;}
 
 /* APP BAR */
