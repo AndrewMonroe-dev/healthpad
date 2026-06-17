@@ -1035,7 +1035,7 @@ var SPLIT_HEAVY=[
 ];
 
 /* ============ STATE ============ */
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -2888,12 +2888,12 @@ function loadWeightReactionPref(){
 function loadBPPromptPref(){
   var el=document.getElementById("bpPromptToggle");
   if(!el)return;
-  var on=(DB.settings&&DB.settings.bpPrompt!==undefined)?DB.settings.bpPrompt:true;
+  var on=(DB.settings&&DB.settings.bpPrompt!==undefined)?DB.settings.bpPrompt:false;
   el.checked=on;
 }
 function checkBPPrompt(){
   DB.bp=DB.bp||[];
-  var on=(DB.settings&&DB.settings.bpPrompt!==undefined)?DB.settings.bpPrompt:true;
+  var on=(DB.settings&&DB.settings.bpPrompt!==undefined)?DB.settings.bpPrompt:false;
   if(!on)return;
   var todayLogged=DB.bp.some(function(x){return x.d===todayStr();});
   if(todayLogged)return;
@@ -3813,7 +3813,7 @@ function executeReset(){
   try{localStorage.removeItem("hp_dp");}catch(e){}
   // Reset DB to factory defaults
   DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],
-      oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,weightReaction:true,medCategories:[]},
+      oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30},
       goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},
       milestones:[],program:null};
   save();
