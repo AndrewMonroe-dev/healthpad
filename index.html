@@ -48,7 +48,9 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
   border-bottom:1px solid var(--line2);padding-top:env(safe-area-inset-top);}
 .appbar-in{display:flex;align-items:center;gap:11px;padding:11px 18px;}
 .appbar-logo{width:26px;height:26px;}
-.appbar-title{font-size:18px;font-weight:700;letter-spacing:.3px;flex:1;}
+.appbar-titlewrap{flex:1;display:flex;flex-direction:column;}
+.appbar-title{font-size:18px;font-weight:700;letter-spacing:.3px;line-height:1.2;}
+.appbar-date{font-size:11px;color:var(--faint);font-weight:500;margin-top:1px;}
 .appbar-weight{text-align:right;line-height:1.05;}
 .appbar-weight span{font-size:17px;font-weight:700;color:var(--red-soft);}
 .appbar-weight small{display:block;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);}
@@ -288,7 +290,10 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
   <header class="appbar">
     <div class="appbar-in">
       <img class="appbar-logo" src="apple-touch-icon.png" alt="">
-      <div class="appbar-title" id="appbarTitle">Home</div>
+      <div class="appbar-titlewrap">
+        <div class="appbar-title" id="appbarTitle">Home</div>
+        <div class="appbar-date" id="appbarDate"></div>
+      </div>
       <div class="appbar-weight"><span id="hdrWeight">&mdash;</span><small>current lbs</small></div>
     </div>
   </header>
@@ -409,6 +414,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <label class="fld">Morning RHR (bpm)</label>
       <input type="number" id="inRHR" inputmode="numeric" placeholder="e.g. 58">
       <button class="btn sm ghost" onclick="saveRHR()">Record RHR</button>
+      <div id="rhrHistory" style="margin-top:12px;"></div>
     </div>
 
     <div class="sec">
@@ -506,6 +512,12 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
         <div class="stat"><div class="v gold" id="wkCal">&mdash;</div><div class="l">Avg Cal</div></div>
         <div class="stat"><div class="v" id="wkPro">&mdash;</div><div class="l">Avg Protein</div></div>
       </div>
+    </div>
+    <div class="sec">
+      <div class="sec-h">Resting Heart Rate Trend</div>
+      <div class="chartbox" id="rhrChart"></div>
+      <div class="note dim" id="rhrTrendNote" style="margin-top:9px;"></div>
+      <div id="rhrFullList" style="margin-top:14px;"></div>
     </div>
     <div class="sec">
       <div class="sec-h">Strength Trend</div>
@@ -1008,7 +1020,7 @@ function nav(v){
   if(v==="prog")renderProg();
   if(v==="setup")renderSetup();
   if(v==="labs"){renderLabs();}
-  if(v==="log"){renderBPSection();renderStepsSection();loadBPPromptPref();loadWeightReactionPref();}
+  if(v==="log"){renderBPSection();renderStepsSection();renderRHRHistory();loadBPPromptPref();loadWeightReactionPref();}
   if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();renderMedTags();}
   window.scrollTo(0,0);
   el.style.animation="none"; void el.offsetWidth;
@@ -1543,7 +1555,23 @@ function saveRHR(){
   var v=parseInt(document.getElementById("inRHR").value);
   if(isNaN(v)){toast("Enter RHR");return;}
   DB.rhr=DB.rhr.filter(function(x){return x.d!==todayStr();});
-  DB.rhr.push({d:todayStr(),v:v});save();document.getElementById("inRHR").value="";toast("RHR recorded");
+  DB.rhr.push({d:todayStr(),v:v});
+  DB.rhr.sort(function(a,b){return new Date(a.d)-new Date(b.d);});
+  save();document.getElementById("inRHR").value="";toast("RHR recorded");trySheetSync();
+  renderRHRHistory();
+}
+function renderRHRHistory(){
+  var box=document.getElementById("rhrHistory");
+  if(!box)return;
+  var recent=(DB.rhr||[]).slice(-5).reverse();
+  if(!recent.length){box.innerHTML="";return;}
+  var rows=recent.map(function(x){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">'+
+      '<span style="opacity:.7;">'+x.d+'</span>'+
+      '<span style="font-weight:600;color:var(--ink);">'+x.v+' bpm</span>'+
+      '</div>';
+  }).join("");
+  box.innerHTML='<div style="font-size:11px;opacity:.6;margin-bottom:4px;">Last 5 readings</div>'+rows;
 }
 function saveNutrition(){
   var cal=parseInt(document.getElementById("inCal").value)||0;
@@ -1629,9 +1657,57 @@ function lastWeight(){return DB.weights.length?DB.weights[DB.weights.length-1].w
 function todayNutrition(){var t=todayStr();for(var i=0;i<DB.nutrition.length;i++)if(DB.nutrition[i].d===t)return DB.nutrition[i];return null;}
 
 /* ============ PROGRESS ============ */
+
+function drawRHR(){
+  var box=document.getElementById("rhrChart");
+  if(!box)return;
+  if(!DB.rhr||DB.rhr.length<2){
+    box.innerHTML='<div class="chart-empty">Log at least two RHR readings to see your trend.</div>';
+    document.getElementById("rhrTrendNote").textContent="";
+    document.getElementById("rhrFullList").innerHTML="";
+    return;
+  }
+  var data=DB.rhr.slice();
+  var vs=data.map(function(x){return x.v;});
+  var minV=Math.min.apply(null,vs)-3, maxV=Math.max.apply(null,vs)+3;
+  var W=520,H=180,pad=30,n=data.length;
+  function x(i){return pad+(W-2*pad)*(n===1?0.5:i/(n-1));}
+  function y(v){return pad+(H-2*pad)*(1-(v-minV)/(maxV-minV||1));}
+  var pts=data.map(function(d,i){return x(i)+","+y(d.v);}).join(" ");
+  var svg='<svg viewBox="0 0 '+W+' '+H+'">';
+  svg+='<polyline points="'+pts+'" fill="none" stroke="var(--red)" stroke-width="3" pathLength="1" class="drawline"/>';
+  data.forEach(function(d,i){svg+='<circle cx="'+x(i)+'" cy="'+y(d.v)+'" r="3" fill="var(--red)"/>';});
+  svg+='<text x="'+pad+'" y="'+(H-8)+'" font-size="10" fill="var(--faint)">'+data[0].d.slice(5)+'</text>';
+  svg+='<text x="'+(W-pad)+'" y="'+(H-8)+'" text-anchor="end" font-size="10" fill="var(--faint)">'+data[n-1].d.slice(5)+'</text>';
+  svg+='</svg>';
+  box.innerHTML=svg;
+
+  var note="";
+  if(data.length>=4){
+    var recent=data.slice(Math.max(0,n-7));
+    var prev=data.slice(Math.max(0,n-14),Math.max(0,n-7));
+    if(prev.length){
+      var avg=function(a){return a.reduce(function(s,x){return s+x.v;},0)/a.length;};
+      var diff=avg(recent)-avg(prev);
+      note="7-day average "+(diff<0?"down":"up")+" "+Math.abs(diff).toFixed(1)+" bpm vs the prior week. Lower RHR generally reflects improving cardiovascular fitness or better recovery.";
+    }
+  }
+  document.getElementById("rhrTrendNote").textContent=note;
+
+  var listHtml='<div style="font-size:11px;opacity:.6;margin-bottom:6px;">All readings (most recent first)</div>';
+  data.slice().reverse().forEach(function(d){
+    listHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">'+
+      '<span style="opacity:.7;">'+d.d+'</span>'+
+      '<span style="font-weight:600;">'+d.v+' bpm</span>'+
+      '</div>';
+  });
+  document.getElementById("rhrFullList").innerHTML=listHtml;
+}
+
 function renderProg(){
   drawWeight();
   weeklyRecap();
+  drawRHR();
   populateLifts();
   drawStrength();
   renderPRs();
@@ -3306,12 +3382,21 @@ function addPermEx(dayIdx,name){
   save();renderProgramExEditor();toast(name+" added to "+d.day+" permanently.");
 }
 
+
+function renderAppbarDate(){
+  var el=document.getElementById("appbarDate");
+  if(!el)return;
+  el.textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+}
+
 /* ============ INIT ============ */
 load();
+renderAppbarDate();
 setTimeout(function(){document.getElementById("splash").classList.add("hide");},3200);
 renderHome();
 renderBPSection();
 renderStepsSection();
+renderRHRHistory();
 loadBPPromptPref();
 loadWeightReactionPref();
 loadWeightReactions(function(){});
