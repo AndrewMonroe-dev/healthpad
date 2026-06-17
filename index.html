@@ -478,24 +478,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
           <div id="calStepNote" style="display:none;font-size:10px;color:var(--faint);text-align:center;margin-top:4px;"></div>
         </div>
       </div>
-      <label class="fld">Calories</label>
-      <input type="number" id="inCal" inputmode="numeric" placeholder="total kcal">
-      <div class="row3" style="margin-top:6px;">
-        <div><label class="fld">Protein g</label><input type="number" id="inPro" inputmode="numeric" placeholder="g"></div>
-        <div><label class="fld">Carbs g</label><input type="number" id="inCarb" inputmode="numeric" placeholder="g"></div>
-        <div><label class="fld">Fat g</label><input type="number" id="inFat" inputmode="numeric" placeholder="g"></div>
-      </div>
-      <div class="row3" style="margin-top:6px;">
-        <div><label class="fld">Fiber g</label><input type="number" id="inFiber" inputmode="numeric" placeholder="g"></div>
-        <div><label class="fld">Sugar g</label><input type="number" id="inSugar" inputmode="numeric" placeholder="g"></div>
-        <div><label class="fld">Sat Fat g</label><input type="number" id="inSatFat" inputmode="numeric" placeholder="g"></div>
-      </div>
-      <div class="row3" style="margin-top:6px;">
-        <div><label class="fld">Sodium mg</label><input type="number" id="inSodium" inputmode="numeric" placeholder="mg"></div>
-        <div><label class="fld">Water oz</label><input type="number" id="inWater" inputmode="numeric" placeholder="oz"></div>
-        <div><label class="fld">Veg Servings</label><input type="number" id="inVeg" inputmode="numeric" placeholder="0"></div>
-      </div>
-      <button class="btn sm" style="margin-top:10px;" onclick="saveNutrition()">Record Day</button>
+      <div id="foodLogList" style="margin-bottom:10px;"></div>
+      <button class="btn sm" onclick="showAddFoodModal()">+ Add Food</button>
       <div id="nutFlagArea" style="margin-top:12px;"></div>
     </div>
   </div>
@@ -986,7 +970,7 @@ var SPLIT_HEAVY=[
 ];
 
 /* ============ STATE ============ */
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[]},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:true,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[]},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -994,6 +978,8 @@ function load(){
   try{var s=localStorage.getItem("healthpad_db");if(s)DB=JSON.parse(s);}catch(e){}
   if(!DB.oneRM||Object.keys(DB.oneRM).length===0){DB.oneRM=Object.assign({},DEFAULT_1RM);}
   if(!DB.settings)DB.settings={sheetUrl:""};
+  if(!DB.foodLog)DB.foodLog=[];
+  if(!DB.myFoods)DB.myFoods=[];
 }
 function save(){try{localStorage.setItem("healthpad_db",JSON.stringify(DB));}catch(e){}}
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
@@ -1578,6 +1564,7 @@ function renderLog(){
   if(_sn){_sn.textContent=_stepAdj>0?"+"+_stepAdj+" kcal (steps)":_stepAdj<0?_stepAdj+" kcal (steps)":"";_sn.style.display=_stepAdj!==0?"block":"none";}
   setRing("ringCalLog",cal/_adjCal);
   renderNutFlags(nt,_adjCal);
+  renderFoodLogList();
 }
 
 function saveWeight(){
@@ -1614,27 +1601,6 @@ function renderRHRHistory(){
   }).join("");
   box.innerHTML='<div style="font-size:11px;opacity:.6;margin-bottom:4px;">Last 5 readings</div>'+rows;
 }
-function saveNutrition(){
-  var cal=parseInt(document.getElementById("inCal").value)||0;
-  var pro=parseInt(document.getElementById("inPro").value)||0;
-  var carb=parseInt(document.getElementById("inCarb").value)||0;
-  var fat=parseInt(document.getElementById("inFat").value)||0;
-  var fiber=parseInt(document.getElementById("inFiber").value)||0;
-  var sugar=parseInt(document.getElementById("inSugar").value)||0;
-  var satFat=parseInt(document.getElementById("inSatFat").value)||0;
-  var sodium=parseInt(document.getElementById("inSodium").value)||0;
-  var water=parseInt(document.getElementById("inWater").value)||0;
-  var veg=parseInt(document.getElementById("inVeg").value)||0;
-  if(!cal&&!pro){toast("Enter at least calories or protein");return;}
-  DB.nutrition=DB.nutrition.filter(function(x){return x.d!==todayStr();});
-  DB.nutrition.push({d:todayStr(),cal:cal,pro:pro,carb:carb,fat:fat,
-    fiber:fiber,sugar:sugar,satFat:satFat,sodium:sodium,water:water,veg:veg});
-  save();renderLog();toast("Day recorded");trySheetSync();
-  ["inCal","inPro","inCarb","inFat","inFiber","inSugar","inSatFat","inSodium","inWater","inVeg"].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.value="";
-  });
-}
-
 function getNutTargets(){
   var ph=currentPhase();
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
@@ -1695,7 +1661,33 @@ function renderNutFlags(nt,adjCalTarget){
   }).join("");
 }
 function lastWeight(){return DB.weights.length?DB.weights[DB.weights.length-1].w:null;}
-function todayNutrition(){var t=todayStr();for(var i=0;i<DB.nutrition.length;i++)if(DB.nutrition[i].d===t)return DB.nutrition[i];return null;}
+var NUT_FIELDS=["cal","pro","carb","fat","fiber","sugar","satFat","sodium","water","veg"];
+function todaysFoodEntries(){
+  var t=todayStr();
+  return DB.foodLog.filter(function(e){return e.d===t;});
+}
+function sumFoodEntries(entries){
+  var sums={};
+  NUT_FIELDS.forEach(function(f){sums[f]=0;});
+  entries.forEach(function(e){
+    NUT_FIELDS.forEach(function(f){sums[f]+=(e[f]||0);});
+  });
+  return sums;
+}
+function syncNutritionAggregate(){
+  var t=todayStr();
+  var sums=sumFoodEntries(todaysFoodEntries());
+  DB.nutrition=DB.nutrition.filter(function(x){return x.d!==t;});
+  var row=Object.assign({d:t},sums);
+  DB.nutrition.push(row);
+  DB.nutrition.sort(function(a,b){return new Date(a.d)-new Date(b.d);});
+  save();
+}
+function todayNutrition(){
+  var entries=todaysFoodEntries();
+  if(!entries.length)return null;
+  return Object.assign({d:todayStr()},sumFoodEntries(entries));
+}
 
 /* ============ PROGRESS ============ */
 
@@ -2642,6 +2634,7 @@ function handleExRowTap(row){
   var action=row.dataset.action;
   if(action==="addEx"){addExToSession(name);}
   else if(action==="addPermEx"){addPermEx(parseInt(row.dataset.day),name);}
+  else if(action==="pickFood"){pickFood(row.dataset.id);}
 }
 
 function obFinish(){
@@ -3530,6 +3523,138 @@ function addExToSession(name){
   var m=document.getElementById("addExModal");if(m)m.remove();
   _sessionAdded.push({n:name,s:3,lo:8,hi:12});
   renderTrain();toast(name+" added for today.");
+}
+
+/* ============ FOOD LOG ============ */
+function renderFoodLogList(){
+  var area=document.getElementById("foodLogList");
+  if(!area)return;
+  var entries=todaysFoodEntries();
+  if(!entries.length){area.innerHTML='<div class="note dim">No food logged yet today.</div>';return;}
+  area.innerHTML=entries.map(function(e){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);">'+
+      '<div><div style="font-size:14px;font-weight:600;">'+e.name+'</div>'+
+      '<div style="font-size:12px;color:var(--faint);">'+e.qty+' '+e.unit+' \u2022 '+e.cal+' kcal \u2022 '+e.pro+'g protein</div></div>'+
+      '<button class="btn sm dark" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="removeFoodEntry('+e.id+')">Remove</button>'+
+      '</div>';
+  }).join("");
+}
+function removeFoodEntry(id){
+  DB.foodLog=DB.foodLog.filter(function(e){return e.id!==id;});
+  syncNutritionAggregate();
+  renderFoodLogList();renderLog();trySheetSync();
+}
+function showAddFoodModal(){
+  var recent=DB.myFoods.slice().sort(function(a,b){return (b.lastUsed||0)-(a.lastUsed||0);});
+  var modal=document.createElement("div");
+  modal.id="addFoodModal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
+  modal.innerHTML=
+    '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:75vh;display:flex;flex-direction:column;color:var(--ink);">'+
+    '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
+      '<div style="font-weight:700;font-size:16px;">Add Food</div>'+
+      '<button data-close="addFoodModal" onclick="closeExModal(this.dataset.close)" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
+    '</div>'+
+    '<input id="addFoodSearch" type="text" placeholder="Search My Foods..." '+
+      'style="margin:12px 16px;padding:10px 14px;background:var(--surf);border:1.5px solid var(--border);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500;">'+
+    '<div style="padding:0 16px 10px;">'+
+      '<button class="btn sm ghost" style="width:100%;" onclick="showNewFoodForm()">+ Log a New Food</button>'+
+    '</div>'+
+    '<div id="addFoodList" style="overflow-y:auto;flex:1;padding:0 16px 20px;">'+
+      (recent.length?recent.map(function(f){
+        return '<div class="add-ex-row" data-name="'+f.name.replace(/"/g,"&quot;")+'" data-action="pickFood" data-id="'+f.id+'" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+
+          f.name+'<div style="font-size:12px;color:var(--faint);font-weight:400;">'+f.qty+' '+f.unit+' \u2022 '+f.cal+' kcal \u2022 '+f.pro+'g protein</div></div>';
+      }).join(""):'<div class="note dim" style="padding:14px 4px;">No saved foods yet \u2014 log your first one above.</div>')+
+    '</div></div>';
+  document.body.appendChild(modal);
+  setTimeout(function(){
+    var si=document.getElementById("addFoodSearch");
+    if(si){si.addEventListener("input",function(){filterAddFoodList(si.value);});si.focus();}
+  },50);
+}
+function filterAddFoodList(q){
+  var ql=(q||"").toLowerCase().trim();
+  document.querySelectorAll("#addFoodList .add-ex-row").forEach(function(r){
+    r.style.display=(!ql||r.dataset.name.toLowerCase().indexOf(ql)>-1)?"block":"none";
+  });
+}
+function pickFood(id){
+  var f=DB.myFoods.filter(function(x){return String(x.id)===String(id);})[0];
+  if(!f)return;
+  f.lastUsed=Date.now();
+  var entry=Object.assign({},f,{id:Date.now(),d:todayStr()});
+  DB.foodLog.push(entry);
+  syncNutritionAggregate();
+  var m=document.getElementById("addFoodModal");if(m)m.remove();
+  renderFoodLogList();renderLog();toast(f.name+" added.");trySheetSync();
+}
+function showNewFoodForm(){
+  var modal=document.getElementById("addFoodModal");if(modal)modal.remove();
+  var m2=document.createElement("div");
+  m2.id="newFoodModal";
+  m2.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
+  m2.innerHTML=
+    '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;color:var(--ink);padding-bottom:20px;">'+
+    '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
+      '<div style="font-weight:700;font-size:16px;">Log a New Food</div>'+
+      '<button data-close="newFoodModal" onclick="closeExModal(this.dataset.close)" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
+    '</div>'+
+    '<div style="padding:0 16px;">'+
+    '<label class="fld">Food name</label><input id="nfName" type="text" placeholder="e.g. Chicken Breast">'+
+    '<div class="row3" style="margin-top:6px;">'+
+      '<div><label class="fld">Qty</label><input id="nfQty" type="number" inputmode="decimal" placeholder="6"></div>'+
+      '<div><label class="fld">Unit</label><input id="nfUnit" type="text" placeholder="oz"></div>'+
+      '<div><label class="fld">Calories</label><input id="nfCal" type="number" inputmode="numeric" placeholder="kcal"></div>'+
+    '</div>'+
+    '<div class="row3" style="margin-top:6px;">'+
+      '<div><label class="fld">Protein g</label><input id="nfPro" type="number" inputmode="numeric" placeholder="g"></div>'+
+      '<div><label class="fld">Carbs g</label><input id="nfCarb" type="number" inputmode="numeric" placeholder="g"></div>'+
+      '<div><label class="fld">Fat g</label><input id="nfFat" type="number" inputmode="numeric" placeholder="g"></div>'+
+    '</div>'+
+    '<div class="row3" style="margin-top:6px;">'+
+      '<div><label class="fld">Fiber g</label><input id="nfFiber" type="number" inputmode="numeric" placeholder="g"></div>'+
+      '<div><label class="fld">Sugar g</label><input id="nfSugar" type="number" inputmode="numeric" placeholder="g"></div>'+
+      '<div><label class="fld">Sat Fat g</label><input id="nfSatFat" type="number" inputmode="numeric" placeholder="g"></div>'+
+    '</div>'+
+    '<div class="row3" style="margin-top:6px;">'+
+      '<div><label class="fld">Sodium mg</label><input id="nfSodium" type="number" inputmode="numeric" placeholder="mg"></div>'+
+      '<div><label class="fld">Water oz</label><input id="nfWater" type="number" inputmode="numeric" placeholder="oz"></div>'+
+      '<div><label class="fld">Veg Servings</label><input id="nfVeg" type="number" inputmode="numeric" placeholder="0"></div>'+
+    '</div>'+
+    '<button class="btn sm" style="width:100%;margin-top:14px;" onclick="saveNewFood()">Log It</button>'+
+    '</div></div>';
+  document.body.appendChild(m2);
+  setTimeout(function(){var ni=document.getElementById("nfName");if(ni)ni.focus();},50);
+}
+function saveNewFood(){
+  var name=(document.getElementById("nfName").value||"").trim();
+  if(!name){toast("Enter a food name");return;}
+  var f={
+    id:Date.now(),
+    name:name,
+    qty:parseFloat(document.getElementById("nfQty").value)||1,
+    unit:(document.getElementById("nfUnit").value||"serving").trim(),
+    cal:parseInt(document.getElementById("nfCal").value)||0,
+    pro:parseInt(document.getElementById("nfPro").value)||0,
+    carb:parseInt(document.getElementById("nfCarb").value)||0,
+    fat:parseInt(document.getElementById("nfFat").value)||0,
+    fiber:parseInt(document.getElementById("nfFiber").value)||0,
+    sugar:parseInt(document.getElementById("nfSugar").value)||0,
+    satFat:parseInt(document.getElementById("nfSatFat").value)||0,
+    sodium:parseInt(document.getElementById("nfSodium").value)||0,
+    water:parseInt(document.getElementById("nfWater").value)||0,
+    veg:parseInt(document.getElementById("nfVeg").value)||0,
+    lastUsed:Date.now()
+  };
+  // De-dupe by case-insensitive name match \u2014 update the existing saved food instead of creating a duplicate
+  var existingIdx=DB.myFoods.findIndex(function(x){return x.name.toLowerCase()===name.toLowerCase();});
+  if(existingIdx>-1){f.id=DB.myFoods[existingIdx].id;DB.myFoods[existingIdx]=f;}
+  else{DB.myFoods.push(f);}
+  var entry=Object.assign({},f,{id:Date.now(),d:todayStr()});
+  DB.foodLog.push(entry);
+  syncNutritionAggregate();
+  var m=document.getElementById("newFoodModal");if(m)m.remove();
+  renderFoodLogList();renderLog();toast(name+" logged and saved to My Foods.");trySheetSync();
 }
 
 /* ============ PROGRAM EXERCISE EDITOR (permanent) ============ */
