@@ -150,6 +150,8 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 /* INPUTS */
 label.fld{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin:12px 0 5px;font-weight:700;}
 input,select,textarea{width:100%;font-family:var(--font);font-size:17px;color:var(--ink);background:var(--surf2);border:1.5px solid var(--line2);border-radius:12px;padding:13px 14px;outline:none;font-weight:600;}
+.ob-input{width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;}
+.modal-fld{flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:13px;}
 input::placeholder{color:#b0b0b4;font-weight:500;}
 input:focus,select:focus,textarea:focus{border-color:var(--red);background:#fff;}
 input[type=number]{-moz-appearance:textfield;}
@@ -763,16 +765,16 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
         <div class="note dim" style="color:rgba(255,255,255,.45);margin-bottom:18px;font-size:13px;">Height in feet and inches.</div>
         <div style="margin-bottom:16px;">
           <label style="font-size:12px;color:rgba(255,255,255,.6);display:block;margin-bottom:6px;">Age (years)</label>
-          <input id="obAge" type="number" inputmode="numeric" placeholder="e.g. 45" min="16" max="100" style="width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;">
+          <input id="obAge" type="number" inputmode="numeric" placeholder="e.g. 45" min="16" max="100" class="ob-input">
         </div>
         <div style="display:flex;gap:12px;">
           <div style="flex:1;">
             <label style="font-size:12px;color:rgba(255,255,255,.6);display:block;margin-bottom:6px;">Feet</label>
-            <input id="obHeightFt" type="number" inputmode="numeric" placeholder="5" min="4" max="7" style="width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;">
+            <input id="obHeightFt" type="number" inputmode="numeric" placeholder="5" min="4" max="7" class="ob-input">
           </div>
           <div style="flex:1;">
             <label style="font-size:12px;color:rgba(255,255,255,.6);display:block;margin-bottom:6px;">Inches</label>
-            <input id="obHeightIn" type="number" inputmode="numeric" placeholder="10" min="0" max="11" style="width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;">
+            <input id="obHeightIn" type="number" inputmode="numeric" placeholder="10" min="0" max="11" class="ob-input">
           </div>
         </div>
       </div>
@@ -782,11 +784,11 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
         <div class="note dim" style="color:rgba(255,255,255,.45);margin-bottom:18px;font-size:13px;">Weight in pounds. Body fat is optional — skip if unsure.</div>
         <div style="margin-bottom:16px;">
           <label style="font-size:12px;color:rgba(255,255,255,.6);display:block;margin-bottom:6px;">Body Weight (lbs)</label>
-          <input id="obWeight" type="number" inputmode="decimal" placeholder="e.g. 195" min="80" max="500" style="width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;">
+          <input id="obWeight" type="number" inputmode="decimal" placeholder="e.g. 195" min="80" max="500" class="ob-input">
         </div>
         <div>
           <label style="font-size:12px;color:rgba(255,255,255,.6);display:block;margin-bottom:6px;">Body Fat % <span style="opacity:.5;">(optional)</span></label>
-          <input id="obBodyFat" type="number" inputmode="decimal" placeholder="e.g. 22" min="3" max="60" style="width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;">
+          <input id="obBodyFat" type="number" inputmode="decimal" placeholder="e.g. 22" min="3" max="60" class="ob-input">
         </div>
       </div>
 
@@ -1694,35 +1696,13 @@ function drawRHR(){
     document.getElementById("rhrFullList").innerHTML="";
     return;
   }
-  var data=DB.rhr.slice();
-  var vs=data.map(function(x){return x.v;});
-  var minV=Math.min.apply(null,vs)-3, maxV=Math.max.apply(null,vs)+3;
-  var W=520,H=180,pad=30,n=data.length;
-  function x(i){return pad+(W-2*pad)*(n===1?0.5:i/(n-1));}
-  function y(v){return pad+(H-2*pad)*(1-(v-minV)/(maxV-minV||1));}
-  var pts=data.map(function(d,i){return x(i)+","+y(d.v);}).join(" ");
-  var svg='<svg viewBox="0 0 '+W+' '+H+'">';
-  svg+='<polyline points="'+pts+'" fill="none" stroke="var(--red)" stroke-width="3" pathLength="1" class="drawline"/>';
-  data.forEach(function(d,i){svg+='<circle cx="'+x(i)+'" cy="'+y(d.v)+'" r="3" fill="var(--red)"/>';});
-  svg+='<text x="'+pad+'" y="'+(H-8)+'" font-size="10" fill="var(--faint)">'+data[0].d.slice(5)+'</text>';
-  svg+='<text x="'+(W-pad)+'" y="'+(H-8)+'" text-anchor="end" font-size="10" fill="var(--faint)">'+data[n-1].d.slice(5)+'</text>';
-  svg+='</svg>';
-  box.innerHTML=svg;
-
-  var note="";
-  if(data.length>=4){
-    var recent=data.slice(Math.max(0,n-7));
-    var prev=data.slice(Math.max(0,n-14),Math.max(0,n-7));
-    if(prev.length){
-      var avg=function(a){return a.reduce(function(s,x){return s+x.v;},0)/a.length;};
-      var diff=avg(recent)-avg(prev);
-      note="7-day average "+(diff<0?"down":"up")+" "+Math.abs(diff).toFixed(1)+" bpm vs the prior week. Lower RHR generally reflects improving cardiovascular fitness or better recovery.";
-    }
-  }
-  document.getElementById("rhrTrendNote").textContent=note;
+  var raw=DB.rhr.slice();
+  var data=raw.map(function(x){return {d:x.d,v:x.v};});
+  box.innerHTML=_lineChart(data,"var(--red)","var(--red)");
+  document.getElementById("rhrTrendNote").textContent=_trendNote(data,"rhr","bpm",1,"Lower RHR generally reflects improving cardiovascular fitness or better recovery.");
 
   var listHtml='<div style="font-size:11px;opacity:.6;margin-bottom:6px;">All readings (most recent first)</div>';
-  data.slice().reverse().forEach(function(d){
+  raw.slice().reverse().forEach(function(d){
     listHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">'+
       '<span style="opacity:.7;">'+d.d+'</span>'+
       '<span style="font-weight:600;">'+d.v+' bpm</span>'+
@@ -1731,8 +1711,9 @@ function drawRHR(){
   document.getElementById("rhrFullList").innerHTML=listHtml;
 }
 
-/* Shared single-series line chart. data=[{d:"YYYY-MM-DD",v:Number}] */
-function _lineChart(data,strokeVar,dotVar){
+/* Shared single-series line chart. data=[{d:"YYYY-MM-DD",v:Number}]
+   extraSvg: optional SVG string drawn behind the line (e.g. a goal line) */
+function _lineChart(data,strokeVar,dotVar,extraSvg){
   var vs=data.map(function(x){return x.v;});
   var minV=Math.min.apply(null,vs),maxV=Math.max.apply(null,vs);
   var pad10=(maxV-minV)*0.1||1;
@@ -1742,6 +1723,7 @@ function _lineChart(data,strokeVar,dotVar){
   function y(v){return pad+(H-2*pad)*(1-(v-minV)/(maxV-minV||1));}
   var pts=data.map(function(d,i){return x(i)+","+y(d.v);}).join(" ");
   var svg='<svg viewBox="0 0 '+W+' '+H+'">';
+  if(extraSvg)svg+=extraSvg(x,y);
   svg+='<polyline points="'+pts+'" fill="none" stroke="'+strokeVar+'" stroke-width="3" pathLength="1" class="drawline"/>';
   data.forEach(function(d,i){svg+='<circle cx="'+x(i)+'" cy="'+y(d.v)+'" r="3" fill="'+dotVar+'"/>';});
   svg+='<text x="'+pad+'" y="'+(H-8)+'" font-size="10" fill="var(--faint)">'+data[0].d.slice(5)+'</text>';
@@ -1749,7 +1731,8 @@ function _lineChart(data,strokeVar,dotVar){
   svg+='</svg>';
   return svg;
 }
-function _trendNote(data,label,unit,decimals){
+/* Shared 7-day-vs-prior-7-day trend note. suffix: optional extra sentence appended. */
+function _trendNote(data,label,unit,decimals,suffix){
   var n=data.length;
   if(n<4)return "";
   var recent=data.slice(Math.max(0,n-7));
@@ -1757,7 +1740,7 @@ function _trendNote(data,label,unit,decimals){
   if(!prev.length)return "";
   var avg=function(a){return a.reduce(function(s,x){return s+x.v;},0)/a.length;};
   var diff=avg(recent)-avg(prev);
-  return "7-day average "+(diff<0?"down":"up")+" "+Math.abs(diff).toFixed(decimals)+(unit?" "+unit:"")+" vs the prior week.";
+  return "7-day average "+(diff<0?"down":"up")+" "+Math.abs(diff).toFixed(decimals)+(unit?" "+unit:"")+" vs the prior week."+(suffix?" "+suffix:"");
 }
 function drawSteps(){
   var box=document.getElementById("stepsChart");
@@ -1836,38 +1819,20 @@ function renderProg(){
 function drawWeight(){
   var box=document.getElementById("weightChart");
   if(DB.weights.length<2){box.innerHTML='<div class="chart-empty">Log at least two weigh-ins to see your trajectory.</div>';document.getElementById("weightTrendNote").textContent="";return;}
-  var data=DB.weights.slice();
-  var ws=data.map(function(x){return x.w;});
-  var minW=Math.min(GOAL_WEIGHT-2,Math.min.apply(null,ws));
-  var maxW=Math.max.apply(null,ws);
-  var W=520,H=200,pad=30;
-  var n=data.length;
-  function x(i){return pad+(W-2*pad)*(n===1?0.5:i/(n-1));}
-  function y(w){return pad+(H-2*pad)*(1-(w-minW)/(maxW-minW||1));}
-  var pts=data.map(function(d,i){return x(i)+","+y(d.w);}).join(" ");
-  var goalY=y(GOAL_WEIGHT);
-  var svg='<svg viewBox="0 0 '+W+' '+H+'">';
-  svg+='<line x1="'+pad+'" y1="'+goalY+'" x2="'+(W-pad)+'" y2="'+goalY+'" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="5 4"/>';
-  svg+='<text x="'+(W-pad)+'" y="'+(goalY-5)+'" text-anchor="end" font-size="11" fill="var(--gold)">Goal 200</text>';
-  svg+='<polyline points="'+pts+'" fill="none" stroke="var(--red)" stroke-width="3" pathLength="1" class="drawline"/>';
-  data.forEach(function(d,i){svg+='<circle cx="'+x(i)+'" cy="'+y(d.w)+'" r="3" fill="var(--red)"/>';});
-  svg+='<text x="'+pad+'" y="'+(H-8)+'" font-size="10" fill="var(--faint)">'+data[0].d.slice(5)+'</text>';
-  svg+='<text x="'+(W-pad)+'" y="'+(H-8)+'" text-anchor="end" font-size="10" fill="var(--faint)">'+data[n-1].d.slice(5)+'</text>';
-  svg+='</svg>';
-  box.innerHTML=svg;
-  // 7-day avg trend
-  var note=weeklyAvgTrend();
-  document.getElementById("weightTrendNote").textContent=note;
+  var raw=DB.weights.slice();
+  var data=raw.map(function(x){return {d:x.d,v:x.w};});
+  var goalLine=function(x,y){
+    var n=data.length,W=520,pad=30;
+    var goalY=y(GOAL_WEIGHT);
+    return '<line x1="'+pad+'" y1="'+goalY+'" x2="'+(W-pad)+'" y2="'+goalY+'" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="5 4"/>'+
+      '<text x="'+(W-pad)+'" y="'+(goalY-5)+'" text-anchor="end" font-size="11" fill="var(--gold)">Goal 200</text>';
+  };
+  box.innerHTML=_lineChart(data,"var(--red)","var(--red)",goalLine);
+  document.getElementById("weightTrendNote").textContent=weeklyAvgTrend(data);
 }
-function weeklyAvgTrend(){
-  if(DB.weights.length<4)return "";
-  var n=DB.weights.length;
-  var recent=DB.weights.slice(Math.max(0,n-7));
-  var prev=DB.weights.slice(Math.max(0,n-14),Math.max(0,n-7));
-  if(!prev.length)return "";
-  var avg=function(a){return a.reduce(function(s,x){return s+x.w;},0)/a.length;};
-  var diff=avg(recent)-avg(prev);
-  return "7-day average "+(diff<0?"down":"up")+" "+Math.abs(diff).toFixed(2)+" lb vs the prior week. The weekly average is the number to trust \u2014 ignore daily water swings.";
+function weeklyAvgTrend(data){
+  if(data.length<4)return "";
+  return _trendNote(data,"weight","lb",2,"The weekly average is the number to trust \u2014 ignore daily water swings.");
 }
 function weeklyRecap(){
   var now=new Date();var weekAgo=new Date();weekAgo.setDate(now.getDate()-7);
@@ -1901,17 +1866,8 @@ function drawStrength(){
     }
   });
   if(series.length<2){box.innerHTML='<div class="chart-empty">Log this lift across at least two sessions to chart estimated strength.</div>';document.getElementById("prNote").textContent="";return;}
-  var es=series.map(function(x){return x.e;});
-  var minE=Math.min.apply(null,es)*0.96,maxE=Math.max.apply(null,es)*1.02;
-  var W=520,H=180,pad=30,n=series.length;
-  function x(i){return pad+(W-2*pad)*(i/(n-1));}
-  function y(e){return pad+(H-2*pad)*(1-(e-minE)/(maxE-minE||1));}
-  var pts=series.map(function(d,i){return x(i)+","+y(d.e);}).join(" ");
-  var svg='<svg viewBox="0 0 '+W+' '+H+'">';
-  svg+='<polyline points="'+pts+'" fill="none" stroke="var(--red)" stroke-width="3" pathLength="1" class="drawline"/>';
-  series.forEach(function(d,i){svg+='<circle cx="'+x(i)+'" cy="'+y(d.e)+'" r="3" fill="var(--gold)"/>';});
-  svg+='</svg>';
-  box.innerHTML=svg;
+  var data=series.map(function(x){return {d:x.d,v:x.e};});
+  box.innerHTML=_lineChart(data,"var(--red)","var(--gold)");
   var pr=DB.prs[lift];
   if(pr)document.getElementById("prNote").textContent="Best: "+pr.w+" lb \u00D7 "+pr.r+" (est 1RM "+pr.e1rm+" lb) on "+pr.d+".";
 }
@@ -2020,8 +1976,6 @@ function fallbackCopy(text){
   try{document.execCommand("copy");toast("URL copied to clipboard.");}
   catch(e){toast("Copy failed — select the URL field and copy manually.");}
   document.body.removeChild(ta);
-}
-function _saveSheetUrl_placeholder(){// merged above
 }
 function addCreatineReminder(){
   var ics="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//TheLedger//Creatine//EN\r\nCALSCALE:GREGORIAN\r\nBEGIN:VEVENT\r\nUID:creatine-ledger-"+Date.now()+"@ledger\r\nDTSTART:20260614T180000\r\nRRULE:FREQ=DAILY\r\nSUMMARY:Take Creatine (3-5g)\r\nDESCRIPTION:Daily creatine monohydrate. Stay hydrated.\r\nBEGIN:VALARM\r\nTRIGGER:PT0M\r\nACTION:DISPLAY\r\nDESCRIPTION:Take Creatine (3-5g)\r\nEND:VALARM\r\nEND:VEVENT\r\nEND:VCALENDAR";
@@ -2346,14 +2300,14 @@ function renderMilestoneEditor(){
   rows.forEach(function(m,i){
     html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'
       +'<input type="checkbox" id="mc'+i+'" '+(m.done?"checked":"")+' style="width:18px;height:18px;accent-color:var(--red);">'
-      +'<input type="text" id="mt'+i+'" value="'+m.t.replace(/"/g,"&quot;")+'" placeholder="Milestone description" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:13px;">'
+      +'<input type="text" id="mt'+i+'" value="'+m.t.replace(/"/g,"&quot;")+'" placeholder="Milestone description" class="modal-fld">'
       +'</div>';
   });
   // fill empty slots up to 6
   for(var i=rows.length;i<6;i++){
     html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'
       +'<input type="checkbox" id="mc'+i+'" style="width:18px;height:18px;accent-color:var(--red);">'
-      +'<input type="text" id="mt'+i+'" placeholder="Optional milestone '+( i+1)+'" style="flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:13px;">'
+      +'<input type="text" id="mt'+i+'" placeholder="Optional milestone '+( i+1)+'" class="modal-fld">'
       +'</div>';
   }
   ed.innerHTML=html;
