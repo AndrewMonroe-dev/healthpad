@@ -4197,8 +4197,8 @@ function showAddFoodModal(){
       '<button class="btn sm ghost" style="flex:1;" onclick="showNewFoodForm()">+ Log New</button>'+
       '<button class="btn sm ghost" style="flex:1;" onclick="showBarcodeScanner()">+ Scan Barcode</button>'+
     '</div>'+
-    '<div id="offSearchArea" style="padding:0 16px;"></div>'+
     '<div id="addFoodList" style="overflow-y:auto;flex:1;padding:0 16px 20px;">'+
+      '<div id="offSearchArea"></div>'+
       (recent.length?recent.map(function(f){
         return '<div class="add-ex-row" data-name="'+f.name.replace(/"/g,"&quot;")+'" data-action="pickFood" data-id="'+f.id+'" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+
           f.name+'<div style="font-size:12px;color:var(--faint);font-weight:400;">'+f.qty+' '+f.unit+' \u2022 '+f.cal+' kcal \u2022 '+f.pro+'g protein</div></div>';
@@ -4226,7 +4226,7 @@ function scheduleOFFSearchPrompt(q){
 }
 function filterAddFoodList(q){
   var ql=(q||"").toLowerCase().trim();
-  document.querySelectorAll("#addFoodList .add-ex-row").forEach(function(r){
+  document.querySelectorAll("#addFoodList .add-ex-row[data-action='pickFood']").forEach(function(r){
     r.style.display=(!ql||r.dataset.name.toLowerCase().indexOf(ql)>-1)?"block":"none";
   });
 }
