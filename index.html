@@ -570,6 +570,11 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="note dim" id="milestoneEcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
+      <div class="sec-h">Program Exercises</div>
+      <div class="note dim" style="margin-bottom:10px;">Permanently add or remove exercises from each training day. Changes apply immediately.</div>
+      <div id="programExEditor"></div>
+    </div>
+    <div class="sec">
       <div class="sec-h">Estimated 1-Rep Maxes</div>
       <div class="note dim">Drives the working-weight calculator. The three barbell lifts start blank &mdash; set them by feel after Phase 0.</div>
       <div id="oneRMList" style="margin-top:12px;"></div>
@@ -1391,12 +1396,15 @@ function renderTrain(){
     var ds=daySessions(d.day);var unlocks=ADAPT_UNLOCKS[d.day]||[];
     unlocks.forEach(function(u){if(ds>=ADAPT.unlockEvery&&exList.length<ADAPT.maxExercises&&!exList.some(function(e){return e.n===u.n;})){var uu=Object.assign({},u);uu.added=true;exList.push(uu);}});
   }
+  _sessionAdded.forEach(function(ex){exList.push(ex);});
+  exList=exList.filter(function(ex,i){return !_sessionRemoved[i];});
 
   document.getElementById("dayNote").innerHTML='<div class="adapt-panel '+stateCls+'">'+stateTxt+'</div><div class="note dim">Log RIR (reps in reserve) on every set. E.g., RIR 2 = you had 2 reps left in the tank.</div>'+(allAdj&&allAdj.length?'<div class="adapt-panel held" style="margin-top:8px;">&#9888; Active adjustments: '+allAdj.map(function(a){return a.label;}).join(", ")+'</div>':'');
 
   var html2="";
   exList.forEach(function(ex,ei){
     var a=computeAdaptive(ex,holdToday,pauseVolume,wip,todayFat);
+    if(_sessionSets[ei]!==undefined)a.sets=_sessionSets[ei];
     var rows="";var last=lastSetData(ex.n);
     for(var si=0;si<a.sets;si++){
       var pw=last&&last[si]?last[si].w:"";
@@ -1412,16 +1420,28 @@ function renderTrain(){
         '<div class="ex-target">'+a.sets+' × '+(a.lo===a.hi?a.lo:a.lo+"–"+a.hi)+' @ RIR '+a.tRIR+' &middot; '+a.loadStr+(a.est?' &middot; e1RM '+a.est:'')+'</div>'+
         (a.fatigueNote?'<div class="ex-rec" style="color:var(--dim);">⚡ '+a.fatigueNote+'</div>':'')+(a.rec?'<div class="ex-rec">▲ '+a.rec+'</div>':'')+
         (a.downtrend?'<div class="ex-rec" style="color:var(--gold);">▼ Strength dipped vs last session — watch recovery</div>':'')+
-        '</div><span style="color:var(--faint);">▾</span>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:8px;">'+
+          '<button class="btn sm dark" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="event.stopPropagation();removeSessionEx('+ei+')">Remove</button>'+
+          '<span style="color:var(--faint);">▾</span>'+
+        '</div>'+
       '</div>'+
       '<div class="ex-body">'+
         '<div class="setlbl"><span></span><span>Weight</span><span>Reps</span><span>RIR</span></div>'+rows+
+        '<div style="display:flex;gap:8px;margin-top:8px;">'+
+          '<button class="btn sm ghost" style="flex:1;touch-action:manipulation;" onclick="addSessionSet('+ei+')">+ Set</button>'+
+          '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="removeSessionSet('+ei+')">- Set</button>'+
+        '</div>'+
         (ex.bone?'<div class="bonebar">Bone-priority lift. Reduce load before skipping.</div>':'')+
       '</div></div>';
   });
+  html2+='<div style="margin-top:14px;"><button class="btn sm ghost" style="width:100%;touch-action:manipulation;" onclick="showAddExModal()">+ Add Exercise to Today</button></div>';
   document.getElementById("workoutArea").innerHTML=html2;
 }
-function pickDay(i){selDay=i;renderTrain();}
+function pickDay(i){
+  if(i!==_lastSelDay){_sessionSets={};_sessionRemoved={};_sessionAdded=[];_lastSelDay=i;}
+  selDay=i;renderTrain();
+}
 function toggleEx(el){el.parentNode.querySelector(".ex-body").classList.toggle("open");}
 
 function overloadRec(name,hi){
@@ -1710,6 +1730,7 @@ function renderPRs(){
 
 /* ============ SETUP ============ */
 function renderSetup(){
+  renderProgramExEditor();
   // 1RM editor
   var html="";
   Object.keys(DEFAULT_1RM).forEach(function(k){
@@ -3124,6 +3145,130 @@ function showWeightReaction(lost,newW,prevW){
     });
     document.body.appendChild(overlay);
   });
+}
+
+
+/* ============ SESSION EDITS ============ */
+var _sessionSets={};
+var _sessionRemoved={};
+var _sessionAdded=[];
+var _lastSelDay=null;
+
+function removeSessionEx(ei){
+  _sessionRemoved[ei]=true;
+  renderTrain();
+}
+function addSessionSet(ei){
+  var split=currentSplit();var d=split[selDay];if(!d)return;
+  var exList=d.ex.slice();_sessionAdded.forEach(function(e){exList.push(e);});
+  exList=exList.filter(function(e,i){return !_sessionRemoved[i];});
+  var ex=exList[ei];if(!ex)return;
+  var hold=(currentFatigue()==="low");var pv=(recentLowReadiness()>=2);
+  var a=computeAdaptive(ex,hold,pv,weeksIntoPhase(),currentFatigue());
+  _sessionSets[ei]=(_sessionSets[ei]!==undefined?_sessionSets[ei]:a.sets)+1;
+  renderTrain();
+}
+function removeSessionSet(ei){
+  var split=currentSplit();var d=split[selDay];if(!d)return;
+  var exList=d.ex.slice();_sessionAdded.forEach(function(e){exList.push(e);});
+  exList=exList.filter(function(e,i){return !_sessionRemoved[i];});
+  var ex=exList[ei];if(!ex)return;
+  var hold=(currentFatigue()==="low");var pv=(recentLowReadiness()>=2);
+  var a=computeAdaptive(ex,hold,pv,weeksIntoPhase(),currentFatigue());
+  var cur=(_sessionSets[ei]!==undefined?_sessionSets[ei]:a.sets);
+  _sessionSets[ei]=Math.max(ex.bone?2:1,cur-1);
+  renderTrain();
+}
+function showAddExModal(){
+  var split=currentSplit();var d=split[selDay];if(!d)return;
+  var exList=d.ex.slice();_sessionAdded.forEach(function(e){exList.push(e);});
+  exList=exList.filter(function(e,i){return !_sessionRemoved[i];});
+  var existing=exList.map(function(e){return e.n;});
+  var available=Object.keys(DEFAULT_1RM).sort().filter(function(n){return existing.indexOf(n)===-1;});
+  var modal=document.createElement("div");
+  modal.id="addExModal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
+  modal.innerHTML=
+    '<div style="background:var(--panel);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:70vh;display:flex;flex-direction:column;">'+
+    '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
+      '<div style="font-weight:700;font-size:16px;">Add Exercise (Today)</div>'+
+      '<button onclick="document.getElementById(&quot;addExModal&quot;).remove()" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
+    '</div>'+
+    '<input id="addExSearch" type="text" placeholder="Search..." '+
+      'style="margin:12px 16px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;font-size:15px;" '+
+      'oninput="filterAddExList(this.value)">'+
+    '<div id="addExList" style="overflow-y:auto;flex:1;padding:0 16px 20px;">'+
+      available.map(function(n){return '<div class="add-ex-row" data-name="'+n+'" onclick="addExToSession(&quot;"+n+"&quot;)" style="padding:14px 4px;border-bottom:1px solid var(--line);font-size:15px;cursor:pointer;touch-action:manipulation;">'+n+'</div>';}).join("")+
+    '</div></div>';
+  document.body.appendChild(modal);
+}
+function filterAddExList(q){
+  document.querySelectorAll("#addExList .add-ex-row").forEach(function(r){r.style.display=r.dataset.name.toLowerCase().indexOf(q.toLowerCase())>-1?"":"none";});
+}
+function addExToSession(name){
+  var m=document.getElementById("addExModal");if(m)m.remove();
+  _sessionAdded.push({n:name,s:3,lo:8,hi:12});
+  renderTrain();toast(name+" added for today.");
+}
+
+/* ============ PROGRAM EXERCISE EDITOR (permanent) ============ */
+function renderProgramExEditor(){
+  var area=document.getElementById("programExEditor");if(!area)return;
+  var split=currentSplit();
+  if(!split||!split.length){area.innerHTML='<div class="note dim">Complete onboarding to generate your program.</div>';return;}
+  var html="";
+  split.forEach(function(d,dayIdx){
+    if(d.rest)return;
+    html+='<div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-bottom:8px;">'+d.day+'</div>';
+    if(d.cardio){html+='<div style="font-size:13px;color:var(--faint);padding:6px 0;">Cardio day</div>';}
+    (d.ex||[]).forEach(function(ex,ei){
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);">'+
+        '<span style="font-size:14px;font-weight:600;">'+ex.n+'</span>'+
+        '<button class="btn sm dark" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="removePermEx('+dayIdx+','+ei+')">Remove</button>'+
+      '</div>';
+    });
+    html+='<button class="btn sm ghost" style="width:100%;margin-top:8px;touch-action:manipulation;" onclick="showAddPermExModal('+dayIdx+')">+ Add to '+d.day+'</button></div>';
+  });
+  area.innerHTML=html;
+}
+function removePermEx(dayIdx,exIdx){
+  var split=currentSplit();
+  if(!split||!split[dayIdx]||!split[dayIdx].ex)return;
+  split[dayIdx].ex.splice(exIdx,1);
+  if(DB.program)DB.program.split=split;
+  save();renderProgramExEditor();toast("Exercise removed from program.");
+}
+function showAddPermExModal(dayIdx){
+  var split=currentSplit();var d=split[dayIdx];if(!d)return;
+  var existing=(d.ex||[]).map(function(e){return e.n;});
+  var available=Object.keys(DEFAULT_1RM).sort().filter(function(n){return existing.indexOf(n)===-1;});
+  var modal=document.createElement("div");
+  modal.id="addPermExModal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
+  modal.innerHTML=
+    '<div style="background:var(--panel);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:70vh;display:flex;flex-direction:column;">'+
+    '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
+      '<div style="font-weight:700;font-size:16px;">Add to '+d.day+' (permanent)</div>'+
+      '<button onclick="document.getElementById(&quot;addPermExModal&quot;).remove()" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
+    '</div>'+
+    '<input id="addPermExSearch" type="text" placeholder="Search..." '+
+      'style="margin:12px 16px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;font-size:15px;" '+
+      'oninput="filterPermExList(this.value)">'+
+    '<div id="addPermExList" style="overflow-y:auto;flex:1;padding:0 16px 20px;">'+
+      available.map(function(n){return '<div class="add-ex-row" data-name="'+n+'" onclick="addPermEx('+dayIdx+',&quot;'+n+'&quot;)" style="padding:14px 4px;border-bottom:1px solid var(--line);font-size:15px;cursor:pointer;touch-action:manipulation;">'+n+'</div>';}).join("")+
+    '</div></div>';
+  document.body.appendChild(modal);
+}
+function filterPermExList(q){
+  document.querySelectorAll("#addPermExList .add-ex-row").forEach(function(r){r.style.display=r.dataset.name.toLowerCase().indexOf(q.toLowerCase())>-1?"":"none";});
+}
+function addPermEx(dayIdx,name){
+  var m=document.getElementById("addPermExModal");if(m)m.remove();
+  var split=currentSplit();var d=split[dayIdx];if(!d)return;
+  if(!d.ex)d.ex=[];
+  d.ex.push({n:name,s:3,lo:8,hi:12});
+  if(DB.program)DB.program.split=split;
+  save();renderProgramExEditor();toast(name+" added to "+d.day+" permanently.");
 }
 
 /* ============ INIT ============ */
