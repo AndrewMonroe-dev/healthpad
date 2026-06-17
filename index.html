@@ -2240,7 +2240,7 @@ var _zxingLoaded=false,_zxingReader=null,_zxingControls=null;
 function loadZXing(cb){
   if(_zxingLoaded&&window.ZXingBrowser){cb();return;}
   var s=document.createElement("script");
-  s.src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js";
+  s.src="https://unpkg.com/@zxing/browser@0.2.0/umd/zxing-browser.min.js";
   s.onload=function(){_zxingLoaded=true;cb();};
   s.onerror=function(){toast("Couldn't load barcode scanner \u2014 check connection");closeBarcodeScanner();};
   document.head.appendChild(s);
@@ -2249,11 +2249,11 @@ function showBarcodeScanner(){
   var existingFoodModal=document.getElementById("addFoodModal");if(existingFoodModal)existingFoodModal.remove();
   var modal=document.createElement("div");
   modal.id="barcodeScanModal";
-  modal.style.cssText="position:fixed;inset:0;background:#000;z-index:9500;display:flex;flex-direction:column;";
+  modal.style.cssText="position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column;";
   modal.innerHTML=
-    '<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.5);">'+
+    '<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.5);position:relative;z-index:2;">'+
       '<div style="font-weight:700;font-size:16px;color:#fff;">Scan Barcode</div>'+
-      '<button onclick="closeBarcodeScanner()" style="background:none;border:none;font-size:22px;color:#fff;cursor:pointer;padding:4px;">&#x2715;</button>'+
+      '<button onclick="closeBarcodeScanner()" style="background:rgba(255,255,255,.15);border:none;font-size:20px;color:#fff;cursor:pointer;padding:8px 14px;border-radius:8px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.3);">&#x2715; Close</button>'+
     '</div>'+
     '<div style="flex:1;position:relative;display:flex;align-items:center;justify-content:center;">'+
       '<video id="barcodeVideo" style="width:100%;height:100%;object-fit:cover;"></video>'+
@@ -2263,12 +2263,18 @@ function showBarcodeScanner(){
       '<div id="barcodeStatus" style="position:absolute;bottom:24px;left:0;right:0;text-align:center;color:#fff;font-size:13px;">Loading scanner\u2026</div>'+
     '</div>';
   document.body.appendChild(modal);
+  // Safety net: if loading hangs for any reason, surface a close-able error instead of leaving a silent full-screen lock
+  var loadTimeout=setTimeout(function(){
+    var statusEl=document.getElementById("barcodeStatus");
+    if(statusEl)statusEl.textContent="Scanner took too long to load. Tap Close above and try again.";
+  },8000);
   loadZXing(function(){
+    clearTimeout(loadTimeout);
     var statusEl=document.getElementById("barcodeStatus");
     try{
       _zxingReader=new window.ZXingBrowser.BrowserMultiFormatReader();
       window.ZXingBrowser.BrowserCodeReader.listVideoInputDevices().then(function(devices){
-        if(!devices.length){if(statusEl)statusEl.textContent="No camera found.";return;}
+        if(!devices.length){if(statusEl)statusEl.textContent="No camera found. Tap Close above.";return;}
         var backCam=devices.find(function(d){return /back|rear|environment/i.test(d.label);});
         var deviceId=(backCam||devices[devices.length-1]).deviceId;
         if(statusEl)statusEl.textContent="Point at a barcode";
@@ -2282,12 +2288,21 @@ function showBarcodeScanner(){
             lookupOFFByBarcode(code);
           }
         });
-      }).catch(function(){if(statusEl)statusEl.textContent="Camera access denied or unavailable.";});
-    }catch(e){if(statusEl)statusEl.textContent="Scanner failed to start.";}
+      }).catch(function(){if(statusEl)statusEl.textContent="Camera access denied or unavailable. Tap Close above.";});
+    }catch(e){if(statusEl)statusEl.textContent="Scanner failed to start. Tap Close above.";}
   });
 }
 function closeBarcodeScanner(){
   if(_zxingControls){try{_zxingControls.stop();}catch(e){}_zxingControls=null;}
+  // Defensive cleanup: also directly stop any active camera stream on the video element,
+  // in case ZXing never reached the point of handing us controls (e.g. load failure mid-stream)
+  try{
+    var v=document.getElementById("barcodeVideo");
+    if(v&&v.srcObject){
+      v.srcObject.getTracks().forEach(function(t){t.stop();});
+      v.srcObject=null;
+    }
+  }catch(e){}
   var m=document.getElementById("barcodeScanModal");if(m)m.remove();
 }
 
