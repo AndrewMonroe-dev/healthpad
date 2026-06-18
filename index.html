@@ -643,11 +643,18 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="sec-h">Tracking Style</div>
       <div class="note dim" style="margin-bottom:12px;">Choose what the Foods tab tracks you against. This changes the main rings and daily guidance on that tab.</div>
       <label class="fld">Daily Tracking Mode</label>
-      <select id="inTrackingStyle" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:14px;margin-bottom:12px;" onchange="toggleTrackingStyleFields()">
-        <option value="calories">Calories + Protein</option>
-        <option value="macros">Macros (Protein / Carb / Fat)</option>
-        <option value="points">Points (estimated, SmartPoints-style)</option>
-      </select>
+      <div style="position:relative;margin-bottom:4px;">
+        <select id="inTrackingStyle" style="width:100%;padding:10px 36px 10px 10px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:14px;appearance:none;-webkit-appearance:none;cursor:pointer;" onchange="toggleTrackingStyleFields();updateTrackingStyleCounter()">
+          <option value="calories">Calories + Protein</option>
+          <option value="macros">Macros (Protein / Carb / Fat)</option>
+          <option value="points">Points (estimated, SmartPoints-style)</option>
+        </select>
+        <div style="pointer-events:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:1px;opacity:0.5;">
+          <span style="font-size:9px;line-height:1;">▲</span>
+          <span style="font-size:9px;line-height:1;">▼</span>
+        </div>
+      </div>
+      <div id="trackingStyleCounter" style="text-align:right;font-size:11px;color:var(--dim,#888);letter-spacing:.4px;margin-bottom:12px;"></div>
       <div id="pointsBudgetFields" style="display:none;">
         <div class="note dim" style="margin-bottom:10px;background:rgba(203,162,76,.10);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;">Points here use an unofficial, commonly-cited approximation of WW's SmartPoints formula (calories, saturated fat, sugar, protein). It will not exactly match your real WW app \u2014 treat it as a reasonable estimate, not a substitute for WW's own tracker.</div>
         <label class="fld">Daily Points Budget</label>
@@ -3033,6 +3040,14 @@ function loadGoalSettings(){
   if(gs)gs.value=g.startDate||"";
   renderMilestoneEditor();
 }
+function updateTrackingStyleCounter(){
+  var sel=document.getElementById("inTrackingStyle");
+  var counter=document.getElementById("trackingStyleCounter");
+  if(!sel||!counter)return;
+  var idx=sel.selectedIndex+1;
+  var total=sel.options.length;
+  counter.textContent="Style "+idx+" of "+total;
+}
 function toggleTrackingStyleFields(){
   var sel=document.getElementById("inTrackingStyle");
   var fields=document.getElementById("pointsBudgetFields");
@@ -3095,6 +3110,7 @@ function loadTrackingStyle(){
   setVal("inMacroCarbPct",(DB.settings&&DB.settings.macroCarbPct!==undefined)?DB.settings.macroCarbPct:40);
   setVal("inMacroFatPct",(DB.settings&&DB.settings.macroFatPct!==undefined)?DB.settings.macroFatPct:30);
   toggleTrackingStyleFields();
+  updateTrackingStyleCounter();
 }
 
 function renderMilestoneEditor(){
