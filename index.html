@@ -2551,6 +2551,7 @@ function showBarcodeScanner(){
       '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">'+
         '<div style="width:80%;max-width:320px;height:120px;border:2px solid #fff;border-radius:12px;opacity:.7;"></div>'+
       '</div>'+
+      '<button id="barcodeTorchBtn" onclick="toggleBarcodeTorch()" style="display:none;position:absolute;bottom:64px;right:20px;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:13px;font-weight:600;padding:9px 14px;border-radius:10px;cursor:pointer;touch-action:manipulation;">&#x1F526; Light</button>'+
       '<div id="barcodeStatus" style="position:absolute;bottom:24px;left:0;right:0;text-align:center;color:#fff;font-size:13px;">Loading scanner\u2026</div>'+
     '</div>';
   document.body.appendChild(modal);
@@ -2563,14 +2564,43 @@ function showBarcodeScanner(){
     clearTimeout(loadTimeout);
     var statusEl=document.getElementById("barcodeStatus");
     try{
-      _zxingReader=new window.ZXingBrowser.BrowserMultiFormatReader();
+      // Restrict to retail/food barcode formats only and ask the decoder to try harder per frame.
+      // Both cut wasted work vs. scanning for every supported 1D/2D format, and TRY_HARDER
+      // meaningfully improves hit rate on damaged, low-contrast, or angled codes.
+      var hints=null;
+      try{
+        if(window.ZXingBrowser.BarcodeFormat&&window.ZXingBrowser.DecodeHintType){
+          hints=new Map();
+          hints.set(window.ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS,[
+            window.ZXingBrowser.BarcodeFormat.EAN_13,
+            window.ZXingBrowser.BarcodeFormat.EAN_8,
+            window.ZXingBrowser.BarcodeFormat.UPC_A,
+            window.ZXingBrowser.BarcodeFormat.UPC_E
+          ]);
+          hints.set(window.ZXingBrowser.DecodeHintType.TRY_HARDER,true);
+        }
+      }catch(eh){hints=null;}
+      _zxingReader=hints?new window.ZXingBrowser.BrowserMultiFormatReader(hints):new window.ZXingBrowser.BrowserMultiFormatReader();
       window.ZXingBrowser.BrowserCodeReader.listVideoInputDevices().then(function(devices){
         if(!devices.length){if(statusEl)statusEl.textContent="No camera found. Tap Close above.";return;}
         var backCam=devices.find(function(d){return /back|rear|environment/i.test(d.label);});
         var deviceId=(backCam||devices[devices.length-1]).deviceId;
         if(statusEl)statusEl.textContent="Point at a barcode";
-        _zxingReader.decodeFromVideoDevice(deviceId,"barcodeVideo",function(result,err,controls){
+        // High resolution + continuous autofocus give the decoder a much sharper, better-focused
+        // frame to work with than the browser's bare default — this is the single biggest lever
+        // for real-world hit rate on small/close-up UPC codes.
+        var constraints={
+          video:{
+            deviceId:{exact:deviceId},
+            width:{ideal:1920},
+            height:{ideal:1080},
+            focusMode:"continuous",
+            advanced:[{focusMode:"continuous"}]
+          }
+        };
+        function onDecode(result,err,controls){
           _zxingControls=controls;
+          if(!_torchChecked){_torchChecked=true;setupTorchButton(controls);}
           if(result){
             var code=result.getText();
             if(statusEl)statusEl.textContent="Found: "+code;
@@ -2578,12 +2608,40 @@ function showBarcodeScanner(){
             controls.stop();
             lookupOFFByBarcode(code);
           }
-        });
+        }
+        _zxingReader.decodeFromConstraints(constraints,"barcodeVideo",onDecode)
+          .catch(function(){
+            // Constrained request failed (older browser, unsupported constraint, etc.) — fall back
+            // to the plain device-id call so scanning still works, just without the tuning.
+            _zxingReader.decodeFromVideoDevice(deviceId,"barcodeVideo",onDecode);
+          });
       }).catch(function(){if(statusEl)statusEl.textContent="Camera access denied or unavailable. Tap Close above.";});
     }catch(e){if(statusEl)statusEl.textContent="Scanner failed to start. Tap Close above.";}
   });
 }
+function setupTorchButton(controls){
+  var btn=document.getElementById("barcodeTorchBtn");
+  if(!btn||!controls||!controls.switchTorch)return;
+  try{
+    var video=document.getElementById("barcodeVideo");
+    var stream=video&&video.srcObject;
+    var track=stream?stream.getVideoTracks()[0]:null;
+    var supportsTorch=track&&track.getCapabilities&&track.getCapabilities().torch;
+    if(supportsTorch){btn.style.display="block";}
+  }catch(e){/* torch capability check failed silently — button stays hidden, scanning unaffected */}
+}
+var _torchOn=false,_torchChecked=false;
+function toggleBarcodeTorch(){
+  if(!_zxingControls||!_zxingControls.switchTorch)return;
+  _torchOn=!_torchOn;
+  try{
+    _zxingControls.switchTorch(_torchOn);
+    var btn=document.getElementById("barcodeTorchBtn");
+    if(btn)btn.style.background=_torchOn?"rgba(255,210,80,.35)":"rgba(255,255,255,.18)";
+  }catch(e){toast("Flashlight not available on this device");}
+}
 function closeBarcodeScanner(){
+  _torchOn=false;_torchChecked=false;
   if(_zxingControls){try{_zxingControls.stop();}catch(e){}_zxingControls=null;}
   // Defensive cleanup: also directly stop any active camera stream on the video element,
   // in case ZXing never reached the point of handing us controls (e.g. load failure mid-stream)
