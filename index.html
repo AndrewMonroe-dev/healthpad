@@ -942,50 +942,162 @@ var PHASES=[
 
 /* exercise: name, sets, repLow, repHigh, key(for 1RM lookup or null), bone */
 var DEFAULT_1RM={
- // Chest
- "Hammer Chest Press":0,"Hammer Incline Press":0,"Incline DB Chest Press":0,"DB Bench Press":0,
- "Pec Deck":0,"High-to-Low Cable Fly":0,"Low-to-High Cable Fly":0,"Cable Crossover":0,
- "Barbell Bench Press":0,"Close-Grip Bench Press":0,"Dips":0,
- // Back
- "Hammer Iso-Lateral Row":0,"Hammer Lat Pulldown":0,"Hammer Iso Front Lat Pulldown":0,
- "T-Bar Row":0,"Barbell Row":0,"Seated Cable Row":0,"Single-Arm DB Row":0,
- "Cable Straight-Arm Pulldown":0,"Cable Pullovers":0,"Kelso Shrugs":0,"Standing Shrugs":0,
- "Face Pull":0,"Chest-Supported Row":0,"Pull-Up":0,"Chin-Up":0,
- // Shoulders
- "Hammer Iso Shoulder Press":0,"DB Shoulder Press":0,"Barbell Overhead Press":0,
- "DB Lateral Raise":0,"Cable Lateral Raise":0,"Seated Lateral Raise":0,
- "Rear Delt Fly":0,"Reverse Pec Deck":0,"Upright Row":0,"Arnold Press":0,
- // Arms
- "EZ-Bar Curl":0,"Incline DB Curl":0,"Preacher Curl":0,"Bayesian Cable Curl":0,
- "Hammer Curl":0,"Concentration Curl":0,"Cable Curl":0,
- "Cable Tricep Pressdown":0,"DB Skull Crusher":0,"Overhead Tricep Cable Ext":0,
- "Triceps Press Machine":0,"Close-Grip DB Press":0,"Tricep Kickback":0,
- // Legs
- "Barbell Back Squat":0,"Trap-Bar Deadlift":0,"Barbell RDL":0,
- "Reverse Hack Squat":0,"Leg Press":0,"Leg Extension":0,"Seated Leg Curl":0,
- "Lying Leg Curl":0,"Standing Calf Raise":0,"Seated Calf Raise":0,
- "Bulgarian Split Squat":0,"Goblet Squat":0,"Hip Thrust":0,"Glute Kickback":0,
- "Abductor Machine":0,"Adductor Machine":0,"Nordic Curl":0,
- // Core
- "Cable Crunch":0,"Decline Crunch":0,"Hanging Leg Raise":0,"Ab Wheel Rollout":0,
- "Pallof Press":0,"Plank":0,"Side Plank":0,"Landmine Rotation":0,
- // Functional / Cardio-adjacent
- "Sled Push":0,"Farmers Carry":0,"Battle Ropes":0,"Box Jump":0,"Step-Up":0,
+ // ── CHEST ─────────────────────────────────────────────────────────────────
+ // Barbell
+ "Barbell Bench Press":0,"Incline Barbell Press":0,"Decline Bench Press":0,
+ "Close-Grip Bench Press":0,"Smith Machine Bench Press":0,"Smith Machine Incline Press":0,
+ "Floor Press":0,"Reverse-Grip Bench Press":0,"Spoto Press":0,"Larsen Press":0,
+ "Guillotine Press":0,"Hex Press":0,"Svend Press":0,"Plate Press":0,
+ // Dumbbell
+ "DB Bench Press":0,"Incline DB Chest Press":0,"Decline DB Press":0,
+ // Machine
+ "Hammer Chest Press":0,"Hammer Incline Press":0,"Machine Chest Press":0,"Machine Incline Press":0,
+ "Pec Deck":0,
+ // Cable
+ "High-to-Low Cable Fly":0,"Low-to-High Cable Fly":0,"Cable Crossover":0,
+ "Single-Arm Cable Press":0,"Standing Cable Chest Press":0,
  // Bodyweight
- "Push-Up":0,"Close-Grip Push-Up":0,"Wide Push-Up":0,"Decline Push-Up":0,
- "Diamond Push-Up":0,"Pike Push-Up":0,"Archer Push-Up":0,
- "Pull-Up":0,"Chin-Up":0,"Inverted Row":0,"Australian Pull-Up":0,
- "Bodyweight Squat":0,"Jump Squat":0,"Bulgarian Split Squat BW":0,
- "Reverse Lunge":0,"Forward Lunge":0,"Lateral Lunge":0,
- "Pistol Squat":0,"Step-Up BW":0,
- "Glute Bridge BW":0,"Single-Leg Glute Bridge":0,"Hip Thrust BW":0,
- "Good Morning BW":0,"Single-Leg Hip Hinge":0,"Nordic Curl BW":0,
- "Calf Raise BW":0,"Single-Leg Calf Raise":0,
+ "Dips":0,"Push-Up":0,"Close-Grip Push-Up":0,"Wide Push-Up":0,"Decline Push-Up":0,
+ "Diamond Push-Up":0,"Archer Push-Up":0,"Ring Push-Up":0,"Deficit Push-Up":0,"Weighted Push-Up":0,
+
+ // ── BACK ──────────────────────────────────────────────────────────────────
+ // Vertical Pulls
+ "Pull-Up":0,"Chin-Up":0,"Hammer Lat Pulldown":0,"Hammer Iso Front Lat Pulldown":0,
+ "Wide-Grip Lat Pulldown":0,"Neutral-Grip Lat Pulldown":0,"Underhand Lat Pulldown":0,
+ "Rope Pulldown":0,"Cable Straight-Arm Pulldown":0,"Cable Pullovers":0,
+ "Scapular Pull-Up":0,"Rope Climb":0,
+ // Rows
+ "Hammer Iso-Lateral Row":0,"T-Bar Row":0,"Barbell Row":0,"Pendlay Row":0,
+ "Yates Row":0,"Meadows Row":0,"Seal Row":0,"Kroc Row":0,"Landmine Row":0,
+ "Gorilla Row":0,"Chest-Supported Row":0,"Seated Cable Row":0,"Single-Arm DB Row":0,
+ "Machine High Row":0,"Machine Low Row":0,"Inverted Row":0,"Australian Pull-Up":0,
+ "TRX Row":0,"Renegade Row":0,
+ // Deadlift-Based Back Work
+ "Deadlift":0,"Rack Pull":0,"Snatch-Grip Deadlift":0,"Deficit Deadlift":0,
+ // Upper Back / Traps
+ "Face Pull":0,"Kelso Shrugs":0,"Standing Shrugs":0,
+
+ // ── SHOULDERS ─────────────────────────────────────────────────────────────
+ // Presses
+ "Hammer Iso Shoulder Press":0,"DB Shoulder Press":0,"Barbell Overhead Press":0,
+ "Machine Shoulder Press":0,"Smith Machine Overhead Press":0,"Arnold Press":0,
+ "Bradford Press":0,"Z Press":0,"Landmine Press":0,"Viking Press":0,
+ "Pike Push-Up":0,"Handstand Push-Up":0,
+ // Lateral Delts
+ "DB Lateral Raise":0,"Cable Lateral Raise":0,"Seated Lateral Raise":0,
+ "Lean-Away Lateral Raise":0,"Machine Lateral Raise":0,
+ // Front Delts
+ "Front Raise":0,"Cable Front Raise":0,"Plate Front Raise":0,
+ // Rear Delts / Rotator Cuff
+ "Rear Delt Fly":0,"Reverse Pec Deck":0,"Machine Rear Delt Fly":0,
+ "Y Raise":0,"Trap-3 Raise":0,"Cuban Press":0,"Around-the-Worlds":0,
+ // Mixed
+ "Upright Row":0,
+
+ // ── BICEPS ────────────────────────────────────────────────────────────────
+ "EZ-Bar Curl":0,"Incline DB Curl":0,"Preacher Curl":0,"Machine Preacher Curl":0,
+ "Bayesian Cable Curl":0,"Hammer Curl":0,"Cross-Body Hammer Curl":0,
+ "Rope Hammer Curl":0,"Concentration Curl":0,"Cable Curl":0,"High Cable Curl":0,
+ "Spider Curl":0,"Drag Curl":0,"Drag Cable Curl":0,"Reverse Curl":0,
+ "Zottman Curl":0,"Scott Curl":0,"Cheat Curl":0,"Waiter Curl":0,
+
+ // ── TRICEPS ───────────────────────────────────────────────────────────────
+ "Cable Tricep Pressdown":0,"Reverse-Grip Pressdown":0,"Single-Arm Pressdown":0,
+ "Overhead Tricep Cable Ext":0,"Cross-Body Cable Extension":0,
+ "DB Skull Crusher":0,"Floor Skull Crusher":0,"Rolling DB Extension":0,
+ "JM Press":0,"Tate Press":0,"PJR Pullover":0,
+ "Triceps Press Machine":0,"Machine Dip":0,"Close-Grip DB Press":0,
+ "Tricep Kickback":0,"Ring Tricep Extension":0,"Bench Press Lockout":0,
  "Dip BW":0,"Bench Dip":0,"Tricep Push-Up":0,
- "Hollow Body Hold":0,"L-Sit":0,"Tuck Hold":0,
- "Plank":0,"Side Plank":0,"RKC Plank":0,
- "Hanging Knee Raise":0,"Hanging Leg Raise":0,"V-Up":0,
- "Mountain Climber":0,"Bear Crawl":0,"Burpee":0
+
+ // ── FOREARMS / GRIP ───────────────────────────────────────────────────────
+ "Wrist Curl":0,"Reverse Wrist Curl":0,"Behind-the-Back Wrist Curl":0,
+ "Wrist Roller":0,"Plate Pinch Hold":0,"Dead Hang":0,"Towel Pull-Up":0,
+
+ // ── QUADS ─────────────────────────────────────────────────────────────────
+ "Barbell Back Squat":0,"Front Squat":0,"Safety Bar Squat":0,"Zercher Squat":0,
+ "Hatfield Squat":0,"Smith Machine Squat":0,"Cyclist Squat":0,"Heels-Elevated Squat":0,
+ "Goblet Squat":0,"Landmine Squat":0,"Reverse Hack Squat":0,"Pendulum Squat":0,
+ "Belt Squat":0,"Leg Press":0,"Leg Extension":0,"Spanish Squat":0,"Sissy Squat":0,
+ "Walking Lunge":0,"Reverse Lunge":0,"Forward Lunge":0,"Lateral Lunge":0,
+ "Bulgarian Split Squat":0,"Smith Machine Split Squat":0,"Step-Up":0,
+ "Bodyweight Squat":0,"Jump Squat":0,"Pistol Squat":0,"Step-Up BW":0,
+
+ // ── HAMSTRINGS / GLUTES ───────────────────────────────────────────────────
+ // Deadlift Variations
+ "Trap-Bar Deadlift":0,"Conventional Deadlift":0,"Sumo Deadlift":0,
+ "Barbell RDL":0,"Stiff-Leg Deadlift":0,"Single-Leg RDL":0,"B-Stance RDL":0,
+ // Hinge Variations
+ "Good Morning":0,"Safety Bar Good Morning":0,"Good Morning BW":0,"Single-Leg Hip Hinge":0,
+ // Hamstrings
+ "Seated Leg Curl":0,"Lying Leg Curl":0,"Nordic Curl":0,"Nordic Curl BW":0,"GHD Raise":0,
+ // Glutes
+ "Hip Thrust":0,"Hip Thrust BW":0,"Glute Bridge BW":0,"Single-Leg Glute Bridge":0,
+ "Kas Glute Bridge":0,"Frog Pump":0,"Cable Pull-Through":0,"Glute Kickback":0,
+ "GHD Hip Extension":0,"Reverse Hyperextension":0,"45-Degree Back Extension":0,"Curtsy Lunge":0,
+ // Hips
+ "Abductor Machine":0,"Adductor Machine":0,"Bulgarian Split Squat BW":0,
+
+ // ── CALVES ────────────────────────────────────────────────────────────────
+ "Standing Calf Raise":0,"Seated Calf Raise":0,"Donkey Calf Raise":0,
+ "Leg Press Calf Raise":0,"Smith Machine Calf Raise":0,
+ "Calf Raise BW":0,"Single-Leg Calf Raise":0,"Single-Leg Seated Calf Raise":0,
+ "Tibialis Raise":0,"Tib Bar Raise":0,
+
+ // ── CORE ──────────────────────────────────────────────────────────────────
+ // Flexion
+ "Cable Crunch":0,"Decline Crunch":0,"Reverse Crunch":0,"Stability Ball Crunch":0,
+ // Leg Raise Variations
+ "Hanging Knee Raise":0,"Hanging Leg Raise":0,"Toes-to-Bar":0,"V-Up":0,"Windshield Wipers":0,
+ // Anti-Rotation
+ "Pallof Press":0,"Bird Dog":0,"Dead Bug":0,
+ // Rotation
+ "Landmine Rotation":0,"Cable Woodchopper":0,"High-to-Low Woodchopper":0,"Low-to-High Woodchopper":0,
+ // Bracing / Stability
+ "Plank":0,"Side Plank":0,"RKC Plank":0,"Hollow Body Hold":0,"Hollow Rock":0,
+ "Ab Wheel Rollout":0,"Dragon Flag":0,"Copenhagen Plank":0,"Stir-the-Pot":0,
+ "L-Sit":0,"Tuck Hold":0,
+ // Loaded Core / Carries
+ "Farmers Carry":0,"Suitcase Carry":0,"Overhead Carry":0,"Turkish Get-Up":0,
+
+ // ── OLYMPIC / POWER ───────────────────────────────────────────────────────
+ "Power Clean":0,"Hang Clean":0,"Clean Pull":0,"Clean & Jerk":0,
+ "Snatch":0,"Hang Snatch":0,"Snatch Pull":0,
+ "Push Press":0,"Push Jerk":0,"Split Jerk":0,
+ "High Pull":0,"Dumbbell Snatch":0,"Dumbbell Clean":0,"Thruster":0,
+
+ // ── KETTLEBELL ────────────────────────────────────────────────────────────
+ "Kettlebell Swing":0,"American Kettlebell Swing":0,"Kettlebell Snatch":0,
+ "Kettlebell Clean":0,"Kettlebell Thruster":0,"Bottoms-Up Carry":0,
+
+ // ── STRONGMAN ─────────────────────────────────────────────────────────────
+ "Yoke Walk":0,"Sandbag Carry":0,"Sandbag Load":0,"Atlas Stone Lift":0,
+ "Tire Flip":0,"Log Press":0,"Husafell Carry":0,
+
+ // ── FUNCTIONAL / ATHLETIC ─────────────────────────────────────────────────
+ "Sled Push":0,"Reverse Sled Drag":0,"Lateral Sled Drag":0,
+ "Bear Crawl":0,"Battle Ropes":0,"Box Jump":0,
+ "Medicine Ball Slam":0,"Medicine Ball Rotational Throw":0,
+ "Mountain Climber":0,"Burpee":0,
+
+ // ── CARDIO MACHINES (duration/effort tracked, not weight) ─────────────────
+ "Treadmill Walk":0,"Treadmill Jog":0,"Treadmill Run":0,"Incline Treadmill Walk":0,
+ "Stair Climber":0,"StepMill":0,"Elliptical":0,"Arc Trainer":0,
+ "Upright Bike":0,"Recumbent Bike":0,"Air Bike":0,
+ "Rowing Ergometer":0,"Ski Erg":0,"VersaClimber":0,"Jacob's Ladder":0,"Water Rower":0,
+
+ // ── CARDIO INTERVALS ──────────────────────────────────────────────────────
+ "Sprint Intervals":0,"Hill Sprints":0,"Stadium Stairs":0,"Shuttle Runs":0,
+ "Tempo Runs":0,"Fartlek Running":0,"Prowler Sprint":0,
+
+ // ── CARDIO ENDURANCE ──────────────────────────────────────────────────────
+ "Walking":0,"Hiking":0,"Rucking":0,"Swimming":0,"Lap Swimming":0,
+ "Cycling":0,"Road Cycling":0,"Spin Class":0,"Kayaking":0,"Paddleboarding":0,
+ "Cross-Country Skiing":0,"Snowshoeing":0,
+
+ // ── COMBAT CONDITIONING (effort/rounds tracked) ───────────────────────────
+ "Heavy Bag Work":0,"Speed Bag":0,"Shadow Boxing":0,"Boxing Rounds":0,
+ "Kickboxing":0,"Muay Thai Pad Work":0
 };
 
 /* Weekly templates. Day idx 0..6 Mon..Sun */
@@ -1455,14 +1567,33 @@ function computeAdaptive(ex,holdToday,pauseVolume,wip,fatigueTier){
   }
 
   var loadR=load?Math.round(load/5)*5:0;
-  var bwExNames=["Push-Up","Close-Grip Push-Up","Wide Push-Up","Decline Push-Up","Diamond Push-Up",
-    "Pike Push-Up","Archer Push-Up","Pull-Up","Chin-Up","Inverted Row","Australian Pull-Up",
-    "Bodyweight Squat","Jump Squat","Bulgarian Split Squat BW","Reverse Lunge","Forward Lunge",
-    "Lateral Lunge","Pistol Squat","Step-Up BW","Glute Bridge BW","Single-Leg Glute Bridge",
-    "Hip Thrust BW","Good Morning BW","Single-Leg Hip Hinge","Nordic Curl BW","Calf Raise BW",
-    "Single-Leg Calf Raise","Dip BW","Bench Dip","Tricep Push-Up","Hollow Body Hold","L-Sit",
-    "Tuck Hold","Plank","Side Plank","RKC Plank","Hanging Knee Raise","Hanging Leg Raise",
-    "V-Up","Mountain Climber","Bear Crawl","Burpee"];
+  var bwExNames=[
+    // Chest / Push
+    "Push-Up","Close-Grip Push-Up","Wide Push-Up","Decline Push-Up","Diamond Push-Up",
+    "Archer Push-Up","Ring Push-Up","Deficit Push-Up","Weighted Push-Up",
+    // Shoulders
+    "Pike Push-Up","Handstand Push-Up",
+    // Back / Pull
+    "Pull-Up","Chin-Up","Inverted Row","Australian Pull-Up","Scapular Pull-Up","Rope Climb","TRX Row",
+    // Triceps
+    "Dip BW","Bench Dip","Tricep Push-Up","Ring Tricep Extension",
+    // Quads / Lunge
+    "Bodyweight Squat","Jump Squat","Reverse Lunge","Forward Lunge","Lateral Lunge",
+    "Pistol Squat","Step-Up BW","Walking Lunge","Bulgarian Split Squat BW",
+    // Hamstrings / Glutes
+    "Glute Bridge BW","Single-Leg Glute Bridge","Hip Thrust BW","Good Morning BW",
+    "Single-Leg Hip Hinge","Nordic Curl BW","Frog Pump","Curtsy Lunge","Kas Glute Bridge",
+    // Calves
+    "Calf Raise BW","Single-Leg Calf Raise",
+    // Core
+    "Plank","Side Plank","RKC Plank","Copenhagen Plank","Hollow Body Hold","Hollow Rock",
+    "L-Sit","Tuck Hold","Dragon Flag","Bird Dog","Dead Bug","Stir-the-Pot",
+    "Hanging Knee Raise","Hanging Leg Raise","Toes-to-Bar","V-Up","Windshield Wipers",
+    // Functional / Athletic
+    "Mountain Climber","Bear Crawl","Burpee","Turkish Get-Up",
+    // Combat
+    "Shadow Boxing","Heavy Bag Work","Speed Bag","Boxing Rounds","Kickboxing","Muay Thai Pad Work"
+  ];
   var isBW=bwExNames.indexOf(ex.n)>-1;
   var loadStr=load?("~"+loadR+" lb"):isBW?"bodyweight":"set by feel";
   return {
