@@ -2362,6 +2362,22 @@ function parseOFFServingGrams(servingSizeStr){
   if(mMl)return parseFloat(mMl[1]); // treat ml as g for liquids (close enough, density ~1 for most tracked liquids)
   return null;
 }
+// Cleans raw OFF/USDA product names (often ALL CAPS, comma-padded, or oddly spaced)
+// into the app's normal Title Case copy style. Pure string formatting, no network cost.
+var _NAME_SMALLWORDS={"of":1,"and":1,"the":1,"in":1,"with":1,"a":1,"to":1,"for":1,"on":1,"&":1};
+function titleCaseFoodName(raw){
+  if(!raw)return raw;
+  var s=String(raw).replace(/\s+/g," ").trim().replace(/\s*,\s*,/g,",").replace(/,\s*$/,"");
+  var words=s.toLowerCase().split(" ");
+  for(var i=0;i<words.length;i++){
+    var w=words[i];
+    if(!w)continue;
+    // keep short all-caps brand/unit tokens like USDA, UHT, BBQ readable: only re-cap if it was a normal alphabetic word
+    if(i>0&&_NAME_SMALLWORDS[w]){continue;}
+    words[i]=w.replace(/(^|-)([a-z])/g,function(m,p1,p2){return p1+p2.toUpperCase();});
+  }
+  return words.join(" ");
+}
 function offNutrimentsToFood(name,nutriments,qty,unit){
   var n=nutriments||{};
   var per100=function(key){return n[key+"_100g"]!==undefined?n[key+"_100g"]:0;};
@@ -2412,7 +2428,7 @@ function searchOFFByName(query){
       html+=fdcResults.map(function(f,i){
         var cal=f.foodNutrients&&f.foodNutrients.find(function(n){return (n.nutrientName||"").toLowerCase().indexOf("energy")>-1;});
         return '<div class="add-ex-row" onclick="useFDCResult('+i+')" style="padding:12px 4px;border-bottom:1px solid var(--border);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;">'+
-          f.description+' <span class="tag" style="font-size:10px;">USDA</span>'+
+          titleCaseFoodName(f.description)+' <span class="tag" style="font-size:10px;">USDA</span>'+
           '<div style="font-size:12px;color:var(--faint);font-weight:400;">'+
           (cal?Math.round(cal.value)+" kcal/100g":"no calorie data")+'</div></div>';
       }).join("");
@@ -2420,7 +2436,7 @@ function searchOFFByName(query){
     if(offResults.length){
       html+=offResults.map(function(p,i){
         return '<div class="add-ex-row" onclick="useOFFResult('+i+')" style="padding:12px 4px;border-bottom:1px solid var(--border);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;">'+
-          p.product_name+' <span class="tag" style="font-size:10px;">OFF</span>'+
+          titleCaseFoodName(p.product_name)+' <span class="tag" style="font-size:10px;">OFF</span>'+
           '<div style="font-size:12px;color:var(--faint);font-weight:400;">'+
           (p.nutriments&&p.nutriments["energy-kcal_100g"]!==undefined?Math.round(p.nutriments["energy-kcal_100g"])+" kcal/100g":"no calorie data")+'</div></div>';
       }).join("");
@@ -2433,7 +2449,7 @@ function searchOFFByName(query){
 var _offLastResults=[];
 function useOFFResult(i){
   var p=_offLastResults[i];if(!p)return;
-  var food=offNutrimentsToFood(p.product_name,p.nutriments,100,"g");
+  var food=offNutrimentsToFood(titleCaseFoodName(p.product_name),p.nutriments,100,"g");
   var servingG=parseOFFServingGrams(p.serving_size);
   var m=document.getElementById("addFoodModal");if(m)m.remove();
   showNewFoodForm(food,{source:"off",raw:p.nutriments,servingG:servingG,servingLabel:p.serving_size||null});
@@ -2486,7 +2502,7 @@ function searchFDCByName(query){
 var _fdcLastResults=[];
 function useFDCResult(i){
   var f=_fdcLastResults[i];if(!f)return;
-  var food=fdcNutrientsToFood(f.description,f.foodNutrients,100,"g");
+  var food=fdcNutrientsToFood(titleCaseFoodName(f.description),f.foodNutrients,100,"g");
   var servingG=(f.servingSizeUnit&&f.servingSizeUnit.toLowerCase()==="g"&&f.servingSize)?f.servingSize:null;
   var m=document.getElementById("addFoodModal");if(m)m.remove();
   showNewFoodForm(food,{source:"fdc",raw:f.foodNutrients,servingG:servingG,servingLabel:f.householdServingFullText||null});
@@ -2499,7 +2515,7 @@ function lookupOFFByBarcode(code){
     .then(function(data){
       closeBarcodeScanner();
       if(data&&data.product&&data.product.product_name){
-        var food=offNutrimentsToFood(data.product.product_name,data.product.nutriments,100,"g");
+        var food=offNutrimentsToFood(titleCaseFoodName(data.product.product_name),data.product.nutriments,100,"g");
         var servingG=parseOFFServingGrams(data.product.serving_size);
         var m=document.getElementById("addFoodModal");if(m)m.remove();
         showNewFoodForm(food,{source:"off",raw:data.product.nutriments,servingG:servingG,servingLabel:data.product.serving_size||null});
