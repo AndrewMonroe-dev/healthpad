@@ -155,7 +155,8 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 /* INPUTS */
 label.fld{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin:12px 0 5px;font-weight:700;}
 input,select,textarea{width:100%;font-family:var(--font);font-size:17px;color:var(--ink);background:var(--surf2);border:1.5px solid var(--line2);border-radius:12px;padding:13px 14px;outline:none;font-weight:600;}
-.ob-input{width:100%;padding:14px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;}
+input.ob-input,.ob-input{width:100%;padding:14px 16px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.28);color:#ffffff !important;border-radius:12px;font-size:16px;-webkit-tap-highlight-color:transparent;}
+input.ob-input::placeholder,.ob-input::placeholder{color:rgba(255,255,255,.45);font-weight:500;}
 .modal-fld{flex:1;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:13px;}
 input::placeholder{color:#b0b0b4;font-weight:500;}
 input:focus,select:focus,textarea:focus{border-color:var(--red);background:#fff;}
@@ -738,8 +739,9 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
   </div>
 
   <!-- ONBOARDING -->
-  <div id="onboarding" style="display:none;position:fixed;inset:0;background:rgba(10,6,4,.96);z-index:5000;overflow-y:auto;padding:0;">
-    <div style="max-width:480px;margin:0 auto;padding:40px 24px 60px;">
+  <div id="onboarding" style="display:none;position:fixed;inset:0;background:rgba(10,6,4,.96);z-index:5000;padding:0;flex-direction:column;">
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div style="max-width:480px;margin:0 auto;padding:40px 24px 24px;">
       <div style="text-align:center;margin-bottom:32px;">
         <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e0c279;margin-bottom:8px;">HealthPad Setup</div>
         <div style="font-size:22px;font-weight:700;color:#ffffff;">Let's build your program.</div>
@@ -857,8 +859,11 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
         </div>
       </div>
 
-      <!-- Nav buttons -->
-      <div style="display:flex;gap:12px;margin-top:32px;">
+    </div>
+    </div>
+    <!-- Pinned nav buttons — always visible, never scrolls away, always above bottom tab bar -->
+    <div style="flex-shrink:0;max-width:480px;width:100%;margin:0 auto;padding:16px 24px calc(env(safe-area-inset-bottom) + 20px);background:rgba(10,6,4,.96);border-top:1px solid rgba(255,255,255,.1);">
+      <div style="display:flex;gap:12px;">
         <button id="obBack" class="btn dark" style="flex:1;display:none;touch-action:manipulation;" onclick="obPrev()">Back</button>
         <button id="obNext" class="btn" style="flex:2;touch-action:manipulation;" onclick="obNext()">Next</button>
       </div>
@@ -3096,11 +3101,13 @@ function loadAndShowQuote(){
 var OB={step:1,total:9,answers:{goal:null,exp:null,days:null,equip:null,limits:[],sex:null,age:null,heightFt:null,heightIn:null,weight:null,bodyFat:null,activity:null}};
 
 function obShow(){
-  document.getElementById("onboarding").style.display="block";
+  document.getElementById("onboarding").style.display="flex";
+  var nv=document.querySelector(".nav"); if(nv)nv.style.display="none";
   obRender();
 }
 function obHide(){
   document.getElementById("onboarding").style.display="none";
+  var nv=document.querySelector(".nav"); if(nv)nv.style.display="flex";
 }
 function obRender(){
   document.getElementById("obProgress").style.width=(OB.step/OB.total*100)+"%";
