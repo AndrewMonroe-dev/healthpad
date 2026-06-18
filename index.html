@@ -2544,7 +2544,7 @@ function showBarcodeScanner(){
   modal.innerHTML=
     '<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.5);position:relative;z-index:2;">'+
       '<div style="font-weight:700;font-size:16px;color:#fff;">Scan Barcode</div>'+
-      '<button onclick="closeBarcodeScanner()" style="background:rgba(255,255,255,.15);border:none;font-size:20px;color:#fff;cursor:pointer;padding:8px 14px;border-radius:8px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.3);">&#x2715; Close</button>'+
+      '<button onclick="closeBarcodeScanner()" style="position:relative;z-index:10;background:rgba(255,255,255,.15);border:none;font-size:20px;color:#fff;cursor:pointer;padding:8px 14px;border-radius:8px;touch-action:manipulation;-webkit-tap-highlight-color:rgba(255,255,255,.3);">&#x2715; Close</button>'+
     '</div>'+
     '<div style="flex:1;position:relative;display:flex;align-items:center;justify-content:center;">'+
       '<video id="barcodeVideo" style="width:100%;height:100%;object-fit:cover;"></video>'+
@@ -2581,41 +2581,39 @@ function showBarcodeScanner(){
         }
       }catch(eh){hints=null;}
       _zxingReader=hints?new window.ZXingBrowser.BrowserMultiFormatReader(hints):new window.ZXingBrowser.BrowserMultiFormatReader();
-      window.ZXingBrowser.BrowserCodeReader.listVideoInputDevices().then(function(devices){
-        if(!devices.length){if(statusEl)statusEl.textContent="No camera found. Tap Close above.";return;}
-        var backCam=devices.find(function(d){return /back|rear|environment/i.test(d.label);});
-        var deviceId=(backCam||devices[devices.length-1]).deviceId;
-        if(statusEl)statusEl.textContent="Point at a barcode";
-        // High resolution + continuous autofocus give the decoder a much sharper, better-focused
-        // frame to work with than the browser's bare default — this is the single biggest lever
-        // for real-world hit rate on small/close-up UPC codes.
-        var constraints={
-          video:{
-            deviceId:{exact:deviceId},
-            width:{ideal:1920},
-            height:{ideal:1080},
-            focusMode:"continuous",
-            advanced:[{focusMode:"continuous"}]
-          }
-        };
-        function onDecode(result,err,controls){
-          _zxingControls=controls;
-          if(!_torchChecked){_torchChecked=true;setupTorchButton(controls);}
-          if(result){
-            var code=result.getText();
-            if(statusEl)statusEl.textContent="Found: "+code;
-            try{navigator.vibrate&&navigator.vibrate(80);}catch(e){}
-            controls.stop();
-            lookupOFFByBarcode(code);
-          }
+      function onDecode(result,err,controls){
+        _zxingControls=controls;
+        if(!_torchChecked){_torchChecked=true;setupTorchButton(controls);}
+        if(result){
+          var code=result.getText();
+          if(statusEl)statusEl.textContent="Found: "+code;
+          try{navigator.vibrate&&navigator.vibrate(80);}catch(e){}
+          controls.stop();
+          lookupOFFByBarcode(code);
         }
-        _zxingReader.decodeFromConstraints(constraints,"barcodeVideo",onDecode)
-          .catch(function(){
-            // Constrained request failed (older browser, unsupported constraint, etc.) — fall back
-            // to the plain device-id call so scanning still works, just without the tuning.
-            _zxingReader.decodeFromVideoDevice(deviceId,"barcodeVideo",onDecode);
-          });
-      }).catch(function(){if(statusEl)statusEl.textContent="Camera access denied or unavailable. Tap Close above.";});
+      }
+      if(statusEl)statusEl.textContent="Point at a barcode";
+      // facingMode is the standards-based way to request the rear camera and does not depend on
+      // device labels being populated (labels are often blank until permission has been granted
+      // once already, which is what was causing the front camera to get picked by mistake).
+      var idealConstraints={video:{facingMode:{exact:"environment"},width:{ideal:1920},height:{ideal:1080},advanced:[{focusMode:"continuous"}]}};
+      var basicEnvConstraints={video:{facingMode:"environment"}};
+      _zxingReader.decodeFromConstraints(idealConstraints,"barcodeVideo",onDecode)
+        .catch(function(){
+          // High-res rear-camera request failed (older device, unsupported resolution, etc.) —
+          // retry with a plain rear-camera request before ever falling back to "any camera".
+          _zxingReader.decodeFromConstraints(basicEnvConstraints,"barcodeVideo",onDecode)
+            .catch(function(){
+              // Device genuinely has no distinguishable rear camera (e.g. some laptops/desktops) —
+              // fall back to device enumeration only as a last resort.
+              window.ZXingBrowser.BrowserCodeReader.listVideoInputDevices().then(function(devices){
+                if(!devices.length){if(statusEl)statusEl.textContent="No camera found. Tap Close above.";return;}
+                var backCam=devices.find(function(d){return /back|rear|environment/i.test(d.label);});
+                var deviceId=(backCam||devices[devices.length-1]).deviceId;
+                _zxingReader.decodeFromVideoDevice(deviceId,"barcodeVideo",onDecode);
+              }).catch(function(){if(statusEl)statusEl.textContent="Camera access denied or unavailable. Tap Close above.";});
+            });
+        });
     }catch(e){if(statusEl)statusEl.textContent="Scanner failed to start. Tap Close above.";}
   });
 }
