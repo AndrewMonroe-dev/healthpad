@@ -4246,7 +4246,7 @@ function showNewFoodForm(prefill,sourceMeta){
       '<label class="fld">Calculate for</label>'+
       '<div class="row3" style="margin-top:0;">'+
         '<select id="nfRecalcUnit" onchange="recalcNewFoodFromSource()" style="flex:1;">'+opts+'</select>'+
-        '<input id="nfRecalcAmount" type="number" inputmode="decimal" value="100" style="flex:1;" oninput="recalcNewFoodFromSource()">'+
+        '<input id="nfRecalcAmount" type="number" inputmode="decimal" value="1" style="flex:1;" oninput="recalcNewFoodFromSource()">'+
       '</div>'+
       '<div class="note dim" id="nfRecalcNote" style="margin-top:4px;margin-bottom:10px;"></div>';
   }
@@ -4300,7 +4300,7 @@ function showNewFoodForm(prefill,sourceMeta){
     }
     if(sourceMeta){
       var unitSel=document.getElementById("nfRecalcUnit");
-      if(unitSel&&sourceMeta.servingG)unitSel.value="serving"; // default to the labeled serving when one exists
+      if(unitSel)unitSel.value="oz"; // default to ounces for database results
       recalcNewFoodFromSource();
     } else {
       updateNfPointsDisplay();
