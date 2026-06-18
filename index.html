@@ -4215,6 +4215,7 @@ function renderFoodLogList(){
         '<div><div class="ex-name">'+e.name+'</div>'+
         '<div class="ex-target">'+(e.cal||0)+' kcal \u2022 '+(e.pro||0)+'g protein \u2022 '+pts+' pts \u2022 '+e.qty+' '+e.unit+'</div></div>'+
         '<div style="display:flex;align-items:center;gap:8px;">'+
+          '<button class="btn sm ghost" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="event.stopPropagation();editFoodEntry('+e.id+')">Edit</button>'+
           '<button class="btn sm dark" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="event.stopPropagation();removeFoodEntry('+e.id+')">Remove</button>'+
           '<span style="color:var(--faint);">\u25be</span>'+
         '</div>'+
@@ -4238,6 +4239,14 @@ function removeFoodEntry(id){
   DB.foodLog=DB.foodLog.filter(function(e){return e.id!==id;});
   syncNutritionAggregate();
   renderFoodLogList();renderFoodsTab();trySheetSync();
+}
+function editFoodEntry(id){
+  var e=DB.foodLog.find(function(x){return x.id===id;});
+  if(!e)return;
+  // No raw per-100g source data exists for an already-logged entry, so open the form in plain
+  // manual-edit mode (no sourceMeta) \u2014 same as a fresh manual entry, just prefilled with its
+  // current values. editId tells saveNewFood to update this entry in place instead of logging new.
+  showNewFoodForm(e,null,id);
 }
 function showAddFoodModal(){
   var recent=DB.myFoods.slice().sort(function(a,b){return (b.lastUsed||0)-(a.lastUsed||0);});
@@ -4293,17 +4302,18 @@ function pickFood(id){
   var f=DB.myFoods.filter(function(x){return String(x.id)===String(id);})[0];
   if(!f)return;
   f.lastUsed=Date.now();
-  var entry=Object.assign({},f,{id:Date.now(),d:todayStr()});
-  DB.foodLog.push(entry);
-  syncNutritionAggregate();
-  var m=document.getElementById("addFoodModal");if(m)m.remove();
-  renderFoodLogList();renderFoodsTab();toast(f.name+" added.");trySheetSync();
+  save();
+  // Open the editable form instead of logging immediately, so the amount can be adjusted
+  // (e.g. a different quantity than what was saved) before it's added to today's log.
+  showNewFoodForm(f,null,null);
 }
 var _nfSourceData=null; // holds raw nutriment data + serving info for live unit recalculation, null for manual entries
-function showNewFoodForm(prefill,sourceMeta){
+var _nfEditId=null; // set when editing an existing logged entry in place, null when logging something new
+function showNewFoodForm(prefill,sourceMeta,editId){
   var modal=document.getElementById("addFoodModal");if(modal)modal.remove();
   var existingNf=document.getElementById("newFoodModal");if(existingNf)existingNf.remove();
   _nfSourceData=sourceMeta||null;
+  _nfEditId=editId||null;
   var m2=document.createElement("div");
   m2.id="newFoodModal";
   m2.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
@@ -4325,7 +4335,7 @@ function showNewFoodForm(prefill,sourceMeta){
   m2.innerHTML=
     '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;color:var(--ink);padding-bottom:20px;">'+
     '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
-      '<div style="font-weight:700;font-size:16px;">Log a New Food</div>'+
+      '<div style="font-weight:700;font-size:16px;">'+(editId?"Edit Food":"Log a New Food")+'</div>'+
       '<button data-close="newFoodModal" onclick="closeExModal(this.dataset.close)" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
     '</div>'+
     '<div style="padding:0 16px;">'+
@@ -4357,7 +4367,7 @@ function showNewFoodForm(prefill,sourceMeta){
       '<div><label class="fld">Calcium mg <span style="opacity:.55;font-weight:400;">(optional)</span></label><input id="nfCalcium" type="number" inputmode="numeric" placeholder="mg"></div>'+
       '<div><label class="fld">Points <span style="opacity:.55;font-weight:400;">(est.)</span></label><input id="nfPoints" type="number" inputmode="numeric" placeholder="0" readonly style="opacity:.75;"></div>'+
     '</div>'+
-    '<button class="btn sm" style="width:100%;margin-top:14px;" onclick="saveNewFood()">Log It</button>'+
+    '<button class="btn sm" style="width:100%;margin-top:14px;" onclick="saveNewFood()">'+(editId?"Save Changes":"Log It")+'</button>'+
     '</div></div>';
   document.body.appendChild(m2);
   setTimeout(function(){
@@ -4440,8 +4450,7 @@ function saveNewFood(){
   var satFat=parseInt(document.getElementById("nfSatFat").value)||0;
   var ptsField=document.getElementById("nfPoints");
   var points=ptsField&&ptsField.value!==""?parseInt(ptsField.value):calcPoints(cal,satFat,sugar,pro);
-  var f={
-    id:Date.now(),
+  var fields={
     name:name,
     qty:parseFloat(document.getElementById("nfQty").value)||1,
     unit:(document.getElementById("nfUnit").value||"serving").trim(),
@@ -4457,9 +4466,20 @@ function saveNewFood(){
     veg:parseInt(document.getElementById("nfVeg").value)||0,
     potassium:parseInt(document.getElementById("nfPotassium").value)||0,
     calcium:parseInt(document.getElementById("nfCalcium").value)||0,
-    points:points,
-    lastUsed:Date.now()
+    points:points
   };
+  if(_nfEditId!=null){
+    // Editing an already-logged entry in place — update its values, keep its id/date, don't touch My Foods.
+    var logIdx=DB.foodLog.findIndex(function(x){return x.id===_nfEditId;});
+    if(logIdx===-1){toast("Couldn't find that entry to update");return;}
+    DB.foodLog[logIdx]=Object.assign({},DB.foodLog[logIdx],fields);
+    syncNutritionAggregate();
+    var m2=document.getElementById("newFoodModal");if(m2)m2.remove();
+    _nfEditId=null;
+    renderFoodLogList();renderFoodsTab();toast(name+" updated.");trySheetSync();
+    return;
+  }
+  var f=Object.assign({id:Date.now()},fields,{lastUsed:Date.now()});
   // De-dupe by case-insensitive name match \u2014 update the existing saved food instead of creating a duplicate
   var existingIdx=DB.myFoods.findIndex(function(x){return x.name.toLowerCase()===name.toLowerCase();});
   if(existingIdx>-1){f.id=DB.myFoods[existingIdx].id;DB.myFoods[existingIdx]=f;}
