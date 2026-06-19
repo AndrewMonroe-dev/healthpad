@@ -127,7 +127,7 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;}
 .hero .ring{width:210px;height:210px;}
 .hero-date{font-size:13px;color:var(--gold);font-family:var(--serif);font-style:italic;margin-top:12px;}
-.ringrow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+.ringrow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;margin-bottom:14px;}
 .ringrow-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px;}
 .ringrow-3 .ringcard{padding:12px 4px 10px;}
 .ringrow-3 .ringcard .ring{width:96px;height:96px;}
@@ -135,6 +135,10 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ringrow-3 .ring-sub{font-size:10px;}
 .ringrow-3 .ring-lbl{font-size:10px;}
 .ringcard{background:var(--surf);border:1px solid var(--line2);box-shadow:0 1px 4px rgba(0,0,0,0.07);border-radius:var(--r);padding:16px 10px 14px;display:flex;flex-direction:column;align-items:center;}
+
+.nutbox-water-btns{display:flex;gap:6px;margin-top:8px;}
+.nutbox-water-btn{font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px;border:1px solid rgba(74,144,164,0.35);background:rgba(74,144,164,0.12);color:#2d6b7d;}
+.nutbox-water-btn:active{background:rgba(74,144,164,0.25);}
 .ringcard .ring{width:148px;height:148px;}
 
 /* PILLS */
@@ -361,22 +365,77 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
           <div class="ring-center"><div class="ring-val sm" id="homePro">0</div><div class="ring-lbl">protein g</div><div class="ring-lbl" style="margin-top:1px;">today</div></div>
         </div>
       </div>
-    </div>
-
-    <div class="sec" style="margin-top:14px;">
-      <div class="note dim" id="paceNote"></div>
-    </div>
-
-    <div id="progressionBanner" style="display:none;margin:0 0 4px 0;"></div>
-
-    <div class="sec">
-      <div class="sec-h">Today &middot; The Plan <span class="tag" id="todayPhaseTag"></span></div>
-      <div style="margin-bottom:12px;">
-        <span class="phase-pill" id="phasePill">&mdash;</span>
-        <span class="pill line" id="weekPill" style="margin-left:7px;">&mdash;</span>
+      <div class="ringcard" id="nbCal" onclick="toggleCalPoints()" style="cursor:pointer;">
+        <div class="ring">
+          <svg viewBox="0 0 130 130" width="148" height="148">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill" id="nbCalRing" cx="65" cy="65" r="54" stroke-width="11" style="stroke:var(--red);"/>
+          </svg>
+          <div class="ring-center"><div class="ring-val sm" id="nbCalVal">0</div><div class="ring-lbl" id="nbCalLbl">calories</div><div class="ring-lbl" id="nbCalSub" style="margin-top:1px;">of 0</div></div>
+        </div>
       </div>
-      <div class="note" id="phaseNote"></div>
+      <div class="ringcard">
+        <div class="ring">
+          <svg viewBox="0 0 130 130" width="148" height="148">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill" id="nbCarbRing" cx="65" cy="65" r="54" stroke-width="11" style="stroke:var(--gold);"/>
+          </svg>
+          <div class="ring-center"><div class="ring-val sm" id="nbCarbVal">0</div><div class="ring-lbl">carbs</div><div class="ring-lbl" id="nbCarbSub" style="margin-top:1px;">of 0g</div></div>
+        </div>
+      </div>
+      <div class="ringcard">
+        <div class="ring">
+          <svg viewBox="0 0 130 130" width="148" height="148">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill" id="nbFatRing" cx="65" cy="65" r="54" stroke-width="11" style="stroke:#7a8fb0;"/>
+          </svg>
+          <div class="ring-center"><div class="ring-val sm" id="nbFatVal">0</div><div class="ring-lbl">fat</div><div class="ring-lbl" id="nbFatSub" style="margin-top:1px;">of 0g</div></div>
+        </div>
+      </div>
+      <div class="ringcard">
+        <div class="ring">
+          <svg viewBox="0 0 130 130" width="148" height="148">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill" id="nbFiberRing" cx="65" cy="65" r="54" stroke-width="11" style="stroke:#4a7c59;"/>
+          </svg>
+          <div class="ring-center"><div class="ring-val sm" id="nbFiberVal">0</div><div class="ring-lbl">fiber</div><div class="ring-lbl" id="nbFiberSub" style="margin-top:1px;">of 0g</div></div>
+        </div>
+      </div>
+      <div class="ringcard">
+        <div class="ring">
+          <svg viewBox="0 0 130 130" width="148" height="148">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill" id="nbSugarRing" cx="65" cy="65" r="54" stroke-width="11" style="stroke:#c478a6;"/>
+          </svg>
+          <div class="ring-center"><div class="ring-val sm" id="nbSugarVal">0</div><div class="ring-lbl">sugar</div><div class="ring-lbl" id="nbSugarSub" style="margin-top:1px;">of 0g</div></div>
+        </div>
+      </div>
+      <div class="ringcard">
+        <div class="ring">
+          <svg viewBox="0 0 130 130" width="148" height="148">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill" id="nbSodiumRing" cx="65" cy="65" r="54" stroke-width="11" style="stroke:#787878;"/>
+          </svg>
+          <div class="ring-center"><div class="ring-val sm" id="nbSodiumVal">0</div><div class="ring-lbl">sodium</div><div class="ring-lbl" id="nbSodiumSub" style="margin-top:1px;">of 0mg</div></div>
+        </div>
+      </div>
+      <div class="ringcard" id="nbWaterBox">
+        <div class="ring">
+          <svg viewBox="0 0 130 130" width="148" height="148">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill" id="nbWaterRing" cx="65" cy="65" r="54" stroke-width="11" style="stroke:#4a90a4;"/>
+          </svg>
+          <div class="ring-center"><div class="ring-val sm" id="nbWaterVal">0</div><div class="ring-lbl">water</div><div class="ring-lbl" id="nbWaterSub" style="margin-top:1px;">of 64 oz</div></div>
+        </div>
+        <div class="nutbox-water-btns">
+          <button class="nutbox-water-btn" onclick="event.stopPropagation();quickAddWater(8)">+8</button>
+          <button class="nutbox-water-btn" onclick="event.stopPropagation();quickAddWater(16)">+16</button>
+        </div>
+      </div>
     </div>
+
+    <div id="paceNote" style="display:none;"></div>
+    <div id="progressionBanner" style="display:none;"></div>
 
     <div class="sec">
       <div class="sec-h">Morning Readiness</div>
@@ -387,11 +446,6 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <label class="fld">Soreness / pain</label>
       <div class="choices" data-grp="pain"><div class="choice" data-v="lots">Lots</div><div class="choice" data-v="some">Some</div><div class="choice" data-v="none">None</div></div>
       <button class="btn sm ghost" onclick="saveReadiness()">Log Readiness</button>
-    </div>
-
-    <div class="sec">
-      <div class="sec-h">Milestones</div>
-      <div id="mileList"></div>
     </div>
   </div>
 
@@ -544,6 +598,10 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 
   <!-- PROGRESS -->
   <div class="view" id="v-prog">
+    <div class="sec">
+      <div class="sec-h">Milestones</div>
+      <div id="mileList"></div>
+    </div>
     <div class="sec">
       <div class="sec-h">Weight Trajectory</div>
       <div class="chartbox" id="weightChart"></div>
@@ -1176,7 +1234,7 @@ var SPLIT_HEAVY=[
 // (no copy-paste needed on their end) while still saving locally on their device from then on.
 var PLAYTESTER_SHEET_URL="https://script.google.com/macros/s/AKfycbyZY0ljj6wmeADNHVics-gKR4cV7i3614ngVl7ZVGxkCVOYLC1VJ_ZbDMklcQQsNOzw-Q/exec";
 var PLAYTESTER_FDC_KEY="cgYh3ZegjtLwvbhppgBYz6wKI0YcTKe99FKyrlcF";
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -1190,6 +1248,7 @@ function load(){
   if(DB.settings.macroProPct===undefined)DB.settings.macroProPct=30;
   if(DB.settings.macroCarbPct===undefined)DB.settings.macroCarbPct=40;
   if(DB.settings.macroFatPct===undefined)DB.settings.macroFatPct=30;
+  if(DB.settings.waterTarget===undefined)DB.settings.waterTarget=64;
   if(!DB.foodLog)DB.foodLog=[];
   if(!DB.myFoods)DB.myFoods=[];
 }
@@ -1326,7 +1385,7 @@ function renderHome(){
         } else {
           document.getElementById("paceNote").textContent="Weight holding steady. Strength gains alongside stable weight = recomp working.";
         }
-      } else {document.getElementById("paceNote").textContent="Keep logging \u2014 your trend appears after a few weigh-ins.";}
+      } else {document.getElementById("paceNote").textContent="";}
     } else if(goalType==="muscle"){
       var gained=Math.max(0,lw-startW);
       countUp("homeToGo",gained,1,"");
@@ -1341,7 +1400,7 @@ function renderHome(){
         } else {
           document.getElementById("paceNote").textContent="Weight holding. Check calorie surplus and protein target in your log.";
         }
-      } else {document.getElementById("paceNote").textContent="Keep logging \u2014 your gain trend appears after a few weigh-ins.";}
+      } else {document.getElementById("paceNote").textContent="";}
     } else {
       // Other goals — just show current weight, neutral ring
       document.getElementById("homeToGo").textContent=lw.toFixed(1);
@@ -1357,14 +1416,59 @@ function renderHome(){
   var _pt=(DB.settings&&DB.settings.proteinTarget)||PROTEIN_TARGET;
   setRing("ringPro",pro/_pt);
   var ph=currentPhase();
-  document.getElementById("phasePill").textContent=ph.name;
-  document.getElementById("phasePill").className="phase-pill"+(isDeload()?" deload":"");
-  document.getElementById("weekPill").textContent="Week "+weekNumber()+(isDeload()?" \u2022 Deload":"");
-  document.getElementById("todayPhaseTag").textContent=ph.key;
-  document.getElementById("phaseNote").textContent=ph.note;
   ["sleep","energy","pain"].forEach(function(g){document.querySelectorAll('[data-grp="'+g+'"] .choice').forEach(function(c){c.classList.remove("sel","g","w","b");});});
-  renderMilestones();
+  renderHomeNutBoxes();
   if(checkProgression)checkProgression();
+}
+
+function renderHomeNutBoxes(){
+  var nt=todayNutrition()||{};
+  var style=getTrackingStyle();
+  var calLbl=document.getElementById("nbCalLbl");
+  var calVal=document.getElementById("nbCalVal");
+  var calSub=document.getElementById("nbCalSub");
+  if(style==="points"){
+    var budget=getPointsBudget();
+    var pts=nt.points||0;
+    if(calLbl)calLbl.textContent="ww points";
+    if(calVal)calVal.textContent=pts;
+    if(calSub)calSub.textContent="of "+budget;
+    setRing("nbCalRing",budget>0?pts/budget:0);
+  } else {
+    var phc=currentPhase();
+    var calTarget=(DB.settings&&DB.settings.currentCalTarget)||phc.cal||2250;
+    var cal=nt.cal||0;
+    if(calLbl)calLbl.textContent="calories";
+    if(calVal)calVal.textContent=cal;
+    if(calSub)calSub.textContent="of "+calTarget;
+    setRing("nbCalRing",calTarget>0?cal/calTarget:0);
+  }
+
+  var mt=getMacroTargets();
+  var carb=nt.carb||0, fat=nt.fat||0;
+  document.getElementById("nbCarbVal").textContent=carb;
+  document.getElementById("nbCarbSub").textContent="of "+mt.carbG+"g";
+  setRing("nbCarbRing",mt.carbG>0?carb/mt.carbG:0);
+  document.getElementById("nbFatVal").textContent=fat;
+  document.getElementById("nbFatSub").textContent="of "+mt.fatG+"g";
+  setRing("nbFatRing",mt.fatG>0?fat/mt.fatG:0);
+
+  var tgt=getNutTargets();
+  var fiber=nt.fiber||0, sugar=nt.sugar||0, sodium=nt.sodium||0, water=nt.water||0;
+  document.getElementById("nbFiberVal").textContent=fiber;
+  document.getElementById("nbFiberSub").textContent="of "+tgt.fiberGood+"g";
+  setRing("nbFiberRing",tgt.fiberGood>0?fiber/tgt.fiberGood:0);
+  document.getElementById("nbSugarVal").textContent=sugar;
+  document.getElementById("nbSugarSub").textContent="of "+tgt.sugarMax+"g";
+  setRing("nbSugarRing",tgt.sugarMax>0?sugar/tgt.sugarMax:0);
+  document.getElementById("nbSodiumVal").textContent=sodium;
+  document.getElementById("nbSodiumSub").textContent="of "+tgt.sodiumMax+"mg";
+  setRing("nbSodiumRing",tgt.sodiumMax>0?sodium/tgt.sodiumMax:0);
+
+  var waterTarget=(DB.settings&&DB.settings.waterTarget)||64;
+  document.getElementById("nbWaterVal").textContent=water;
+  document.getElementById("nbWaterSub").textContent="of "+waterTarget+" oz";
+  setRing("nbWaterRing",waterTarget>0?water/waterTarget:0);
 }
 
 function defaultMilestones(goalType){
@@ -1993,6 +2097,26 @@ function todaysFoodEntries(){
   var t=todayStr();
   return DB.foodLog.filter(function(e){return e.d===t;});
 }
+function quickAddWater(oz){
+  var entry={d:todayStr(),name:"Water",t:new Date().toISOString()};
+  NUT_FIELDS.forEach(function(f){entry[f]=0;});
+  entry.water=oz;
+  DB.foodLog.push(entry);
+  syncNutritionAggregate();
+  save();
+  renderHome();
+  if(typeof renderFoodsTab==="function")renderFoodsTab();
+  toast("+"+oz+" fl oz water logged");
+}
+function toggleCalPoints(){
+  var cur=getTrackingStyle();
+  var next=cur==="points"?"calories":"points";
+  DB.settings.trackingStyle=next;
+  save();
+  renderHomeNutBoxes();
+  if(typeof renderFoodsTab==="function")renderFoodsTab();
+  toast(next==="points"?"Showing WW Points":"Showing Calories");
+}
 function sumFoodEntries(entries){
   var sums={};
   NUT_FIELDS.forEach(function(f){sums[f]=0;});
@@ -2141,6 +2265,7 @@ function drawNutrition(){
 }
 
 function renderProg(){
+  renderMilestones();
   drawWeight();
   weeklyRecap();
   drawRHR();
