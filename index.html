@@ -5476,15 +5476,18 @@ function getExerciseConflictNote(name,medResult){
   if(!tags)return null;
   var src=medResult.sourceClasses;
   var hits=[];
-  function add(field,tagKey,modalityName){
-    if(tags[tagKey]&&medResult.fields.excludeMovementTags.indexOf(modalityName)>-1&&src[field]){
-      src[field].forEach(function(c){if(hits.indexOf(c)===-1)hits.push(c);});
+  // fallRiskFlag is a general signal (some classes pair it with explicit excludeMovementTags
+  // entries -- blood_thinner, cns_depressant_fall_risk, opioid_analgesic -- others set it alone,
+  // e.g. hormone_adt/alpha_blocker/muscle_relaxant, meaning "this person has elevated fall
+  // consequence/likelihood" without listing specific excluded patterns). Bug found via direct
+  // user testing: the original version of this function required excludeMovementTags to ALSO
+  // contain the matching string, which silently dropped any fallRiskFlag-only class (3 of 6).
+  // Fixed: fallRiskFlag alone now flags balance/overhead/grip-relevant exercises directly.
+  if(src.fallRiskFlag){
+    if(tags.unsupportedBalance||tags.overheadUnstable||tags.gripSkinTraumaRisk){
+      src.fallRiskFlag.forEach(function(c){if(hits.indexOf(c)===-1)hits.push(c);});
     }
   }
-  add("fallRiskFlag","unsupportedBalance","unsupported_balance");
-  add("fallRiskFlag","overheadUnstable","overhead_unstable");
-  if(tags.gripSkinTraumaRisk&&medResult.fields.excludeMovementTags.indexOf("grip_skin_trauma_risk")>-1&&src.fallRiskFlag)
-    src.fallRiskFlag.forEach(function(c){if(hits.indexOf(c)===-1)hits.push(c);});
   if(tags.achillesLoading&&medResult.fields.tendonCautionFlag&&src.tendonCautionFlag)
     src.tendonCautionFlag.forEach(function(c){if(hits.indexOf(c)===-1)hits.push(c);});
   if(!hits.length)return null;
