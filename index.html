@@ -1955,8 +1955,17 @@ function renderTrain(){
 
   var flaggedAdj=allAdj.filter(function(a){return a.sev==="crit"||a.sev==="warn";});
   var infoAdj=allAdj.filter(function(a){return a.sev==="info";});
-  var infoHtml=infoAdj.map(function(a){return '<div class="adapt-panel info">'+a.label+': '+a.msg+'</div>';}).join("");
+  var infoHtml="";
+  if(infoAdj.length){
+    var summaryLabel=infoAdj.length===1?infoAdj[0].label:infoAdj.length+" medication notes";
+    infoHtml='<div class="adapt-panel info" style="cursor:pointer;" onclick="this.classList.toggle(&quot;expanded&quot;);this.querySelector(&quot;.med-summary&quot;).style.display=this.classList.contains(&quot;expanded&quot;)?&quot;none&quot;:&quot;block&quot;;this.querySelector(&quot;.med-full&quot;).style.display=this.classList.contains(&quot;expanded&quot;)?&quot;block&quot;:&quot;none&quot;;">'+
+      '<div class="med-summary">&#8505; '+summaryLabel+' &middot; tap for details</div>'+
+      '<div class="med-full" style="display:none;">'+infoAdj.map(function(a){return '<div style="margin-bottom:8px;"><b>'+a.label+':</b> '+a.msg+'</div>';}).join("")+'</div>'+
+    '</div>';
+  }
   document.getElementById("dayNote").innerHTML='<div class="adapt-panel '+stateCls+'">'+stateTxt+'</div><div class="note dim">Log RIR (reps in reserve) on every set. E.g., RIR 2 = you had 2 reps left in the tank.</div>'+(flaggedAdj.length?'<div class="adapt-panel held" style="margin-top:8px;">&#9888; Active adjustments: '+flaggedAdj.map(function(a){return a.label;}).join(", ")+'</div>':'')+infoHtml;
+
+  var medR=getMedicationConstraints?getMedicationConstraints():null;
 
   var html2="";
   exList.forEach(function(ex,ei){
@@ -1970,7 +1979,9 @@ function renderTrain(){
         '<input type="number" inputmode="numeric" placeholder="reps" data-ex="'+ei+'" data-set="'+si+'" data-f="r">'+
         '<input type="number" inputmode="decimal" placeholder="RIR" data-ex="'+ei+'" data-set="'+si+'" data-f="rir"></div>';
     }
-    var badges=(ex.bone?' <span class="pill bone">Bone</span>':'')+(ex.added?' <span class="pill added">Added</span>':'')+(holdToday?' <span class="pill held">Held</span>':'')+(a.extra>0?' <span class="pill added">+'+a.extra+' set</span>':'');
+    var medNote=medR?getExerciseConflictNote(ex.n,medR):null;
+    var medBadge=medNote?' <span class="pill medcaution">&#9888; Med Note</span>':'';
+    var badges=(ex.bone?' <span class="pill bone">Bone</span>':'')+(ex.added?' <span class="pill added">Added</span>':'')+(holdToday?' <span class="pill held">Held</span>':'')+(a.extra>0?' <span class="pill added">+'+a.extra+' set</span>':'')+medBadge;
     html2+='<div class="ex" data-name="'+ex.n+'">'+
       '<div class="ex-h" onclick="toggleEx(this)">'+
         '<div><div class="ex-name">'+ex.n+badges+'</div>'+
@@ -1990,6 +2001,7 @@ function renderTrain(){
           '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="removeSessionSet('+ei+')">- Set</button>'+
         '</div>'+
         (ex.bone?'<div class="bonebar">Bone-priority lift. Reduce load before skipping.</div>':'')+
+        (medNote?'<div class="bonebar" style="background:rgba(217,119,6,.10);border-color:rgba(217,119,6,.4);color:#a85d00;">Medication note: this exercise involves a movement pattern flagged by your '+medNote.split(", ").join(" and ")+' medication(s). See Setup for full guidance.</div>':'')+
       '</div></div>';
   });
   html2+='<div style="margin-top:14px;"><button class="btn sm ghost" style="width:100%;touch-action:manipulation;" onclick="showAddExModal()">+ Add Exercise to Today</button></div>';
