@@ -3439,6 +3439,7 @@ function toggleMedTag(id){
   else{DB.settings.medCategories.push(id);}
   save();
   renderMedTags();
+  promptRegenerateDebounced();
 }
 
 function saveMedStack(){
@@ -3448,6 +3449,22 @@ function saveMedStack(){
   save();
   document.getElementById("medStackEcho").textContent="Saved.";
   setTimeout(function(){document.getElementById("medStackEcho").textContent="";},2000);
+  promptRegenerateNow();
+}
+
+// Checkbox toggles fire one at a time -- debounce so checking several boxes in a row only
+// prompts once, after the person is done clicking, not once per click.
+var _regenPromptTimer=null;
+function promptRegenerateDebounced(){
+  if(_regenPromptTimer)clearTimeout(_regenPromptTimer);
+  _regenPromptTimer=setTimeout(promptRegenerateNow,1200);
+}
+function promptRegenerateNow(){
+  if(!DB.settings||!DB.settings.hasOnboarded)return; // nothing to regenerate yet
+  if(!DB.program||!DB.program.split)return;
+  if(confirm("Your medication list changed. Regenerate your training program's exercise selection to reflect this? (Manual exercise changes will be lost.)")){
+    regenerateProgram();
+  }
 }
 
 function loadMedStack(){
@@ -3912,6 +3929,41 @@ function obFinish(){
   obHide();
   renderHome();
   toast("Program built — BMR "+bmr+" / Target "+ct.cal+" kcal/day");
+}
+
+function regenerateProgram(){
+  if(!DB.settings||!DB.settings.hasOnboarded){toast("Complete onboarding first.");return;}
+  var a={
+    goal:(DB.goal&&DB.goal.type)||"weight_loss",
+    exp:DB.settings.exp,
+    equip:DB.settings.equip,
+    limits:DB.settings.limits||[],
+    days:DB.settings.maxDays
+  };
+  var newProg=generateProgram(a);
+  // Exercise-selection only: carry over the EXISTING phase calorie targets rather than
+  // recompute them from current bodyweight/body-fat, since a regenerate is meant to re-evaluate
+  // medication-driven exercise choices, not silently redo nutrition math the person didn't ask
+  // to touch right now.
+  if(newProg.phases&&DB.program&&DB.program.phases){
+    newProg.phases.forEach(function(ph,i){
+      if(DB.program.phases[i]&&DB.program.phases[i].cal!=null)ph.cal=DB.program.phases[i].cal;
+    });
+  }
+  DB.program=newProg;
+  save();
+  renderProgramExEditor();
+  renderTrain();
+  toast("Program regenerated using your current medications and settings.");
+}
+
+function regenerateProgramConfirm(){
+  var edited=DB.program&&DB.program.manuallyEdited;
+  var msg=edited
+    ? "You've manually added or removed exercises in this program. Regenerating will discard those changes and rebuild your program based on your current medications and settings. Continue?"
+    : "This will rebuild your training program's exercise selection based on your current medications and settings. Continue?";
+  if(!confirm(msg))return;
+  regenerateProgram();
 }
 
 function normalizeExp(exp){return (exp==="returning")?"beginner":exp;}
@@ -5209,7 +5261,7 @@ function renderProgramExEditor(){
   var area=document.getElementById("programExEditor");if(!area)return;
   var split=currentSplit();
   if(!split||!split.length){area.innerHTML='<div class="note dim">Complete onboarding to generate your program.</div>';return;}
-  var html="";
+  var html='<button class="btn sm ghost" style="width:100%;margin-bottom:16px;touch-action:manipulation;" onclick="regenerateProgramConfirm()">&#x21bb; Regenerate Program (apply current medications)</button>';
   split.forEach(function(d,dayIdx){
     if(d.rest)return;
     html+='<div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-bottom:8px;">'+d.day+'</div>';
@@ -5229,6 +5281,7 @@ function removePermEx(dayIdx,exIdx){
   if(!split||!split[dayIdx]||!split[dayIdx].ex)return;
   split[dayIdx].ex.splice(exIdx,1);
   if(DB.program)DB.program.split=split;
+  if(DB.program)DB.program.manuallyEdited=true;
   save();renderProgramExEditor();toast("Exercise removed from program.");
 }
 function showAddPermExModal(dayIdx){
@@ -5271,6 +5324,7 @@ function addPermEx(dayIdx,name){
   if(!d.ex)d.ex=[];
   d.ex.push({n:name,s:3,lo:8,hi:12});
   if(DB.program)DB.program.split=split;
+  if(DB.program)DB.program.manuallyEdited=true;
   save();renderProgramExEditor();toast(name+" added to "+d.day+" permanently.");
 }
 
