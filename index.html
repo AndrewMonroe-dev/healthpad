@@ -3263,6 +3263,20 @@ var MED_CATEGORIES=[
   {id:"immunosuppressant",label:"Immunosuppressants"},
   {id:"pain_nsaid",       label:"NSAIDs / Pain Meds"},
   {id:"stimulant",        label:"Stimulants / ADHD Meds"},
+  {id:"alpha_blocker",    label:"Alpha Blockers"},
+  {id:"antiarrhythmic",   label:"Antiarrhythmics"},
+  {id:"antibiotic_fluoroquinolone", label:"Fluoroquinolone Antibiotics"},
+  {id:"anticholinergic_thermoregulation", label:"Bladder Anticholinergics"},
+  {id:"ccb_nondhp",       label:"Calcium Channel Blockers (non-DHP, e.g. diltiazem/verapamil)"},
+  {id:"cns_depressant_fall_risk", label:"Sedatives / Benzodiazepines / Anticonvulsants"},
+  {id:"macrolide_antibiotic", label:"Macrolide Antibiotics"},
+  {id:"muscle_relaxant",  label:"Muscle Relaxants"},
+  {id:"opioid_analgesic", label:"Opioid Pain Medications"},
+  {id:"pde5_inhibitor",   label:"PDE5 Inhibitors (e.g. sildenafil, tadalafil)"},
+  {id:"sglt2_inhibitor",  label:"SGLT2 Inhibitors"},
+  {id:"testosterone_replacement", label:"Testosterone Replacement"},
+  {id:"tricyclic_antidepressant", label:"Tricyclic Antidepressants"},
+  {id:"vasodilator_reflex_tachycardia", label:"Vasodilators (e.g. hydralazine)"},
   {id:"other",            label:"Other"}
 ];
 
@@ -3347,6 +3361,62 @@ var MED_TRAIN_CONTEXT={
   },
   other:{
     standalone:null,
+    labCaveats:{}
+  },
+  alpha_blocker:{
+    standalone:"Alpha blocker or dopamine agonist on board (e.g. tamsulosin, doxazosin, or pramipexole/ropinirole for restless legs/Parkinson's): orthostatic hypotension, lightheadedness, or fainting with rapid position changes is a documented risk with this group, though the strength of that risk varies quite a bit by specific drug \u2014 evidence is more consistent for the alpha blockers used for blood pressure/prostate symptoms than for dopamine agonists, where study results have been mixed. As a practical default regardless of which specific drug, stand up gradually between sets, most noticeable first thing in the morning or right after standing up from a seated/lying exercise, and treat sudden dizziness as a stop signal rather than something to push through.",
+    labCaveats:{}
+  },
+  antiarrhythmic:{
+    standalone:"Antiarrhythmic medication on board: the underlying heart rhythm condition this treats is often the actual limiting factor for safe cardio intensity, not general fitness. Defer to your cardiologist's specific exercise clearance/intensity limits over RPE or HR-zone math from this app, and treat any palpitations, lightheadedness, or unusual shortness of breath during training as a reason to stop and check in with your care team, not push through.",
+    labCaveats:{}
+  },
+  antibiotic_fluoroquinolone:{
+    standalone:"Fluoroquinolone antibiotic on board (e.g. ciprofloxacin, levofloxacin, moxifloxacin): this class carries a specific, well-documented tendon rupture and tendinopathy risk, most often affecting the Achilles tendon. Per FDA data, the risk stays elevated for up to 90 days after the start of treatment, and over half of reported cases involved symptoms that began after the antibiotic course was already finished \u2014 exercise/physical activity itself is listed by the FDA as a factor that further raises this risk. For the full 90-day window, avoid explosive/plyometric movements and sudden increases in running or jumping volume, and treat any new tendon pain \u2014 especially in the heel/Achilles \u2014 as a reason to stop that movement pattern and contact your prescriber, not something to stretch through.",
+    labCaveats:{}
+  },
+  anticholinergic_thermoregulation:{
+    standalone:"Anticholinergic medication on board for bladder control (e.g. oxybutynin, solifenacin): this class reduces the body's ability to sweat, which directly impairs heat dissipation during exercise. This is a real heatstroke risk, not a minor side effect \u2014 documented cases include heatstroke severe enough to require emergency cooling and IV fluids. Be especially cautious with training in heat, humidity, or for extended duration, watch for hot/dry skin or confusion as warning signs distinct from normal fatigue, and favor cooler environments and shorter sessions during hot weather while on this medication.",
+    labCaveats:{}
+  },
+  ccb_nondhp:{
+    standalone:"Calcium channel blocker (diltiazem/verapamil type) on board: like beta blockers, this type blunts resting and exercise heart rate independent of effort. Use RPE/RIR rather than HR to judge intensity, and don't assume a low HR means the session was easy.",
+    labCaveats:{}
+  },
+  cns_depressant_fall_risk:{
+    standalone:"Sedative, anti-seizure, or similarly sedating medication on board: balance, reaction time, and coordination can be measurably reduced, especially in the hours after a dose. Favor supported or machine-based movements over unsupported single-leg or overhead balance work during peak medication effect, and be more conservative with anything performed near a hard edge, stairs, or heavy free weights overhead.",
+    labCaveats:{}
+  },
+  macrolide_antibiotic:{
+    standalone:"Macrolide antibiotic on board (e.g. azithromycin, clarithromycin, erythromycin): this class carries an FDA-flagged risk of QT interval prolongation, a heart rhythm change that in rare cases can trigger a dangerous arrhythmia. The risk is low for most healthy people but rises if combined with other QT-prolonging medications or pre-existing heart rhythm issues. For the duration of the course, avoid maximal-intensity cardio efforts, and treat any new palpitations, lightheadedness, or fainting as a reason to stop and seek care rather than push through.",
+    labCaveats:{}
+  },
+  muscle_relaxant:{
+    standalone:"Muscle relaxant on board: this class commonly causes sedation and can drop blood pressure on standing, which matters most right when going from seated/lying to standing (e.g. after a seated row or floor exercise). Stand up slowly between exercises, and treat the drowsiness as a reason to scale back balance-dependent or overhead work that session, not just an inconvenience.",
+    labCaveats:{}
+  },
+  opioid_analgesic:{
+    standalone:"Opioid pain medication on board: sedation, dizziness, and slowed reaction time are common, and the first few weeks after starting a new opioid or increasing the dose is a specifically higher-risk window for falls, even more than later in a stable course. Favor supported or machine-based movements over unsupported balance work or anything overhead during this period, and don't rely on pain relief from the medication as a signal that a movement is safe to load heavily \u2014 the underlying injury or condition may still be there even if it doesn't hurt right now. If a benzodiazepine, sleep aid, or other sedating medication is also in the mix, fall risk compounds rather than just adds \u2014 this combination is specifically flagged in geriatric prescribing guidelines, and extra caution is warranted regardless of age.",
+    labCaveats:{}
+  },
+  pde5_inhibitor:{
+    standalone:"PDE5 inhibitor or nitrate on board (e.g. sildenafil, tadalafil, nitroglycerin, isosorbide): this can cause mild blood pressure drops and flushing on its own. Two specific combinations are flagged as dangerous by prescribing guidelines, not just a general caution: pairing a PDE5 inhibitor with a nitrate (timing matters, generally avoid nitrates within 24 hours of sildenafil/vardenafil or 48 hours of tadalafil), and pairing a PDE5 inhibitor with an alpha blocker. If your medication list includes both a PDE5 inhibitor and either a nitrate or an alpha blocker, confirm directly with a prescriber that the combination and timing are safe before training or otherwise.",
+    labCaveats:{}
+  },
+  sglt2_inhibitor:{
+    standalone:"SGLT2 inhibitor on board (e.g. empagliflozin, dapagliflozin): the documented trigger pattern for this class's rare but serious ketoacidosis risk is dehydration, low-carbohydrate eating, and prolonged fasting, not exercise intensity itself \u2014 but a long or hot training session combined with under-hydrating or training fasted/low-carb can recreate that same risk pattern. Stay ahead of hydration and avoid stacking fasted training with very low carbohydrate intake while on this medication, and treat unusual nausea, fatigue, or breathing changes after training as a reason to check ketones or call your prescriber rather than assuming it's normal fatigue.",
+    labCaveats:{}
+  },
+  testosterone_replacement:{
+    standalone:"Testosterone replacement on board: this is anabolic rather than suppressive, and studies combining TRT with resistance training show measurably greater strength and muscle gains than resistance training alone \u2014 the medication amplifies the training response rather than replacing the need for the training itself. This isn't a reason to abandon programmed RIR/RPE targets in favor of pushing harder than planned; progression should still follow the program's structure. Worth knowing: TRT commonly raises hematocrit/hemoglobin, the opposite direction from the anemia pattern flagged elsewhere for ADT \u2014 routine monitoring of these labs is standard during TRT and not itself a training concern unless your prescriber flags it.",
+    labCaveats:{}
+  },
+  tricyclic_antidepressant:{
+    standalone:"Tricyclic antidepressant on board (e.g. amitriptyline, nortriptyline): this class commonly causes sedation and can drop blood pressure when standing up quickly, more noticeably than newer antidepressant classes. Stand up gradually between exercises, especially after floor work or seated movements, and treat morning grogginess as a possible reason to ease into the first sets of a session rather than starting at full intensity.",
+    labCaveats:{}
+  },
+  vasodilator_reflex_tachycardia:{
+    standalone:"Hydralazine on board: this vasodilator commonly causes reflex tachycardia, a heart rate increase that's a direct effect of the medication rather than effort or fitness level. This can make heart-rate-based intensity zones run higher than effort alone would suggest, in the opposite direction from beta blockers. Lean on RPE/RIR over HR-based zones, and don't assume an elevated HR at a given effort means the session is harder than it feels.",
     labCaveats:{}
   }
 };
