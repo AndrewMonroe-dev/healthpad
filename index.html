@@ -756,7 +756,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     </div>
     <div class="sec">
       <div class="sec-h">Estimated 1-Rep Maxes</div>
-      <div class="note dim">Drives the working-weight calculator. The three barbell lifts start blank &mdash; set them by feel after Phase 0.</div>
+      <div class="note dim">Drives the working-weight calculator. Showing exercises in your current program by default &mdash; search to find or set any other exercise.</div>
+      <input id="oneRMSearch" type="text" placeholder="Search all exercises..." oninput="filterOneRMList()" style="margin-top:10px;margin-bottom:4px;padding:10px 14px;background:var(--surf);border:1.5px solid var(--border);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500;width:100%;">
       <div id="oneRMList" style="margin-top:12px;"></div>
       <div id="ormBtnRow"><button class="btn sm ghost" onclick="saveOneRMs()">Save 1RMs</button></div>
     </div>
@@ -2675,14 +2676,7 @@ function renderPRs(){
 /* ============ SETUP ============ */
 function renderSetup(){
   renderProgramExEditor();
-  // 1RM editor
-  var html="";
-  Object.keys(DEFAULT_1RM).forEach(function(k){
-    var v=DB.oneRM[k]||0;
-    html+='<label class="fld">'+k+(v===0?' <span class="pill bone">set after P0</span>':'')+'</label><input type="number" inputmode="numeric" data-orm="'+k+'" value="'+(v||"")+'" placeholder="lb">';
-  });
-  document.getElementById("oneRMList").innerHTML=html;
-  document.getElementById("ormBtnRow").innerHTML='<div class="btn-row"><button class="btn sm ghost" onclick="saveOneRMs()">Save 1RMs</button><button class="btn sm dark" onclick="syncORMsFromLive()">Sync from Live Data</button></div>';
+  renderOneRMList("");
   document.getElementById("inSheetUrl").value=DB.settings.sheetUrl||"";
   var fdcInput=document.getElementById("inFdcKey");if(fdcInput)fdcInput.value=DB.settings.fdcKey||"";
   loadTrackingStyle();
@@ -2745,6 +2739,45 @@ function renderSetup(){
       '<div class="note" style="margin:0;">'+p.note+'</div></div>';
   });
   document.getElementById("phaseOverview").innerHTML=overviewHTML;
+}
+function relevantOneRMExercises(){
+  // "Relevant" = currently in the program, OR has a real logged value already (even if no
+  // longer in the active program) -- this is the set someone actually cares about by default.
+  var relevant=[];
+  var split=currentSplit?currentSplit():null;
+  if(split){
+    split.forEach(function(d){(d.ex||[]).forEach(function(ex){if(relevant.indexOf(ex.n)===-1)relevant.push(ex.n);});});
+  }
+  Object.keys(DB.oneRM||{}).forEach(function(k){
+    if((DB.oneRM[k]||0)>0&&relevant.indexOf(k)===-1)relevant.push(k);
+  });
+  return relevant;
+}
+function renderOneRMList(query){
+  var q=(query||"").toLowerCase().trim();
+  var names;
+  if(q){
+    names=Object.keys(DEFAULT_1RM).filter(function(k){return k.toLowerCase().indexOf(q)>-1;}).sort();
+  }else{
+    names=relevantOneRMExercises().sort();
+  }
+  var html="";
+  if(!q&&!names.length){
+    html='<div class="note dim">No exercises in your current program yet. Search above to set a starting 1RM for any exercise.</div>';
+  }else if(!names.length){
+    html='<div class="note dim">No matches.</div>';
+  }else{
+    names.forEach(function(k){
+      var v=DB.oneRM[k]||0;
+      html+='<label class="fld">'+k+(v===0?' <span class="pill bone">set after P0</span>':'')+'</label><input type="number" inputmode="numeric" data-orm="'+k+'" value="'+(v||"")+'" placeholder="lb">';
+    });
+  }
+  document.getElementById("oneRMList").innerHTML=html;
+  document.getElementById("ormBtnRow").innerHTML='<div class="btn-row"><button class="btn sm ghost" onclick="saveOneRMs()">Save 1RMs</button><button class="btn sm dark" onclick="syncORMsFromLive()">Sync from Live Data</button></div>';
+}
+function filterOneRMList(){
+  var q=document.getElementById("oneRMSearch");
+  renderOneRMList(q?q.value:"");
 }
 function saveOneRMs(){
   document.querySelectorAll('[data-orm]').forEach(function(inp){
