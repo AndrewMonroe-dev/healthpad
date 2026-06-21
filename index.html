@@ -278,6 +278,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 .adapt-panel.info{background:rgba(0,0,0,.04);border-color:var(--line2);color:var(--ink2);font-weight:500;}
 .pill.added{background:rgba(45,138,53,.1);color:#1e6b24;border:1px solid rgba(45,138,53,.3);font-size:9px;padding:3px 8px;}
 .pill.held{background:rgba(192,40,30,.1);color:var(--red-deep);border:1px solid rgba(192,40,30,.3);font-size:9px;padding:3px 8px;}
+.pill.medcaution{background:rgba(217,119,6,.12);color:#a85d00;border:1px solid rgba(217,119,6,.35);font-size:9px;padding:3px 8px;}
 .bonebar{background:rgba(154,110,40,.08);border:1px solid rgba(154,110,40,.28);color:var(--gold);font-size:12px;padding:8px 11px;border-radius:10px;margin-top:8px;font-weight:600;}
 .splash{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 38%,#8a1a12 0%,#c0281e 45%,#6b1208 100%);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .7s ease;}
 .splash.hide{opacity:0;pointer-events:none;}
@@ -1156,6 +1157,187 @@ var DEFAULT_1RM={
  // ── COMBAT CONDITIONING (effort/rounds tracked) ───────────────────────────
  "Heavy Bag Work":0,"Speed Bag":0,"Shadow Boxing":0,"Boxing Rounds":0,
  "Kickboxing":0,"Muay Thai Pad Work":0
+};
+
+/* Track A (medication-aware training constraints): per-exercise mechanism tags used by
+   getMedicationConstraints()-driven substitution in generateProgram, and by the manual
+   exercise-picker conflict warning. Sparse: only true flags are listed, everything else is
+   implicitly false. See exercise_tags_327.json / exercise_tag_vocabulary.md for the full
+   reasoning behind each tag and a complete list including untagged (all-false) exercises. */
+var EXERCISE_TAGS={
+  "Ab Wheel Rollout":{unsupportedBalance:1,gripSkinTraumaRisk:1},
+  "American Kettlebell Swing":{plyometricBallistic:1,overheadUnstable:1},
+  "Archer Push-Up":{unsupportedBalance:1},
+  "Arnold Press":{overheadUnstable:1},
+  "Atlas Stone Lift":{gripSkinTraumaRisk:1},
+  "B-Stance RDL":{unsupportedBalance:1},
+  "Barbell Overhead Press":{overheadUnstable:1},
+  "Battle Ropes":{plyometricBallistic:1},
+  "Bear Crawl":{unsupportedBalance:1},
+  "Bird Dog":{unsupportedBalance:1},
+  "Bottoms-Up Carry":{overheadUnstable:1,gripSkinTraumaRisk:1},
+  "Box Jump":{plyometricBallistic:1,achillesLoading:1},
+  "Bulgarian Split Squat":{unsupportedBalance:1},
+  "Bulgarian Split Squat BW":{unsupportedBalance:1},
+  "Burpee":{plyometricBallistic:1},
+  "Clean & Jerk":{plyometricBallistic:1,overheadUnstable:1},
+  "Copenhagen Plank":{unsupportedBalance:1},
+  "Curtsy Lunge":{unsupportedBalance:1},
+  "Cyclist Squat":{unsupportedBalance:1},
+  "DB Shoulder Press":{overheadUnstable:1},
+  "Dead Hang":{gripSkinTraumaRisk:1},
+  "Dip BW":{gripSkinTraumaRisk:1},
+  "Dips":{gripSkinTraumaRisk:1},
+  "Dragon Flag":{unsupportedBalance:1},
+  "Dumbbell Clean":{plyometricBallistic:1},
+  "Dumbbell Snatch":{plyometricBallistic:1,overheadUnstable:1,unsupportedBalance:1},
+  "Farmers Carry":{gripSkinTraumaRisk:1,unsupportedBalance:1},
+  "Fartlek Running":{highIntensityCardio:1},
+  "Hang Clean":{plyometricBallistic:1},
+  "Hang Snatch":{plyometricBallistic:1,overheadUnstable:1,unsupportedBalance:1},
+  "Handstand Push-Up":{overheadUnstable:1,unsupportedBalance:1},
+  "Heavy Bag Work":{plyometricBallistic:1},
+  "High Pull":{plyometricBallistic:1},
+  "Hill Sprints":{highIntensityCardio:1,achillesLoading:1},
+  "Hollow Rock":{unsupportedBalance:1},
+  "Husafell Carry":{gripSkinTraumaRisk:1,unsupportedBalance:1},
+  "Jump Squat":{plyometricBallistic:1,achillesLoading:1},
+  "Kettlebell Clean":{plyometricBallistic:1},
+  "Kettlebell Snatch":{plyometricBallistic:1,overheadUnstable:1},
+  "Kettlebell Swing":{plyometricBallistic:1},
+  "Kettlebell Thruster":{plyometricBallistic:1,overheadUnstable:1},
+  "Kickboxing":{plyometricBallistic:1,achillesLoading:1},
+  "L-Sit":{unsupportedBalance:1,gripSkinTraumaRisk:1},
+  "Lateral Sled Drag":{gripSkinTraumaRisk:1},
+  "Log Press":{overheadUnstable:1,gripSkinTraumaRisk:1},
+  "Medicine Ball Rotational Throw":{plyometricBallistic:1},
+  "Medicine Ball Slam":{plyometricBallistic:1},
+  "Mountain Climber":{unsupportedBalance:1},
+  "Muay Thai Pad Work":{plyometricBallistic:1,achillesLoading:1},
+  "Nordic Curl":{unsupportedBalance:1},
+  "Nordic Curl BW":{unsupportedBalance:1},
+  "Overhead Carry":{gripSkinTraumaRisk:1,overheadUnstable:1,unsupportedBalance:1},
+  "Pallof Press":{unsupportedBalance:1},
+  "Pike Push-Up":{overheadUnstable:1},
+  "Pistol Squat":{unsupportedBalance:1},
+  "Power Clean":{plyometricBallistic:1},
+  "Prowler Sprint":{highIntensityCardio:1,gripSkinTraumaRisk:1},
+  "Push Jerk":{plyometricBallistic:1,overheadUnstable:1},
+  "Push Press":{plyometricBallistic:1,overheadUnstable:1},
+  "Renegade Row":{unsupportedBalance:1,gripSkinTraumaRisk:1},
+  "Ring Push-Up":{unsupportedBalance:1},
+  "Rope Climb":{gripSkinTraumaRisk:1},
+  "Sandbag Carry":{gripSkinTraumaRisk:1,unsupportedBalance:1},
+  "Sandbag Load":{gripSkinTraumaRisk:1},
+  "Scapular Pull-Up":{gripSkinTraumaRisk:1},
+  "Shadow Boxing":{plyometricBallistic:1},
+  "Single-Leg Calf Raise":{unsupportedBalance:1},
+  "Single-Leg Glute Bridge":{unsupportedBalance:1},
+  "Single-Leg Hip Hinge":{unsupportedBalance:1},
+  "Single-Leg RDL":{unsupportedBalance:1},
+  "Sissy Squat":{unsupportedBalance:1},
+  "Smith Machine Split Squat":{unsupportedBalance:1},
+  "Snatch":{plyometricBallistic:1,overheadUnstable:1,unsupportedBalance:1},
+  "Snatch Pull":{plyometricBallistic:1},
+  "Speed Bag":{plyometricBallistic:1},
+  "Split Jerk":{plyometricBallistic:1,overheadUnstable:1,unsupportedBalance:1},
+  "Sprint Intervals":{highIntensityCardio:1,achillesLoading:1},
+  "Stability Ball Crunch":{unsupportedBalance:1},
+  "Stadium Stairs":{highIntensityCardio:1,achillesLoading:1},
+  "Step-Up":{unsupportedBalance:1},
+  "Step-Up BW":{unsupportedBalance:1},
+  "Stir-the-Pot":{unsupportedBalance:1},
+  "Suitcase Carry":{gripSkinTraumaRisk:1,unsupportedBalance:1},
+  "Thruster":{plyometricBallistic:1,overheadUnstable:1},
+  "Tire Flip":{gripSkinTraumaRisk:1},
+  "Toes-to-Bar":{gripSkinTraumaRisk:1,unsupportedBalance:1},
+  "Towel Pull-Up":{gripSkinTraumaRisk:1},
+  "Treadmill Run":{achillesLoading:1},
+  "Turkish Get-Up":{unsupportedBalance:1,overheadUnstable:1},
+  "V-Up":{unsupportedBalance:1},
+  "Viking Press":{overheadUnstable:1},
+  "Wrist Roller":{gripSkinTraumaRisk:1},
+  "Yoke Walk":{unsupportedBalance:1},
+  "Bradford Press":{overheadUnstable:1},
+  "Plate Pinch Hold":{gripSkinTraumaRisk:1},
+  "Sled Push":{gripSkinTraumaRisk:1},
+  "Reverse Sled Drag":{gripSkinTraumaRisk:1},
+  "Tempo Runs":{highIntensityCardio:1},
+  "Z Press":{overheadUnstable:1},
+  "TRX Row":{unsupportedBalance:1},
+  "Clean Pull":{plyometricBallistic:1},
+  "Shuttle Runs":{highIntensityCardio:1,achillesLoading:1},
+  "Boxing Rounds":{plyometricBallistic:1},
+  "DB Fly":{},
+  "DB Pullover":{},
+  "DB Romanian Deadlift":{}
+};
+
+/* Per-medication-class training constraints, used by getMedicationConstraints() to merge
+   active medications into a single enforcement object consumed by generateProgram and the
+   manual exercise-picker conflict warning. Only classes with an actual enforceable effect (18)
+   or an explicitly-documented non-effect (2, anticholinergic_thermoregulation/sglt2_inhibitor --
+   see thresholdNote) are present; the remaining ~26 classes have no entry here at all and rely
+   solely on Phase 1's MED_TRAIN_CONTEXT standalone text. See training_constraints_schema.md and
+   existing14_constraint_mapping.md for full reasoning behind every value. */
+var MED_TRAINING_CONSTRAINTS={
+  "alpha_blocker":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:true,orthostaticFlag:true,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:null},
+  "antiarrhythmic":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:true,hrZoneDirection:null,fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:true,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:"Defer to your cardiologist's specific exercise clearance over this app's intensity logic."},
+  "antibiotic_fluoroquinolone":{direction:"restrict",timeBehavior:"expiring",expiresAfterDays:90,acuteWindowDays:null,fields:{excludeModalities:["high_intensity_cardio"],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:true,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:"tendonCautionFlag enforcement also excludes any exercise tagged achillesLoading:true on the strength side (e.g. explosive calf/ankle-loading lifts), not just cardio modalities -- narrower and more accurate than a blanket plyometric exclusion, per exercise_tag_vocabulary.md."},
+  "anticholinergic_thermoregulation":{direction:null,timeBehavior:null,expiresAfterDays:null,acuteWindowDays:null,fields:null,coOccurrenceRule:null,thresholdNote:"Informational-only in v1. Real risk (impaired sweating/heatstroke) is heat-conditional, but no weather/environment input exists in HealthPad. heatCautionFlag was dropped rather than shipped permanently-on, since an always-on flag with no relationship to actual conditions would train the user to ignore it. Phase 1's standalone text (hydration/heat caution) still displays normally -- this only affects whether generateProgram enforces anything, which it now does not for this class."},
+  "beta_blocker":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:true,hrZoneDirection:"blunted",fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:null},
+  "blood_thinner":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:["grip_skin_trauma_risk"],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:true,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:"fallRiskFlag reflects bleeding/bruising consequence severity from falls/impact, not coordination impairment. grip_skin_trauma_risk excludes high-friction/abrasion-prone exercises like loaded carries, sled work, rope climbing, and atlas stones."},
+  "ccb_nondhp":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:true,hrZoneDirection:"blunted",fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:null},
+  "cns_depressant_fall_risk":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:["unsupported_balance","overhead_unstable"],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:true,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:"Risk is highest in the few hours after a dose; movement exclusions apply at all times this medication is active since session timing relative to dose isn't tracked in v1."},
+  "corticosteroid":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:true,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:"Treat programmed RPE as a hard ceiling even when feeling unexpectedly good -- this medication can mask normal fatigue/soreness signals."},
+  "hormone_adt":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:true,orthostaticFlag:false,boneLoadingPriority:true,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:"fallRiskFlag here reflects sarcopenia/muscle-loss risk, not coordination/orthostatic effects."},
+  "immunosuppressant":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:"No quantified capWeeklySets without a real clinical source for the specific number -- deliberately left as informational rather than guessed."},
+  "macrolide_antibiotic":{direction:"restrict",timeBehavior:"expiring",expiresAfterDays:14,acuteWindowDays:null,fields:{excludeModalities:["high_intensity_cardio"],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:null},
+  "muscle_relaxant":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:true,orthostaticFlag:true,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:null},
+  "opioid_analgesic":{direction:"restrict",timeBehavior:"acute_window",expiresAfterDays:null,acuteWindowDays:28,fields:{excludeModalities:[],excludeMovementTags:["unsupported_balance","overhead_unstable"],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:true,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:"Within the acute window (first 28 days from start/dose increase): excludeMovementTags active. After day 28: fallRiskFlag remains true, movement exclusions lift."},
+  "pde5_inhibitor":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:{requiresAlsoActive:["alpha_blocker"],note:"PDE5 inhibitor + alpha blocker together carries a specific hypotension risk beyond either alone. Only activates fallRiskFlag:true and orthostaticFlag:true on this entry when alpha_blocker is also currently active; this class alone has no standalone Track A constraint."},thresholdNote:"Nitrate co-use (if applicable) is a medical contraindication, not a training constraint -- handled via Phase 1 standalone text, not enforced here."},
+  "sglt2_inhibitor":{direction:null,timeBehavior:null,expiresAfterDays:null,acuteWindowDays:null,fields:null,coOccurrenceRule:null,thresholdNote:"Informational-only in v1. Real trigger for the documented risk (euglycemic DKA) is dehydration/fasting/low-carb intake, not heat -- heatCautionFlag was already a forced fit for this mechanism, and was dropped entirely (not reassigned) since no environment/fueling-state input exists to condition any enforcement on. Phase 1's standalone text (hydration, avoid fasted/low-carb training) still displays normally; generateProgram enforces nothing for this class in v1."},
+  "stimulant":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:true,hrZoneDirection:"elevated",fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:null},
+  "testosterone_replacement":{direction:"loosen",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:1.15},coOccurrenceRule:null,thresholdNote:"1.15 is a placeholder magnitude, not derived from a specific dosing study -- needs explicit review before this ships."},
+  "tricyclic_antidepressant":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,hrZoneDirection:null,fallRiskFlag:false,orthostaticFlag:true,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:null},
+  "vasodilator_reflex_tachycardia":{direction:"restrict",timeBehavior:"chronic",expiresAfterDays:null,acuteWindowDays:null,fields:{excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:true,hrZoneDirection:"elevated",fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null},coOccurrenceRule:null,thresholdNote:null}
+};
+
+/* Track B (food-drug interaction flags): grapefruit interaction is individual-drug-specific, not
+   class-level, since e.g. only 3 of 5 top-300 statins actually interact via CYP3A4. Keyed by drug
+   NAME, checked via best-effort case-insensitive substring match against DB.settings.medStack
+   (free text) since medication tracking elsewhere in the app is class-level only, not per-drug.
+   See grapefruit_interaction_tags.json / track_b_implementation_plan.md for full reasoning. */
+var GRAPEFRUIT_INTERACTING_DRUGS={
+  "Atorvastatin":{tier:"high",note:"Grapefruit can raise blood levels of this medication and increase risk of muscle pain, weakness, or in rare cases serious muscle breakdown (rhabdomyolysis). Avoid grapefruit or discuss safe amounts with your prescriber."},
+  "Simvastatin":{tier:"high",note:"Grapefruit can raise blood levels of this medication and increase risk of muscle pain, weakness, or in rare cases serious muscle breakdown (rhabdomyolysis). Avoid grapefruit or discuss safe amounts with your prescriber."},
+  "Lovastatin":{tier:"high",note:"Grapefruit can raise blood levels of this medication and increase risk of muscle pain, weakness, or in rare cases serious muscle breakdown (rhabdomyolysis). Avoid grapefruit or discuss safe amounts with your prescriber."},
+  "Cyclosporine":{tier:"high",note:"Grapefruit can raise blood levels of this medication unpredictably. Since this drug requires levels to stay in a precise range, avoid grapefruit entirely unless your transplant or care team has specifically said otherwise."},
+  "Amlodipine":{tier:"moderate",note:"Grapefruit can raise blood levels of this medication, which may increase blood-pressure-lowering effects and side effects like swelling or flushing. Moderate intake is usually fine; ask your prescriber if you eat grapefruit regularly."},
+  "Nifedipine":{tier:"moderate",note:"Grapefruit can raise blood levels of this medication, which may increase blood-pressure-lowering effects and side effects like swelling or flushing. Moderate intake is usually fine; ask your prescriber if you eat grapefruit regularly."},
+  "Diltiazem":{tier:"moderate",note:"Grapefruit can raise blood levels of this medication, which may increase blood-pressure-lowering effects and side effects like swelling or flushing. Moderate intake is usually fine; ask your prescriber if you eat grapefruit regularly."},
+  "Verapamil":{tier:"moderate",note:"Grapefruit can raise blood levels of this medication, which may increase blood-pressure-lowering effects and side effects like swelling or flushing. Moderate intake is usually fine; ask your prescriber if you eat grapefruit regularly."},
+  "Warfarin":{tier:"moderate",note:"Grapefruit can affect blood levels of this medication and may increase bleeding risk. Keep grapefruit intake consistent rather than starting/stopping it suddenly, and mention regular intake to whoever monitors your INR."},
+  "Buspirone":{tier:"mild",note:"Grapefruit can raise blood levels of this medication, which may increase drowsiness or dizziness. Usually a minor effect, but worth noting if you feel unusually sedated."},
+  "Carbamazepine":{tier:"mild",note:"Grapefruit can raise blood levels of this medication. Usually a minor effect at typical intake, but mention regular grapefruit consumption to your prescriber, especially if levels are monitored."},
+  "Diazepam":{tier:"mild",note:"Grapefruit can raise blood levels of this medication, which may increase drowsiness or dizziness. Usually a minor effect, but worth noting if you feel unusually sedated."}
+};
+
+/* High-potassium food check: uses the existing, already-tracked potassium field (no new data
+   plumbing needed). 200mg/serving is the National Kidney Foundation's clinical threshold for
+   "high-potassium" -- the right reference population for someone managing potassium via
+   medication, distinct from the much higher 940mg general-population %DV labeling threshold. */
+var HIGH_POTASSIUM_THRESHOLD_MG=200;
+
+/* Diuretic subtype map: needed because potassium DIRECTION differs by diuretic type. Loop/
+   thiazide diuretics deplete potassium (high-potassium food is fine or even helpful); spironolactone
+   (K-sparing) retains it (high-potassium food is a real caution). Combo products are genuinely
+   mixed/patient-specific and route to a neutral message rather than asserting a direction. */
+var DIURETIC_SUBTYPE={
+  "thiazide":["Hydrochlorothiazide","Chlorthalidone"],
+  "loop":["Furosemide","Torsemide","Bumetanide"],
+  "k_sparing":["Spironolactone"],
+  "mixed":["Hydrochlorothiazide;Lisinopril","Hydrochlorothiazide;Losartan","Hydrochlorothiazide;Triamterene"]
 };
 
 /* Weekly templates. Day idx 0..6 Mon..Sun */
@@ -3662,6 +3844,111 @@ function obFinish(){
 
 function normalizeExp(exp){return (exp==="returning")?"beginner":exp;}
 
+/* ── MEDICATION-AWARE TRAINING CONSTRAINTS (Track A) ──────────────
+   getMedicationConstraints() merges every active medication class's trainingConstraint entry
+   (MED_TRAINING_CONSTRAINTS) into one object per the locked merge rules:
+   - boolean fields: OR across all active constraints
+   - excludeModalities / excludeMovementTags: UNION, never cancel out
+   - capWeeklySets: MINIMUM of all non-null values
+   - recoveryMultiplier: suppressed to 1.0 if ANY restrict-direction field is non-default
+   - coOccurrenceRule: pde5_inhibitor's fallRiskFlag/orthostaticFlag only activate when
+     alpha_blocker is ALSO active
+   - sourceClasses: tracks which active class(es) contributed each true boolean/array entry,
+     needed so the manual exercise-picker warning can name the specific medication, not just
+     say "something conflicts"
+   v1 simplification (explicitly approved): no medication start-date is tracked anywhere in
+   HealthPad, so "expiring"/"acute_window" timeBehavior constraints (fluoroquinolone 90-day,
+   opioid 28-day) are treated as permanently active for as long as the category stays checked
+   in Setup. Unchecking a category (toggleMedTag) immediately and fully removes its constraint
+   on the next call, since this function always reads DB.settings.medCategories fresh rather
+   than caching anything. */
+function getMedicationConstraints(){
+  var active=(DB.settings&&DB.settings.medCategories)||[];
+  var merged={
+    excludeModalities:[], excludeMovementTags:[], capWeeklySets:null,
+    hrZoneUnreliable:false, hrZoneDirection:null,
+    fallRiskFlag:false, orthostaticFlag:false,
+    boneLoadingPriority:false, deferToPhysicianFlag:false, tendonCautionFlag:false,
+    recoveryMultiplier:null
+  };
+  var sourceClasses={}; // fieldName -> [classId, classId, ...]
+  function addSource(field,cls){
+    sourceClasses[field]=sourceClasses[field]||[];
+    if(sourceClasses[field].indexOf(cls)===-1)sourceClasses[field].push(cls);
+  }
+  var anyRestrictActive=false;
+  var pendingLoosen=[]; // {classId, multiplier} - applied only if anyRestrictActive stays false
+
+  active.forEach(function(cls){
+    var c=MED_TRAINING_CONSTRAINTS[cls];
+    if(!c||!c.fields)return; // no entry, or informational-only (direction:null) - nothing to merge
+    var f=c.fields;
+
+    if(c.direction==="loosen"){
+      if(f.recoveryMultiplier!=null)pendingLoosen.push({cls:cls,mult:f.recoveryMultiplier});
+      return; // loosen entries never set restrict-direction fields in v1's schema, nothing else to merge
+    }
+
+    // direction === "restrict" from here down
+    if(f.excludeModalities&&f.excludeModalities.length){
+      f.excludeModalities.forEach(function(m){
+        if(merged.excludeModalities.indexOf(m)===-1)merged.excludeModalities.push(m);
+        addSource("excludeModalities:"+m,cls);
+      });
+      anyRestrictActive=true;
+    }
+    if(f.excludeMovementTags&&f.excludeMovementTags.length){
+      f.excludeMovementTags.forEach(function(m){
+        if(merged.excludeMovementTags.indexOf(m)===-1)merged.excludeMovementTags.push(m);
+        addSource("excludeMovementTags:"+m,cls);
+      });
+      anyRestrictActive=true;
+    }
+    if(f.capWeeklySets!=null){
+      if(merged.capWeeklySets==null||f.capWeeklySets<merged.capWeeklySets)merged.capWeeklySets=f.capWeeklySets;
+      addSource("capWeeklySets",cls);
+      anyRestrictActive=true;
+    }
+    if(f.hrZoneUnreliable){
+      merged.hrZoneUnreliable=true;
+      // direction conflict (blunted vs elevated) is possible if two opposite-direction classes
+      // are both active (e.g. beta_blocker + vasodilator_reflex_tachycardia) - most-conservative
+      // here means surfacing BOTH as unreliable without picking a misleading single direction
+      if(merged.hrZoneDirection&&merged.hrZoneDirection!==f.hrZoneDirection)merged.hrZoneDirection="mixed";
+      else if(!merged.hrZoneDirection)merged.hrZoneDirection=f.hrZoneDirection;
+      addSource("hrZoneUnreliable",cls);
+      anyRestrictActive=true;
+    }
+    if(f.fallRiskFlag){merged.fallRiskFlag=true;addSource("fallRiskFlag",cls);anyRestrictActive=true;}
+    if(f.orthostaticFlag){merged.orthostaticFlag=true;addSource("orthostaticFlag",cls);anyRestrictActive=true;}
+    if(f.boneLoadingPriority){merged.boneLoadingPriority=true;addSource("boneLoadingPriority",cls);anyRestrictActive=true;}
+    if(f.deferToPhysicianFlag){merged.deferToPhysicianFlag=true;addSource("deferToPhysicianFlag",cls);anyRestrictActive=true;}
+    if(f.tendonCautionFlag){merged.tendonCautionFlag=true;addSource("tendonCautionFlag",cls);anyRestrictActive=true;}
+  });
+
+  // coOccurrenceRule: pde5_inhibitor only contributes fallRiskFlag/orthostaticFlag when
+  // alpha_blocker is also active. pde5_inhibitor itself has all-false fields in v1, so this is
+  // the ONLY place it can ever produce an effect.
+  if(active.indexOf("pde5_inhibitor")>-1&&active.indexOf("alpha_blocker")>-1){
+    merged.fallRiskFlag=true; addSource("fallRiskFlag","pde5_inhibitor+alpha_blocker");
+    merged.orthostaticFlag=true; addSource("orthostaticFlag","pde5_inhibitor+alpha_blocker");
+    anyRestrictActive=true;
+  }
+
+  // recoveryMultiplier: restrict always wins (locked decision) - only apply a loosen multiplier
+  // if NOTHING restrict-direction triggered above. Picking the LARGEST pending multiplier if
+  // somehow more than one loosen-direction class were ever active simultaneously (not currently
+  // possible with only testosterone_replacement using this field, but kept generic).
+  if(!anyRestrictActive&&pendingLoosen.length){
+    var best=pendingLoosen[0];
+    pendingLoosen.forEach(function(p){if(p.mult>best.mult)best=p;});
+    merged.recoveryMultiplier=best.mult;
+    addSource("recoveryMultiplier",best.cls);
+  }
+
+  return {fields:merged, sourceClasses:sourceClasses};
+}
+
 /* ── PROGRAM GENERATOR ─────────────────────────────────────────── */
 function generateProgram(a){
   var goal=a.goal, exp=(a.exp==="returning"?"beginner":a.exp), days=parseInt(a.days), equip=a.equip;
@@ -3674,27 +3961,30 @@ function generateProgram(a){
   var hasBar=equip==="barbell"||equip==="full";
   var dbOnly=equip==="dumbbells";
   var bwOnly=equip==="bodyweight";
+  // Track A: merge active medication constraints once per program generation, pass down to
+  // every builder alongside the existing physical-limits array.
+  var medC=getMedicationConstraints().fields;
 
   // ── CARDIO / HEART HEALTH / VO2 MAX → cardio-dominant ──────
   if(goal==="vo2max"||goal==="endurance"||(goal==="heart"&&days<=3)){
-    return buildCardioPlan(days,exp,limits);
+    return buildCardioPlan(days,exp,limits,medC);
   }
 
   // ── BEGINNER or 2-3 days → Full Body ───────────────────────
   if(exp==="beginner"||days<=3){
-    return buildFullBody(days,goal,equip,limits);
+    return buildFullBody(days,goal,equip,limits,medC);
   }
 
   // ── INTERMEDIATE / ADVANCED + 4+ days → Split ──────────────
   if(days>=5&&(goal==="muscle"||goal==="strength"||goal==="recomp")){
-    return buildUpperLower(days,goal,exp,equip,limits);
+    return buildUpperLower(days,goal,exp,equip,limits,medC);
   }
   if(days===4){
-    return buildUpperLower(4,goal,exp,equip,limits);
+    return buildUpperLower(4,goal,exp,equip,limits,medC);
   }
 
   // Default fallback
-  return buildFullBody(days,goal,equip,limits);
+  return buildFullBody(days,goal,equip,limits,medC);
 }
 
 function ex(n,s,lo,hi,bone){
@@ -3703,7 +3993,8 @@ function ex(n,s,lo,hi,bone){
   return o;
 }
 
-function buildFullBody(days,goal,equip,limits){
+function buildFullBody(days,goal,equip,limits,medC){
+  medC=medC||{excludeModalities:[],excludeMovementTags:[]};
   var hasBar=equip==="full"||equip==="barbell";
   var dbOnly=equip==="dumbbells";
   var bwOnly=equip==="bodyweight";
@@ -3711,17 +4002,20 @@ function buildFullBody(days,goal,equip,limits){
   var hasBack=limits.indexOf("lower_back")>-1;
   var hasShoulder=limits.indexOf("shoulder")>-1;
   var isStr=goal==="strength";
+  // Track A: derived booleans from the merged medication constraint object
+  var avoidBalance=medC.excludeMovementTags.indexOf("unsupported_balance")>-1;
+  var avoidOverheadUnstable=medC.excludeMovementTags.indexOf("overhead_unstable")>-1;
 
   // ── BODYWEIGHT-ONLY PROGRAM ───────────────────────────────────
   if(bwOnly){
     // Squat pattern
     var bwSquat=hasKnee?ex("Glute Bridge BW",3,15,20):ex("Bodyweight Squat",3,15,25);
     // Hinge
-    var bwHinge=hasBack?ex("Glute Bridge BW",3,15,20):ex("Single-Leg Hip Hinge",3,10,15);
+    var bwHinge=(hasBack||avoidBalance)?ex("Glute Bridge BW",3,15,20):ex("Single-Leg Hip Hinge",3,10,15);
     // Push (horizontal)
     var bwPushH=hasShoulder?ex("Decline Push-Up",3,8,15):ex("Push-Up",3,10,20);
     // Push (vertical)
-    var bwPushV=hasShoulder?ex("Wide Push-Up",3,8,15):ex("Pike Push-Up",3,8,15);
+    var bwPushV=(hasShoulder||avoidOverheadUnstable)?ex("Wide Push-Up",3,8,15):ex("Pike Push-Up",3,8,15);
     // Pull
     var bwPull=ex("Inverted Row",3,8,15);
     // Lunge
@@ -3729,8 +4023,8 @@ function buildFullBody(days,goal,equip,limits){
     // Core
     var bwCore=ex("Hollow Body Hold",3,20,40);
     var bwPlank=ex("Plank",3,20,45);
-    var bwGlute=ex("Single-Leg Glute Bridge",3,12,20);
-    var bwCalf=ex("Single-Leg Calf Raise",3,15,25);
+    var bwGlute=avoidBalance?ex("Glute Bridge BW",3,15,20):ex("Single-Leg Glute Bridge",3,12,20);
+    var bwCalf=avoidBalance?ex("Calf Raise BW",3,15,25):ex("Single-Leg Calf Raise",3,15,25);
     var bwDip=ex("Bench Dip",3,10,20);
 
     var dayA={day:"Full Body A",rest:false,ex:[bwSquat,bwPushH,bwPull,bwLunge,bwCore]};
@@ -3756,7 +4050,7 @@ function buildFullBody(days,goal,equip,limits){
   // Hinge
   var hinge=hasBack?ex("Seated Leg Curl",3,10,15):
     hasBar?ex("Trap-Bar Deadlift",3,isStr?4:6,isStr?5:8,true):
-    dbOnly?ex("DB Romanian Deadlift",3,10,12):ex("Single-Leg Hip Hinge",3,10,12);
+    dbOnly?ex("DB Romanian Deadlift",3,10,12):(avoidBalance?ex("Glute Bridge BW",3,15,20):ex("Single-Leg Hip Hinge",3,10,12));
   // Push
   var push=hasShoulder?ex("Push-Up",3,10,20):
     hasBar?ex("Barbell Bench Press",3,isStr?5:8,isStr?5:10):
@@ -3767,10 +4061,11 @@ function buildFullBody(days,goal,equip,limits){
     dbOnly?ex("Single-Arm DB Row",3,10,12):ex("Inverted Row",3,8,15);
   // Press
   var press=hasShoulder?ex("Lateral Lunge",3,10,15):
-    hasBar?ex("Barbell Overhead Press",3,isStr?5:8,isStr?5:8,true):
-    dbOnly?ex("DB Shoulder Press",3,10,12):ex("Pike Push-Up",3,8,15);
+    hasBar?(avoidOverheadUnstable?ex("Machine Shoulder Press",3,10,12):ex("Barbell Overhead Press",3,isStr?5:8,isStr?5:8,true)):
+    dbOnly?(avoidOverheadUnstable?ex("Seated Lateral Raise",3,10,12):ex("DB Shoulder Press",3,10,12)):
+    (avoidOverheadUnstable?ex("Wide Push-Up",3,8,15):ex("Pike Push-Up",3,8,15));
 
-  var dayA={day:"Full Body A",rest:false,ex:[squat,push,pull,press,ex(dbOnly?"Single-Leg Calf Raise":"Standing Calf Raise",3,12,20)]};
+  var dayA={day:"Full Body A",rest:false,ex:[squat,push,pull,press,ex((dbOnly&&!avoidBalance)?"Single-Leg Calf Raise":"Standing Calf Raise",3,12,20)]};
   var dayB={day:"Full Body B",rest:false,ex:[hinge,push,pull,ex(dbOnly?"DB Lateral Raise":"Reverse Lunge",3,12,15),ex(dbOnly?"DB Skull Crusher":"Bench Dip",3,10,12)]};
   var cardioDay={day:"Cardio + Core",rest:false,cardio:true,ex:[]};
   var restDay={day:"Rest",rest:true,ex:[]};
@@ -3784,11 +4079,12 @@ function buildFullBody(days,goal,equip,limits){
   return {splitType:"FB",split:split,phases:phases};
 }
 
-function buildUpperLower(days,goal,exp,equip,limits){
+function buildUpperLower(days,goal,exp,equip,limits,medC){
+  medC=medC||{excludeModalities:[],excludeMovementTags:[]};
   // Bodyweight-only users should always get a full-body program
   // Upper/Lower splits require at least dumbbells for meaningful upper body
   if(equip==="bodyweight"){
-    return buildFullBody(Math.min(days,4),goal,equip,limits);
+    return buildFullBody(Math.min(days,4),goal,equip,limits,medC);
   }
   var hasBar=equip==="full"||equip==="barbell";
   var fullGym=equip==="full";
@@ -3798,6 +4094,9 @@ function buildUpperLower(days,goal,exp,equip,limits){
   var hasShoulder=limits.indexOf("shoulder")>-1;
   var isAdv=exp==="advanced";
   var isStr=goal==="strength";
+  // Track A: derived booleans from the merged medication constraint object
+  var avoidBalance=medC.excludeMovementTags.indexOf("unsupported_balance")>-1;
+  var avoidOverheadUnstable=medC.excludeMovementTags.indexOf("overhead_unstable")>-1;
 
   var squat=hasKnee?ex("Leg Press",4,10,12):
     hasBar?ex("Barbell Back Squat",4,isStr?5:6,isStr?5:8,true):ex("Goblet Squat",3,10,15);
@@ -3811,7 +4110,8 @@ function buildUpperLower(days,goal,exp,equip,limits){
   var lat=fullGym?ex("Hammer Lat Pulldown",4,8,12):
     hasBar?ex("Pull-Up",4,5,10):ex("DB Pullover",3,12,15);
   var ohp=hasShoulder?ex("DB Lateral Raise",3,12,20):
-    hasBar?ex("Barbell Overhead Press",4,isStr?5:6,isStr?5:8,true):ex("DB Shoulder Press",3,10,12);
+    hasBar?(avoidOverheadUnstable?ex("Machine Shoulder Press",3,10,12):ex("Barbell Overhead Press",4,isStr?5:6,isStr?5:8,true)):
+    (avoidOverheadUnstable?ex("Seated Lateral Raise",3,10,12):ex("DB Shoulder Press",3,10,12));
 
   var lowerA={day:"Lower A",rest:false,ex:[
     squat,
@@ -3832,7 +4132,7 @@ function buildUpperLower(days,goal,exp,equip,limits){
   ]};
   var upperB={day:"Upper B",rest:false,ex:[
     ohp,lat,
-    fullGym?ex("Hammer Iso Shoulder Press",3,10,12):ex("DB Shoulder Press",3,10,12),
+    fullGym?ex("Hammer Iso Shoulder Press",3,10,12):(avoidOverheadUnstable?ex("Seated Lateral Raise",3,12,15):ex("DB Shoulder Press",3,10,12)),
     ex("EZ-Bar Curl",3,10,12),
     ex("DB Skull Crusher",3,12,12)
   ]};
@@ -3848,7 +4148,9 @@ function buildUpperLower(days,goal,exp,equip,limits){
   return {splitType:"UL",split:split,phases:phases};
 }
 
-function buildCardioPlan(days,exp,limits){
+function buildCardioPlan(days,exp,limits,medC){
+  medC=medC||{excludeModalities:[],excludeMovementTags:[]};
+  var avoidOverheadUnstable=medC.excludeMovementTags.indexOf("overhead_unstable")>-1;
   var hasCardiac=limits.indexOf("cardiac")>-1;
   var cardioDay={day:"Zone 2 Cardio",rest:false,cardio:true,ex:[]};
   var strengthDay={day:"Full Body Strength",rest:false,ex:[
@@ -3856,7 +4158,7 @@ function buildCardioPlan(days,exp,limits){
     ex("DB Romanian Deadlift",3,12,15),
     ex("DB Bench Press",3,12,15),
     ex("Single-Arm DB Row",3,12,15),
-    ex("DB Shoulder Press",3,12,15)
+    avoidOverheadUnstable?ex("Seated Lateral Raise",3,12,15):ex("DB Shoulder Press",3,12,15)
   ]};
   var rest={day:"Rest",rest:true,ex:[]};
 
@@ -4458,7 +4760,11 @@ function showAddExModal(){
     '<input id="addExSearch" type="text" placeholder="Search..." '+
       'style="margin:12px 16px;padding:10px 14px;background:var(--surf);border:1.5px solid var(--border);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500;">'+
     '<div id="addExList" style="overflow-y:auto;flex:1;padding:0 16px 20px;">'+
-      available.map(function(n){return '<div class="add-ex-row" data-name="'+n+'" data-action="addEx" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+n+'</div>';}).join("")+
+      (function(){var medR=getMedicationConstraints();return available.map(function(n){
+        var note=getExerciseConflictNote(n,medR);
+        var badge=note?' <span class="pill medcaution">'+note+'</span>':'';
+        return '<div class="add-ex-row" data-name="'+n+'" data-action="addEx" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+n+badge+'</div>';
+      }).join("");})()+
     '</div></div>';
   document.body.appendChild(modal);
   // Wire search after DOM insertion
@@ -4586,6 +4892,55 @@ function pickFood(id){
 }
 var _nfSourceData=null; // holds raw nutriment data + serving info for live unit recalculation, null for manual entries
 var _nfEditId=null; // set when editing an existing logged entry in place, null when logging something new
+/* Track B: checks a food (by name + potassium value) against active medication data and
+   returns a warning banner string, or null if nothing applies. Warn-don't-block, same pattern
+   as Track A's manual exercise-picker badge -- this renders once at form-open time using
+   whatever data is already known (prefill), not live-recomputed on every keystroke.
+   KNOWN v1 GAP (explicitly accepted, not an oversight): fully-manual entry via the bare
+   "+ Log New" button passes no prefill at all, so this check never fires for food typed from
+   scratch -- only barcode-scanned and searched foods get checked. Accepted since lookup-based
+   entry is the primary logging path; revisit if manual-entry usage turns out to be significant. */
+function getFoodMedicationWarning(foodName,potassiumMg){
+  var warnings=[];
+  var stack=((DB.settings&&DB.settings.medStack)||"").toLowerCase();
+  var name=(foodName||"").toLowerCase();
+  var isGrapefruit=name.indexOf("grapefruit")>-1;
+
+  if(isGrapefruit&&stack){
+    Object.keys(GRAPEFRUIT_INTERACTING_DRUGS).forEach(function(drug){
+      if(stack.indexOf(drug.toLowerCase())>-1){
+        var info=GRAPEFRUIT_INTERACTING_DRUGS[drug];
+        warnings.push({tier:info.tier,text:info.note+" (matched \u201c"+drug+"\u201d in your medication list)"});
+      }
+    });
+  }
+
+  var checked=(DB.settings&&DB.settings.medCategories)||[];
+  var hasAceArb=checked.indexOf("ace_arb")>-1;
+  var hasKSparing=stack&&DIURETIC_SUBTYPE.k_sparing.some(function(d){return stack.indexOf(d.toLowerCase())>-1;});
+  // Combo products are stored as "DrugA;DrugB" (matching Phase 1's source data format) but real
+  // people type free text without semicolons, so match on EITHER component name appearing
+  // alongside its partner, not the literal joined string.
+  var hasMixedDiuretic=stack&&DIURETIC_SUBTYPE.mixed.some(function(combo){
+    return combo.split(";").every(function(part){return stack.indexOf(part.toLowerCase())>-1;});
+  });
+  if(potassiumMg>=HIGH_POTASSIUM_THRESHOLD_MG){
+    if(hasKSparing){
+      warnings.push({tier:"moderate",text:"This food is high in potassium ("+potassiumMg+"mg). Potassium-sparing diuretics"+(hasAceArb?" and ACE inhibitors/ARBs":"")+" can raise blood potassium \u2014 discuss high-potassium foods with your prescriber."});
+    }else if(hasAceArb){
+      warnings.push({tier:"mild",text:"This food is high in potassium ("+potassiumMg+"mg). ACE inhibitors/ARBs can independently raise potassium \u2014 worth being aware of on a high-potassium day, though not a strict avoidance."});
+    }else if(hasMixedDiuretic){
+      warnings.push({tier:"mild",text:"This food is high in potassium ("+potassiumMg+"mg). Your diuretic combination can affect potassium in either direction depending on the specific mix \u2014 ask your prescriber whether high-potassium foods need any attention for your specific prescription."});
+    }
+  }
+
+  if(!warnings.length)return null;
+  // most severe tier first, matching Track A's "most-conservative surfaces first" convention
+  var order={high:0,moderate:1,mild:2};
+  warnings.sort(function(a,b){return order[a.tier]-order[b.tier];});
+  return warnings;
+}
+
 function showNewFoodForm(prefill,sourceMeta,editId){
   var modal=document.getElementById("addFoodModal");if(modal)modal.remove();
   var existingNf=document.getElementById("newFoodModal");if(existingNf)existingNf.remove();
@@ -4617,6 +4972,15 @@ function showNewFoodForm(prefill,sourceMeta,editId){
     '</div>'+
     '<div style="padding:0 16px;">'+
     (prefill&&sourceMeta?'<div class="note dim" style="margin-bottom:10px;background:rgba(203,162,76,.10);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;">From '+(sourceMeta.source==="fdc"?"USDA FoodData Central":"Open Food Facts")+' \u2014 choose the amount below, values recalculate automatically. Double-check before logging.</div>':'')+
+    (function(){
+      var w=getFoodMedicationWarning(prefill&&prefill.name,prefill&&prefill.potassium);
+      if(!w)return"";
+      return w.map(function(item){
+        var color=item.tier==="high"?"rgba(192,40,30,.10)":item.tier==="moderate"?"rgba(217,119,6,.10)":"rgba(217,119,6,.06)";
+        var border=item.tier==="high"?"var(--red-deep)":"rgba(217,119,6,.4)";
+        return '<div class="note dim" style="margin-bottom:10px;background:'+color+';border:1px solid '+border+';border-radius:8px;padding:8px 10px;">'+item.text+'</div>';
+      }).join("");
+    })()+
     unitSelectorHtml+
     '<label class="fld">Food name</label><input id="nfName" type="text" placeholder="e.g. Chicken Breast">'+
     '<div class="row3" style="margin-top:6px;">'+
@@ -4811,7 +5175,11 @@ function showAddPermExModal(dayIdx){
     '<input id="addPermExSearch" type="text" placeholder="Search..." '+
       'style="margin:12px 16px;padding:10px 14px;background:var(--surf);border:1.5px solid var(--border);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500;">'+
     '<div id="addPermExList" style="overflow-y:auto;flex:1;padding:0 16px 20px;">'+
-      available.map(function(n){return '<div class="add-ex-row" data-name="'+n+'" data-action="addPermEx" data-day="'+dayIdx+'" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+n+'</div>';}).join("")+
+      (function(){var medR=getMedicationConstraints();return available.map(function(n){
+        var note=getExerciseConflictNote(n,medR);
+        var badge=note?' <span class="pill medcaution">'+note+'</span>':'';
+        return '<div class="add-ex-row" data-name="'+n+'" data-action="addPermEx" data-day="'+dayIdx+'" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+n+badge+'</div>';
+      }).join("");})()+
     '</div></div>';
   document.body.appendChild(modal);
   setTimeout(function(){
@@ -5023,6 +5391,104 @@ function getDietFlags(){
     if(st!=="ok")flags.push({key:key,label:LAB_REF[key]?LAB_REF[key].label:key,tip:DIET_TIPS[key],status:st});
   });
   return flags;
+}
+/* Track A: merges every active medication category's trainingConstraint (MED_TRAINING_CONSTRAINTS)
+   into a single enforcement object consumed by generateProgram and the manual exercise-picker
+   conflict warning. Merge rules (locked): boolean fields OR across all active constraints;
+   excludeModalities/excludeMovementTags UNION; capWeeklySets MINIMUM of non-null values;
+   recoveryMultiplier suppressed to 1.0 if ANY restrict-direction field is non-default
+   (restrict always wins over loosen). Also returns sourceClasses, a map from each active field
+   back to which medication class(es) triggered it, needed so the manual picker can name the
+   specific class per the locked "name the specific class" decision.
+   KNOWN LIMITATION: DB.settings has no medication start-date tracking anywhere in the app today,
+   so "expiring" (e.g. fluoroquinolone's 90-day window) and "acute_window" (opioid's 28-day
+   window) constraints cannot actually be computed against a real elapsed time. Until start-date
+   tracking is added, every active constraint is treated as fully active regardless of
+   timeBehavior -- this is the conservative default (same as restrict-always-wins), not a bug,
+   but it does mean a fluoroquinolone constraint will never auto-expire at 90 days like the
+   schema intends. Revisit once a start-date field exists. */
+function getMedicationConstraints(){
+  var checked=(DB.settings&&DB.settings.medCategories)||[];
+  var merged={excludeModalities:[],excludeMovementTags:[],capWeeklySets:null,hrZoneUnreliable:false,
+    hrZoneDirection:null,fallRiskFlag:false,orthostaticFlag:false,boneLoadingPriority:false,
+    deferToPhysicianFlag:false,tendonCautionFlag:false,recoveryMultiplier:null};
+  var sourceClasses={};
+  var anyRestrictActive=false;
+  var loosenCandidates=[];
+
+  function noteSource(field,cls){
+    sourceClasses[field]=sourceClasses[field]||[];
+    if(sourceClasses[field].indexOf(cls)===-1)sourceClasses[field].push(cls);
+  }
+
+  checked.forEach(function(cls){
+    var c=MED_TRAINING_CONSTRAINTS[cls];
+    if(!c||c.direction===null)return; // no entry, or explicitly informational-only
+    var f=c.fields;
+    if(c.direction==="restrict"){
+      ["hrZoneUnreliable","fallRiskFlag","orthostaticFlag","boneLoadingPriority",
+        "deferToPhysicianFlag","tendonCautionFlag"].forEach(function(b){
+        if(f[b]){merged[b]=true;anyRestrictActive=true;noteSource(b,cls);}
+      });
+      if(f.hrZoneDirection){merged.hrZoneDirection=f.hrZoneDirection;noteSource("hrZoneDirection",cls);}
+      f.excludeModalities.forEach(function(m){
+        if(merged.excludeModalities.indexOf(m)===-1)merged.excludeModalities.push(m);
+        anyRestrictActive=true;noteSource("excludeModalities:"+m,cls);
+      });
+      f.excludeMovementTags.forEach(function(m){
+        if(merged.excludeMovementTags.indexOf(m)===-1)merged.excludeMovementTags.push(m);
+        anyRestrictActive=true;noteSource("excludeMovementTags:"+m,cls);
+      });
+      if(f.capWeeklySets!==null){
+        anyRestrictActive=true;noteSource("capWeeklySets",cls);
+        merged.capWeeklySets=(merged.capWeeklySets===null)?f.capWeeklySets:Math.min(merged.capWeeklySets,f.capWeeklySets);
+      }
+    } else if(c.direction==="loosen"){
+      if(f.recoveryMultiplier!==null)loosenCandidates.push({cls:cls,mult:f.recoveryMultiplier});
+    }
+    // Co-occurrence rule: only pde5_inhibitor uses this in v1. Activates its OWN restrict fields
+    // only when the required co-occurring class is ALSO active.
+    if(c.coOccurrenceRule){
+      var req=c.coOccurrenceRule.requiresAlsoActive;
+      var allPresent=req.every(function(r){return checked.indexOf(r)>-1;});
+      if(allPresent){
+        merged.fallRiskFlag=true;merged.orthostaticFlag=true;anyRestrictActive=true;
+        noteSource("fallRiskFlag",cls);noteSource("orthostaticFlag",cls);
+      }
+    }
+  });
+
+  // recoveryMultiplier: restrict always wins. Only apply a loosen multiplier if NOTHING
+  // restrict-direction is active anywhere in the merge.
+  if(!anyRestrictActive&&loosenCandidates.length){
+    merged.recoveryMultiplier=loosenCandidates[0].mult;
+    noteSource("recoveryMultiplier",loosenCandidates[0].cls);
+  }
+
+  return {fields:merged,sourceClasses:sourceClasses,activeClasses:checked.slice()};
+}
+/* Manual exercise-picker conflict check. Returns null if no conflict, or a short class-name
+   string (joined if multiple) to show in a pill badge next to the exercise row. Reuses the
+   same merged constraint object getMedicationConstraints() already computes -- no separate
+   logic, per the locked design. Warns, does not block (manual addition stays flexible). */
+function getExerciseConflictNote(name,medResult){
+  var tags=EXERCISE_TAGS[name];
+  if(!tags)return null;
+  var src=medResult.sourceClasses;
+  var hits=[];
+  function add(field,tagKey,modalityName){
+    if(tags[tagKey]&&medResult.fields.excludeMovementTags.indexOf(modalityName)>-1&&src[field]){
+      src[field].forEach(function(c){if(hits.indexOf(c)===-1)hits.push(c);});
+    }
+  }
+  add("fallRiskFlag","unsupportedBalance","unsupported_balance");
+  add("fallRiskFlag","overheadUnstable","overhead_unstable");
+  if(tags.gripSkinTraumaRisk&&medResult.fields.excludeMovementTags.indexOf("grip_skin_trauma_risk")>-1&&src.fallRiskFlag)
+    src.fallRiskFlag.forEach(function(c){if(hits.indexOf(c)===-1)hits.push(c);});
+  if(tags.achillesLoading&&medResult.fields.tendonCautionFlag&&src.tendonCautionFlag)
+    src.tendonCautionFlag.forEach(function(c){if(hits.indexOf(c)===-1)hits.push(c);});
+  if(!hits.length)return null;
+  return hits.join(", ");
 }
 function getLabTrainAdj(){
   var last=lastLabEntry();
