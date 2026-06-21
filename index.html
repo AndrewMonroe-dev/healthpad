@@ -278,7 +278,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 .adapt-panel.info{background:rgba(0,0,0,.04);border-color:var(--line2);color:var(--ink2);font-weight:500;}
 .pill.added{background:rgba(45,138,53,.1);color:#1e6b24;border:1px solid rgba(45,138,53,.3);font-size:9px;padding:3px 8px;}
 .pill.held{background:rgba(192,40,30,.1);color:var(--red-deep);border:1px solid rgba(192,40,30,.3);font-size:9px;padding:3px 8px;}
-.pill.medcaution{background:rgba(217,119,6,.12);color:#a85d00;border:1px solid rgba(217,119,6,.35);font-size:9px;padding:3px 8px;}
+.pill.medcaution{background:rgba(217,119,6,.12);color:#a85d00;border:1px solid rgba(217,119,6,.35);font-size:9px;padding:3px 8px;cursor:pointer;touch-action:manipulation;}
 .bonebar{background:rgba(154,110,40,.08);border:1px solid rgba(154,110,40,.28);color:var(--gold);font-size:12px;padding:8px 11px;border-radius:10px;margin-top:8px;font-weight:600;}
 .splash{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 38%,#8a1a12 0%,#c0281e 45%,#6b1208 100%);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .7s ease;}
 .splash.hide{opacity:0;pointer-events:none;}
@@ -1981,7 +1981,11 @@ function renderTrain(){
         '<input type="number" inputmode="decimal" placeholder="RIR" data-ex="'+ei+'" data-set="'+si+'" data-f="rir"></div>';
     }
     var medNote=medR?getExerciseConflictNote(ex.n,medR):null;
-    var medBadge=medNote?' <span class="pill medcaution">&#9888; Med Note</span>':'';
+    var medFullText=medNote?medNote.split(", ").map(function(cls){
+      var mc=MED_TRAIN_CONTEXT[cls];
+      return mc&&mc.standalone?mc.standalone:"This exercise involves a movement pattern flagged by this medication.";
+    }).join("\n\n"):"";
+    var medBadge=medNote?' <span class="pill medcaution" onclick="event.stopPropagation();showMedNotePopup(this)" data-medtext="'+medFullText.replace(/"/g,"&quot;")+'">&#9888; Med Note</span>':'';
     var badges=(ex.bone?' <span class="pill bone">Bone</span>':'')+(ex.added?' <span class="pill added">Added</span>':'')+(holdToday?' <span class="pill held">Held</span>':'')+(a.extra>0?' <span class="pill added">+'+a.extra+' set</span>':'')+medBadge;
     html2+='<div class="ex" data-name="'+ex.n+'">'+
       '<div class="ex-h" onclick="toggleEx(this)">'+
@@ -2002,7 +2006,6 @@ function renderTrain(){
           '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="removeSessionSet('+ei+')">- Set</button>'+
         '</div>'+
         (ex.bone?'<div class="bonebar">Bone-priority lift. Reduce load before skipping.</div>':'')+
-        (medNote?'<div class="bonebar" style="background:rgba(217,119,6,.10);border-color:rgba(217,119,6,.4);color:#a85d00;">Medication note: this exercise involves a movement pattern flagged by your '+medNote.split(", ").join(" and ")+' medication(s). See Setup for full guidance.</div>':'')+
       '</div></div>';
   });
   html2+='<div style="margin-top:14px;"><button class="btn sm ghost" style="width:100%;touch-action:manipulation;" onclick="showAddExModal()">+ Add Exercise to Today</button></div>';
@@ -2013,6 +2016,21 @@ function pickDay(i){
   selDay=i;renderTrain();
 }
 function toggleEx(el){el.parentNode.querySelector(".ex-body").classList.toggle("open");}
+function showMedNotePopup(badgeEl){
+  var text=(badgeEl.dataset.medtext||"").split("\n\n");
+  var m=document.createElement("div");
+  m.id="medNotePopup";
+  m.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.85);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px;";
+  m.innerHTML='<div style="background:var(--surf);border-radius:14px;max-width:420px;max-height:75vh;overflow-y:auto;padding:20px;color:var(--ink);">'+
+    '<div style="font-weight:700;font-size:15px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">'+
+      '<span>&#9888; Medication Note</span>'+
+      '<button onclick="closeExModal(&quot;medNotePopup&quot;)" style="background:none;border:none;font-size:20px;color:var(--faint);cursor:pointer;padding:0 4px;">&#x2715;</button>'+
+    '</div>'+
+    text.map(function(t){return '<div style="font-size:14px;line-height:1.5;margin-bottom:10px;">'+t+'</div>';}).join("")+
+  '</div>';
+  m.addEventListener("click",function(e){if(e.target===m)closeExModal("medNotePopup");});
+  document.body.appendChild(m);
+}
 
 function lastSetData(name){
   var hist=DB.workouts.filter(function(w){return w.ex&&w.ex[name];}).slice(-1);
