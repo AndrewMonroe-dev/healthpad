@@ -2009,6 +2009,7 @@ function renderTrain(){
       '</div></div>';
   });
   html2+='<div style="margin-top:14px;"><button class="btn sm ghost" style="width:100%;touch-action:manipulation;" onclick="showAddExModal()">+ Add Exercise to Today</button></div>';
+  html2+='<div style="margin-top:8px;"><button class="btn sm dark" style="width:100%;touch-action:manipulation;" onclick="showEndOfDayRecap()">&#128203; End of Day Recap</button></div>';
   document.getElementById("workoutArea").innerHTML=html2;
 }
 function pickDay(i){
@@ -2016,6 +2017,98 @@ function pickDay(i){
   selDay=i;renderTrain();
 }
 function toggleEx(el){el.parentNode.querySelector(".ex-body").classList.toggle("open");}
+function showEndOfDayRecap(){
+  var nt=todayNutrition()||{};
+  var tgt=getNutTargets();
+  var steps=todaySteps?todaySteps():0;
+  var stepBaseline=(DB.settings&&DB.settings.stepBaseline)||null;
+  var workout=DB.workouts.filter(function(w){return w.d===todayStr();})[0];
+
+  var rows=[]; // {label, actual, target, status: "good"|"over"|"under", tip}
+
+  // ── Acute, same-day-actionable items ──────────────────────────
+  if(nt.sodium!==undefined){
+    var sodOver=nt.sodium>tgt.sodiumMax;
+    rows.push({label:"Sodium", actual:nt.sodium+"mg", target:"under "+tgt.sodiumMax+"mg", status:sodOver?"over":"good",
+      tip:sodOver?"Watch for processed/restaurant food and added salt tomorrow \u2014 sauces, deli meat, and canned goods are common hidden sources.":null});
+  }
+  if(nt.water!==undefined){
+    var waterUnder=nt.water<tgt.waterMin;
+    rows.push({label:"Water", actual:nt.water+"oz", target:tgt.waterMin+"oz", status:waterUnder?"under":"good",
+      tip:waterUnder?"Try keeping a bottle visible at your desk or in the car \u2014 most people under-hydrate from not having water within reach, not from active avoidance.":null});
+  }
+  var calLow=tgt.calLow, calHigh=tgt.calHigh;
+  if(nt.cal!==undefined){
+    var calOff=nt.cal<calLow||nt.cal>calHigh;
+    rows.push({label:"Calories", actual:nt.cal, target:calLow+"\u2013"+calHigh, status:calOff?(nt.cal>calHigh?"over":"under"):"good",
+      tip:calOff?(nt.cal>calHigh?"One high day isn't a setback on its own \u2014 just pick back up at target tomorrow rather than restricting further to compensate.":"If this was appetite-driven, that's worth tracking; if it was intentional, make sure protein still landed."):null});
+  }
+
+  // ── Pattern-based items: only suggest if low/high 2+ of the last 3 logged days, not just today ──
+  var recent=DB.nutrition.slice(-3);
+  function recentLowCount(key,min){return recent.filter(function(d){return (d[key]||0)<min;}).length;}
+  function recentHighCount(key,max){return recent.filter(function(d){return (d[key]||0)>max;}).length;}
+
+  if(nt.pro!==undefined){
+    var proLow=nt.pro<tgt.proMin;
+    var pattern=recentLowCount("pro",tgt.proMin)>=2;
+    rows.push({label:"Protein", actual:nt.pro+"g", target:tgt.proMin+"g min", status:proLow?"under":"good",
+      tip:(proLow&&pattern)?"This has been low a couple of days running \u2014 worth front-loading protein earlier in the day rather than trying to catch up at dinner.":null});
+  }
+  if(nt.fiber!==undefined){
+    var fibLow=nt.fiber<tgt.fiberMin;
+    var fibPattern=recentLowCount("fiber",tgt.fiberMin)>=2;
+    rows.push({label:"Fiber", actual:nt.fiber+"g", target:tgt.fiberMin+"g min", status:fibLow?"under":"good",
+      tip:(fibLow&&fibPattern)?"Low a couple days in a row \u2014 beans, oats, or a piece of fruit at a meal you're not currently using them in is usually the easiest lever.":null});
+  }
+  if(nt.veg!==undefined){
+    var vegLow=nt.veg<tgt.vegMin;
+    var vegPattern=recentLowCount("veg",tgt.vegMin)>=2;
+    rows.push({label:"Vegetable servings", actual:nt.veg, target:tgt.vegMin+" min", status:vegLow?"under":"good",
+      tip:(vegLow&&vegPattern)?"Trending low this week \u2014 even adding one serving to your most consistent meal would close most of the gap.":null});
+  }
+
+  // ── Training ──────────────────────────────────────────────────
+  var trainingRow="";
+  if(!workout){
+    trainingRow="No training session logged for today.";
+  }else if(workout.cardio!==undefined){
+    trainingRow="Cardio day \u2014 "+workout.cardio+" min logged.";
+  }else{
+    var totalSets=0; Object.keys(workout.ex||{}).forEach(function(n){totalSets+=workout.ex[n].length;});
+    trainingRow=totalSets+" sets logged across "+Object.keys(workout.ex||{}).length+" exercise(s).";
+  }
+
+  // ── Steps ─────────────────────────────────────────────────────
+  var stepsRow=stepBaseline?steps.toLocaleString()+" steps (your baseline is ~"+stepBaseline.toLocaleString()+")":steps.toLocaleString()+" steps logged.";
+
+  var rowsHtml=rows.map(function(r){
+    var color=r.status==="good"?"var(--good)":r.status==="over"?"var(--red)":"var(--gold)";
+    var icon=r.status==="good"?"&#10003;":r.status==="over"?"&#9650;":"&#9660;";
+    return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line);">'+
+      '<span style="font-size:14px;font-weight:600;">'+r.label+'</span>'+
+      '<span style="font-size:13px;color:'+color+';">'+icon+' '+r.actual+' <span style="opacity:.6;">/ '+r.target+'</span></span>'+
+    '</div>'+(r.tip?'<div style="font-size:12px;color:var(--dim);padding:4px 0 8px;">'+r.tip+'</div>':'');
+  }).join("");
+
+  var m=document.createElement("div");
+  m.id="eodRecapModal";
+  m.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.88);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px;";
+  m.innerHTML='<div style="background:var(--surf);border-radius:14px;max-width:440px;max-height:80vh;overflow-y:auto;padding:20px;color:var(--ink);">'+
+    '<div style="font-weight:700;font-size:16px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">'+
+      '<span>End of Day Recap</span>'+
+      '<button onclick="closeExModal(&quot;eodRecapModal&quot;)" style="background:none;border:none;font-size:20px;color:var(--faint);cursor:pointer;padding:0 4px;">&#x2715;</button>'+
+    '</div>'+
+    '<div style="font-size:12px;color:var(--faint);margin-bottom:14px;">'+todayStr()+'</div>'+
+    rowsHtml+
+    '<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;font-weight:600;">Training</div>'+
+    '<div style="font-size:13px;color:var(--dim);padding:6px 0;">'+trainingRow+'</div>'+
+    '<div style="font-size:13px;font-weight:600;margin-top:8px;">Steps</div>'+
+    '<div style="font-size:13px;color:var(--dim);padding:6px 0;">'+stepsRow+'</div>'+
+  '</div>';
+  m.addEventListener("click",function(e){if(e.target===m)closeExModal("eodRecapModal");});
+  document.body.appendChild(m);
+}
 function showMedNotePopup(badgeEl){
   var text=(badgeEl.dataset.medtext||"").split("\n\n");
   var m=document.createElement("div");
