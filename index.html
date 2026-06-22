@@ -1447,7 +1447,8 @@ var timerInt=null, timerLeft=0;
 function load(){
   try{var s=localStorage.getItem("healthpad_db");if(s)DB=JSON.parse(s);}catch(e){}
   if(!DB.oneRM||Object.keys(DB.oneRM).length===0){DB.oneRM=Object.assign({},DEFAULT_1RM);}
-  if(!DB.settings)DB.settings={sheetUrl:""};
+  if(!DB.settings||typeof DB.settings!=="object")DB.settings={};
+  if(DB.settings.sheetUrl===undefined)DB.settings.sheetUrl="";
   if(DB.settings.fdcKey===undefined)DB.settings.fdcKey="";
   if(DB.settings.trackingStyle===undefined)DB.settings.trackingStyle="calories";
   if(DB.settings.pointsBudgetOverride===undefined)DB.settings.pointsBudgetOverride=null;
@@ -5295,7 +5296,7 @@ function showNewFoodForm(prefill,sourceMeta,editId){
     unitSelectorHtml+
     '<label class="fld">Food name</label><input id="nfName" type="text" placeholder="e.g. Chicken Breast">'+
     '<div class="row3" style="margin-top:6px;">'+
-      '<div><label class="fld">Qty</label><input id="nfQty" type="number" inputmode="decimal" placeholder="6"></div>'+
+      '<div><label class="fld">Qty</label><input id="nfQty" type="number" inputmode="decimal" placeholder="6" oninput="syncQtyToRecalc()"></div>'+
       '<div><label class="fld">Unit</label><input id="nfUnit" type="text" placeholder="oz"></div>'+
       '<div><label class="fld">Calories</label><input id="nfCal" type="number" inputmode="numeric" placeholder="kcal"></div>'+
     '</div>'+
@@ -5352,6 +5353,20 @@ function updateNfPointsDisplay(){
   var ptsField=document.getElementById("nfPoints");
   if(!ptsField)return;
   ptsField.value=calcPoints(g("nfCal"),g("nfSatFat"),g("nfSugar"),g("nfPro"));
+}
+function syncQtyToRecalc(){
+  // Bridges manual edits to the Qty field into the same recalculation path used by the
+  // amount/unit selector, since nfQty previously had no handler and silently did nothing.
+  if(!_nfSourceData)return;
+  var amountInput=document.getElementById("nfRecalcAmount");
+  var unitSel=document.getElementById("nfRecalcUnit");
+  var qtyVal=parseFloat(document.getElementById("nfQty").value)||0;
+  if(unitSel&&unitSel.value==="serving"&&unitSel.value!=="g"){
+    // typing a qty while in "serving" mode implies switching to grams so the number is meaningful
+    unitSel.value="g";
+  }
+  if(amountInput)amountInput.value=qtyVal;
+  recalcNewFoodFromSource();
 }
 function recalcNewFoodFromSource(){
   if(!_nfSourceData)return;
