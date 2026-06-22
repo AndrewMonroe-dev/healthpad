@@ -306,6 +306,18 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
   45%{box-shadow:0 0 0 2px rgba(26,157,255,.7), 0 0 18px 2px rgba(26,157,255,.55);border-color:#1a9dff;}
   100%{box-shadow:0 0 0 1px rgba(26,157,255,.45), 0 0 10px rgba(26,157,255,.35);border-color:#1a9dff;}
 }
+/* End of Day button: green glow sweep on first-ever view, same pattern as the food search highlight */
+.eod-hl{
+  border:1.5px solid #2d8a35 !important;
+  box-shadow:0 0 0 1px rgba(45,138,53,.45), 0 0 10px rgba(45,138,53,.35);
+  animation:eodGlare 1.4s cubic-bezier(.22,.9,.3,1) 1;
+}
+@keyframes eodGlare{
+  0%{box-shadow:0 0 0 1px rgba(45,138,53,0), 0 0 0 rgba(45,138,53,0);border-color:rgba(45,138,53,.3);}
+  18%{box-shadow:0 0 0 4px rgba(80,210,90,.95), 0 0 30px 8px rgba(45,138,53,.9);border-color:#5fd86a;}
+  45%{box-shadow:0 0 0 2px rgba(45,138,53,.75), 0 0 20px 3px rgba(45,138,53,.6);border-color:#2d8a35;}
+  100%{box-shadow:0 0 0 1px rgba(45,138,53,.45), 0 0 10px rgba(45,138,53,.35);border-color:#2d8a35;}
+}
 </style>
 </head>
 <body>
@@ -433,12 +445,19 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
           <button class="nutbox-water-btn" onclick="event.stopPropagation();quickAddWater(16)">+16</button>
         </div>
       </div>
+      <div class="ringcard" id="nbEodBox" onclick="showEndOfDayRecap()" style="cursor:pointer;touch-action:manipulation;">
+        <div class="ring" style="display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 130 130" width="148" height="148">
+            <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+            <circle class="ring-fill" cx="65" cy="65" r="54" stroke-width="11" style="stroke:#2d8a35;stroke-dasharray:339;stroke-dashoffset:0;"/>
+          </svg>
+          <div class="ring-center"><div class="ring-val sm" style="font-size:15px;line-height:1.25;">End the<br>day?</div></div>
+        </div>
+      </div>
     </div>
 
     <div id="paceNote" style="display:none;"></div>
     <div id="progressionBanner" style="display:none;"></div>
-
-    <div style="margin-top:12px;"><button class="btn sm dark" style="width:100%;touch-action:manipulation;" onclick="showEndOfDayRecap()">&#128203; End of Day Recap</button></div>
 
     <div class="sec">
       <div class="sec-h">Morning Readiness</div>
@@ -1514,6 +1533,17 @@ function nav(v){
 /* ============ HOME ============ */
 function renderHome(){
   var t=new Date();t.setHours(0,0,0,0);
+  // End of Day button: glow once on first-ever view, then never again
+  var eodBox=document.getElementById("nbEodBox");
+  if(eodBox){
+    if(!DB.settings.eodButtonSeen){
+      eodBox.classList.add("eod-hl");
+      DB.settings.eodButtonSeen=true;
+      save();
+    }else{
+      eodBox.classList.remove("eod-hl");
+    }
+  }
   // Goal-driven countdown
   var g=DB.goal||{};
   var hasGoal=g.targetDate&&g.targetDate.length>0;
