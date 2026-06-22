@@ -445,7 +445,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
           <button class="nutbox-water-btn" onclick="event.stopPropagation();quickAddWater(16)">+16</button>
         </div>
       </div>
-      <div class="ringcard" id="nbEodBox" onclick="showEndOfDayRecap()" style="cursor:pointer;touch-action:manipulation;">
+      <div class="ringcard" id="nbEodBox" onclick="try{showEndOfDayRecap();}catch(e){alert('EOD error: '+e.message);}" style="cursor:pointer;touch-action:manipulation;">
         <div class="ring" style="display:flex;align-items:center;justify-content:center;">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
