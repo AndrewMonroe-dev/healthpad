@@ -650,6 +650,11 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="note dim" id="stepsTrendNote" style="margin-top:9px;"></div>
     </div>
     <div class="sec">
+      <div class="sec-h">Cardio Heart Rate Trend</div>
+      <div class="chartbox" id="cardioHRChart"></div>
+      <div class="note dim" id="cardioHRTrendNote" style="margin-top:9px;"></div>
+    </div>
+    <div class="sec">
       <div class="sec-h">Blood Pressure</div>
       <div class="chartbox" id="bpChart"></div>
       <div class="note dim" id="bpTrendNote" style="margin-top:9px;"></div>
@@ -761,6 +766,14 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <textarea id="inMedStack" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;" placeholder="Specific medications, dosages, or notes for your own reference"></textarea>
       <button class="btn sm" style="margin-top:8px;" onclick="saveMedStack()">Save</button>
       <div class="note dim" id="medStackEcho" style="margin-top:6px;"></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h">Cardio Heart Rate</div>
+      <div class="note dim" style="margin-bottom:8px;">Optional. Overrides the 220-minus-age estimate used for HR zone display on cardio days. Leave blank to use the age-based estimate, or enter a measured/known max if you have one \u2014 the 220-age formula carries roughly \u00B110-12 bpm error person to person.</div>
+      <label class="fld">Known Max HR (bpm)</label>
+      <input type="number" id="inMaxHR" inputmode="numeric" placeholder="e.g. 178">
+      <button class="btn sm ghost" style="margin-top:8px;" onclick="saveMaxHR()">Save</button>
+      <div class="note dim" id="maxHREcho" style="margin-top:6px;"></div>
     </div>
     <div class="sec">
       <div class="sec-h">Milestones</div>
@@ -1440,7 +1453,7 @@ var SPLIT_HEAVY=[
 // (no copy-paste needed on their end) while still saving locally on their device from then on.
 var PLAYTESTER_SHEET_URL="https://script.google.com/macros/s/AKfycbyZY0ljj6wmeADNHVics-gKR4cV7i3614ngVl7ZVGxkCVOYLC1VJ_ZbDMklcQQsNOzw-Q/exec";
 var PLAYTESTER_FDC_KEY="cgYh3ZegjtLwvbhppgBYz6wKI0YcTKe99FKyrlcF";
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var timerInt=null, timerLeft=0;
 
@@ -1523,7 +1536,7 @@ function nav(v){
   if(v==="prog")renderProg();
   if(v==="setup")renderSetup();
   if(v==="log"){renderBPSection();renderStepsSection();renderRHRHistory();loadBPPromptPref();loadWeightReactionPref();renderLabs();}
-  if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();renderMedTags();}
+  if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();loadMaxHR();renderMedTags();}
   window.scrollTo(0,0);
   el.style.animation="none"; void el.offsetWidth;
   el.style.animation="slideIn"+(dir>0?"R":"L")+" .34s cubic-bezier(.22,.9,.3,1)";
@@ -1937,7 +1950,34 @@ function renderTrain(){
   document.getElementById("dayChips").innerHTML=chips;
   var d=split[selDay];
   if(d.rest){document.getElementById("dayNote").textContent="Rest day. Walk the dog, hit 10k steps, light mobility.";document.getElementById("workoutArea").innerHTML="";return;}
-  if(d.cardio){document.getElementById("dayNote").textContent="Zone 2 cardio 40-50 min plus core and mobility. Steer by the talk test.";document.getElementById("workoutArea").innerHTML='<div class="sec"><div class="sec-h">Conditioning</div><label class="fld">Minutes Zone 2</label><input type="number" id="cardioMin" inputmode="numeric" placeholder="45"><div class="note dim" style="margin-top:8px;">Logged with the session when you tap Save.</div></div>';return;}
+  if(d.cardio){
+    document.getElementById("dayNote").textContent="Zone 2 cardio 40-50 min plus core and mobility. Steer by the talk test.";
+    var medC=getMedicationConstraints?getMedicationConstraints():null;
+    var hrUnreliable=medC&&medC.hrZoneUnreliable;
+    var hrMedNote=hrUnreliable?('<div class="note dim" style="margin-top:6px;color:var(--gold);">Medication on board alters heart rate response ('+(medC.hrZoneDirection||"altered")+'). Zones aren\u2019t estimated below \u2014 use RPE and the talk test instead.</div>'):'';
+    document.getElementById("workoutArea").innerHTML=
+      '<div class="sec"><div class="sec-h">Conditioning</div>'+
+      '<label class="fld">Minutes Zone 2</label><input type="number" id="cardioMin" inputmode="numeric" placeholder="45">'+
+      '<div class="row3" style="margin-top:10px;">'+
+        '<div><label class="fld">Avg HR</label><input type="number" id="cardioAvgHR" inputmode="numeric" placeholder="bpm" oninput="updateCardioHRPreview()"></div>'+
+        '<div><label class="fld">Peak HR</label><input type="number" id="cardioPeakHR" inputmode="numeric" placeholder="bpm" oninput="updateCardioHRPreview()"></div>'+
+        '<div><label class="fld">Start HR</label><input type="number" id="cardioStartHR" inputmode="numeric" placeholder="bpm" oninput="updateCardioHRPreview()"></div>'+
+      '</div>'+
+      '<label class="fld" style="margin-top:8px;">End HR (optional, for drift)</label><input type="number" id="cardioEndHR" inputmode="numeric" placeholder="bpm" oninput="updateCardioHRPreview()">'+
+      '<div class="note dim" id="cardioHRPreview" style="margin-top:8px;"></div>'+
+      hrMedNote+
+      '<div class="note dim" style="margin-top:8px;">All HR fields are optional. Logged with the session when you tap Save.</div></div>';
+    if(hasCardioStepCredit&&hasCardioStepCredit()){
+      var wa=document.getElementById("workoutArea");
+      var cc=document.createElement("div");
+      cc.className="adapt-panel step-credit";
+      cc.style.cssText="background:rgba(45,138,53,.12);border-color:var(--good);margin-bottom:12px;";
+      cc.innerHTML="\u2705 "+(todaySteps()?todaySteps():0).toLocaleString()+" steps today \u2014 cardio day credit earned. Zone 2 confirmed.";
+      wa.insertBefore(cc,wa.firstChild);
+    }
+    updateCardioHRPreview();
+    return;
+  }
 
   var wip=weeksIntoPhase();
   var todayFat=currentFatigue();
@@ -1965,19 +2005,7 @@ function renderTrain(){
   else if(todayFat==="low"){stateCls="held";stateTxt="Energy flag: low — sets reduced by 1, load pulled back ~5%, rep range compressed. Move well, not heavy.";}
   else if(todayFat==="mod"){stateCls="";stateTxt="Energy flag: moderate — baseline targets. Consistent effort.";}
   else{stateCls="";stateTxt="Adaptive: active — targets climbing on your logged data. Week "+(wip+1)+" in phase.";}
-  // Cardio step credit — separate block, never part of the status chain
-  if(d&&d.cardio&&hasCardioStepCredit&&hasCardioStepCredit()){
-    setTimeout(function(){
-      var wa=document.getElementById("workoutArea");
-      if(wa&&!wa.querySelector(".step-credit")){
-        var cc=document.createElement("div");
-        cc.className="adapt-panel step-credit";
-        cc.style.cssText="background:rgba(45,138,53,.12);border-color:var(--good);margin-bottom:12px;";
-        cc.innerHTML="✅ "+todaySteps().toLocaleString()+" steps today — cardio day credit earned. Zone 2 confirmed.";
-        wa.insertBefore(cc,wa.firstChild);
-      }
-    },80);
-  }
+  // Cardio step credit panel is built inline in the d.cardio block above (cardio days return before this point).
 
   var exList=d.ex.slice();
   if(!holdToday&&!isDeload()){
@@ -2105,7 +2133,7 @@ function showEndOfDayRecap(){
   if(!workout){
     trainingRow="No training session logged for today.";
   }else if(workout.cardio!==undefined){
-    trainingRow="Cardio day \u2014 "+workout.cardio+" min logged.";
+    trainingRow="Cardio day \u2014 "+workout.cardio+" min logged"+(workout.avgHR?(", avg HR "+workout.avgHR+" bpm"):"")+".";
   }else{
     var totalSets=0; Object.keys(workout.ex||{}).forEach(function(n){totalSets+=workout.ex[n].length;});
     trainingRow=totalSets+" sets logged across "+Object.keys(workout.ex||{}).length+" exercise(s).";
@@ -2168,6 +2196,14 @@ function saveWorkout(){
   if(d.cardio){
     var cm=document.getElementById("cardioMin");
     rec.cardio=cm?parseInt(cm.value)||0:0;
+    var avgHR=parseInt(document.getElementById("cardioAvgHR")?document.getElementById("cardioAvgHR").value:"");
+    var peakHR=parseInt(document.getElementById("cardioPeakHR")?document.getElementById("cardioPeakHR").value:"");
+    var startHR=parseInt(document.getElementById("cardioStartHR")?document.getElementById("cardioStartHR").value:"");
+    var endHR=parseInt(document.getElementById("cardioEndHR")?document.getElementById("cardioEndHR").value:"");
+    if(!isNaN(avgHR))rec.avgHR=avgHR;
+    if(!isNaN(peakHR))rec.peakHR=peakHR;
+    if(!isNaN(startHR))rec.startHR=startHR;
+    if(!isNaN(endHR))rec.endHR=endHR;
   } else {
     var inputs=document.querySelectorAll("#workoutArea input[data-ex]");
     var temp={};
@@ -2199,6 +2235,69 @@ function updatePR(name,sets){
       }
     }
   });
+}
+
+/* ============ CARDIO HEART RATE ============ */
+// estimatedMaxHR: known/measured value from Setup takes priority over the 220-age formula.
+// Returns null if neither is available (no age set, no known max entered).
+function estimatedMaxHR(){
+  var k=DB.settings&&DB.settings.knownMaxHR;
+  if(k)return k;
+  var age=DB.settings&&DB.settings.age;
+  if(age)return 220-age;
+  return null;
+}
+// Simple %-of-max-HR zone bands, consistent with the "Zone 2 cardio" language already used
+// elsewhere in the app (Zone 2 = 60-70% of max). Returns null if no max HR estimate exists.
+function hrZoneInfo(avgHR){
+  var maxHR=estimatedMaxHR();
+  if(!maxHR||!avgHR)return null;
+  var pct=Math.round((avgHR/maxHR)*100);
+  var zones=[
+    {lo:0,hi:60,label:"Zone 1 (Very Light)"},
+    {lo:60,hi:70,label:"Zone 2 (Aerobic Base)"},
+    {lo:70,hi:80,label:"Zone 3 (Moderate)"},
+    {lo:80,hi:90,label:"Zone 4 (Hard)"},
+    {lo:90,hi:999,label:"Zone 5 (Max Effort)"}
+  ];
+  var z=zones.filter(function(zz){return pct>=zz.lo&&pct<zz.hi;})[0]||zones[zones.length-1];
+  return {label:z.label,pct:pct,maxHR:maxHR};
+}
+// Live preview under the cardio HR inputs. Med-aware: if an active medication blunts/elevates
+// HR response (hrZoneUnreliable from getMedicationConstraints), zone math is suppressed entirely
+// rather than shown alongside a caveat, since a number presented next to a warning still reads
+// as the number that matters.
+function updateCardioHRPreview(){
+  var prevEl=document.getElementById("cardioHRPreview");
+  if(!prevEl)return;
+  var avgEl=document.getElementById("cardioAvgHR"),peakEl=document.getElementById("cardioPeakHR"),
+      startEl=document.getElementById("cardioStartHR"),endEl=document.getElementById("cardioEndHR");
+  var avg=avgEl?parseInt(avgEl.value):NaN;
+  var peak=peakEl?parseInt(peakEl.value):NaN;
+  var start=startEl?parseInt(startEl.value):NaN;
+  var end=endEl?parseInt(endEl.value):NaN;
+  var medC=getMedicationConstraints?getMedicationConstraints():null;
+  var hrUnreliable=medC&&medC.hrZoneUnreliable;
+  var parts=[];
+  if(!isNaN(avg)){
+    if(hrUnreliable){
+      parts.push("Avg "+avg+" bpm logged. Zone not estimated \u2014 medication alters HR response, go by RPE/talk test.");
+    }else{
+      var z=hrZoneInfo(avg);
+      if(z)parts.push("Avg "+avg+" bpm \u2014 "+z.label+" ("+z.pct+"% of est. max "+z.maxHR+" bpm).");
+      else parts.push("Avg "+avg+" bpm. Add your known max HR in Setup (or age at onboarding) to estimate a zone.");
+    }
+  }
+  if(!isNaN(peak)&&!hrUnreliable){
+    var maxHR=estimatedMaxHR();
+    if(maxHR&&peak>=maxHR)parts.push("Peak "+peak+" bpm is at or above your estimated max ("+maxHR+") \u2014 that's an estimate with real error margin, not a hard ceiling, but worth noting.");
+  }
+  if(!isNaN(start)&&!isNaN(end)&&start>0){
+    var drift=Math.round(((end-start)/start*100)*10)/10;
+    var driftNote=Math.abs(drift)>=10?" Drift over ~10% during steady-state cardio commonly reflects heat, dehydration, or an aerobic fitness limit \u2014 worth a look if it's a pattern rather than a one-off.":"";
+    parts.push("Cardiac drift: "+(drift>0?"+":"")+drift+"%."+driftNote);
+  }
+  prevEl.textContent=parts.join(" ");
 }
 
 /* ============ LOG ============ */
@@ -2610,6 +2709,7 @@ function renderProg(){
   weeklyRecap();
   drawRHR();
   drawSteps();
+  drawCardioHR();
   drawBP();
   drawNutrition();
   populateLifts();
@@ -2620,6 +2720,18 @@ function renderProg(){
   var _baseCalP=(DB.settings&&DB.settings.currentCalTarget)||_ph.cal||2250;
   var _stepAdjP=stepCalAdjustment?stepCalAdjustment():0;
   renderNutFlags(_nt,_baseCalP+_stepAdjP);
+}
+function drawCardioHR(){
+  var box=document.getElementById("cardioHRChart");
+  if(!box)return;
+  var series=DB.workouts.filter(function(w){return w.avgHR;}).map(function(w){return {d:w.d,v:w.avgHR};});
+  if(series.length<2){
+    box.innerHTML='<div class="chart-empty">Log avg HR on at least two cardio sessions to see your trend.</div>';
+    document.getElementById("cardioHRTrendNote").textContent="";
+    return;
+  }
+  box.innerHTML=_lineChart(series,"var(--red)","var(--gold)");
+  document.getElementById("cardioHRTrendNote").textContent=_trendNote(series,"avg cardio HR","bpm",0,"A downward trend at similar pace/duration generally reflects improving aerobic fitness.");
 }
 function drawWeight(){
   var box=document.getElementById("weightChart");
@@ -3889,6 +4001,21 @@ function loadUserName(){
   if(el&&DB.settings&&DB.settings.userName)el.value=DB.settings.userName;
 }
 
+/* ============ KNOWN MAX HR ============ */
+function saveMaxHR(){
+  var v=parseInt(document.getElementById("inMaxHR").value);
+  DB.settings=DB.settings||{};
+  DB.settings.knownMaxHR=isNaN(v)?null:v;
+  save();
+  document.getElementById("maxHREcho").textContent=isNaN(v)?"Cleared \u2014 using age-based estimate.":"Saved.";
+  setTimeout(function(){document.getElementById("maxHREcho").textContent="";},2000);
+  trySheetSync();
+}
+function loadMaxHR(){
+  var el=document.getElementById("inMaxHR");
+  if(el&&DB.settings&&DB.settings.knownMaxHR)el.value=DB.settings.knownMaxHR;
+}
+
 
 /* ============ MOTIVATIONAL QUOTE ============ */
 function showQuote(quotes){
@@ -4763,7 +4890,7 @@ function executeReset(){
   try{localStorage.removeItem("hp_dp");}catch(e){}
   // Reset DB to factory defaults
   DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],
-      oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30},
+      oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,knownMaxHR:null},
       goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},
       milestones:[],program:null};
   save();
@@ -4777,6 +4904,7 @@ function executeReset(){
   loadMedStack();
   loadGoalSettings();
   loadUserName();
+  loadMaxHR();
   nav("home");
   toast("App reset. Starting onboarding...");
   setTimeout(obShow, 800);
