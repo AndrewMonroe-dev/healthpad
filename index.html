@@ -2051,7 +2051,7 @@ function toggleEx(el){el.parentNode.querySelector(".ex-body").classList.toggle("
 function showEndOfDayRecap(){
   var nt=todayNutrition()||{};
   var tgt=getNutTargets();
-  var steps=todaySteps?todaySteps():0;
+  var steps=todaySteps?(todaySteps()||0):0;
   var stepBaseline=(DB.settings&&DB.settings.stepBaseline)||null;
   var workout=DB.workouts.filter(function(w){return w.d===todayStr();})[0];
 
