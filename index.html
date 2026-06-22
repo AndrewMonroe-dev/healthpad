@@ -816,6 +816,18 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
         <button class="btn sm gold" onclick="syncNow()">Sync Now</button>
       </div>
       <div class="note dim" id="syncNote" style="margin-top:10px;"></div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line2);">
+        <div class="note dim" style="margin-bottom:10px;">Pull your last-synced backup back from Sheets. Use this if local data disappears (a wiped browser, a new device, an update gone wrong).</div>
+        <button class="btn sm ghost" onclick="confirmRestore()">Restore from Sheets</button>
+        <div id="restoreConfirm" style="display:none;margin-top:12px;padding:14px;border:1.5px solid var(--gold);border-radius:12px;background:rgba(203,162,76,.08);">
+          <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">This replaces ALL local data with the last-synced backup from Sheets. Anything entered locally since your last sync will be lost. Continue?</div>
+          <div class="btn-row">
+            <button class="btn sm gold" style="touch-action:manipulation;" onclick="executeRestore()">Yes, Restore</button>
+            <button class="btn sm dark" style="touch-action:manipulation;" onclick="cancelRestore()">Cancel</button>
+          </div>
+        </div>
+        <div class="note dim" id="restoreNote" style="margin-top:10px;"></div>
+      </div>
     </div>
     <div class="sec">
       <div class="sec-h">Data</div>
@@ -3417,6 +3429,52 @@ function syncNow(quiet){
    .catch(function(){if(!quiet)toast("Sync failed \u2014 check URL");});
 }
 
+/* ============ RESTORE FROM SHEETS (reverse sync) ============ */
+// Requires the matching doGet update with an action=pull branch (see Apps Script v4) reading
+// back the hidden _raw_<user> backup tab. Older Apps Script deployments without that branch
+// will return the old {status:"ok",tabs:[...]} shape with no .data field -- handled explicitly
+// below rather than assumed, since this talks to code outside this file that may be stale.
+function confirmRestore(){
+  var c=document.getElementById("restoreConfirm");
+  if(c)c.style.display="block";
+}
+function cancelRestore(){
+  var c=document.getElementById("restoreConfirm");
+  if(c)c.style.display="none";
+}
+function executeRestore(){
+  var c=document.getElementById("restoreConfirm");
+  if(c)c.style.display="none";
+  pullFromSheets();
+}
+function pullFromSheets(){
+  var note=document.getElementById("restoreNote");
+  if(!DB.settings.sheetUrl){if(note)note.textContent="Add your Apps Script URL first.";return;}
+  var userName=DB.settings.userName||"Default";
+  var url=DB.settings.sheetUrl+"?action=pull&user="+encodeURIComponent(userName);
+  if(note)note.textContent="Restoring\u2026";
+  fetch(url)
+    .then(function(r){return r.json();})
+    .then(function(res){
+      if(!res||res.status!=="ok"){
+        if(note)note.textContent="No backup found for \""+userName+"\""+(res&&res.message?(": "+res.message):".");
+        return;
+      }
+      if(!res.data){
+        if(note)note.textContent="Your Apps Script is running an older version without restore support \u2014 redeploy the updated code (Deploy > Manage deployments > New version) and try again.";
+        return;
+      }
+      DB=res.data;
+      save();
+      if(note)note.textContent="Restored from Sheets ("+userName+"). Reloading\u2026";
+      toast("Data restored from Sheets");
+      setTimeout(function(){location.reload();},900);
+    })
+    .catch(function(){
+      if(note)note.textContent="Restore failed \u2014 check the Apps Script URL and that it's deployed with \"Anyone\" access.";
+    });
+}
+
 /* ============ TIMER ============ */
 function startTimer(sec){
   timerLeft=sec;document.getElementById("restTimer").classList.add("show");updTimer();
@@ -5693,58 +5751,23 @@ safeBoot(function(){
   },3400);
 },"onboardingGate");
 // PWA: service worker with offline shell caching — meets Chrome install criteria
+// Service worker (stale-while-revalidate app-shell cache, "A1") intentionally removed.
+// Per MASTER_CONTEXT this was tried previously, failed on-device, and was rolled back via
+// mulligan with root cause unresolved -- found still present/active in this file and removed
+// again here rather than left live, since it's a documented previously-failed mechanism.
+// Active cleanup below: removing the registration code in a new deploy does NOT undo a worker
+// already installed in the browser from a prior page load -- it keeps running and intercepting
+// fetches until explicitly unregistered. This unregisters any existing one and clears its cache
+// so the app goes back to loading index.html straight from the network every time.
 if("serviceWorker" in navigator){
-  try{
-    var swCode=[
-      "var CACHE='healthpad-v3';",
-      "var SHELL=['./index.html','./manifest.json','./apple-touch-icon.png','./quotes.json'];",
-      "self.addEventListener('install',function(e){",
-      "  self.skipWaiting();",
-      "  e.waitUntil(caches.open(CACHE).then(function(c){",
-      "    return Promise.allSettled(SHELL.map(function(u){return c.add(u).catch(function(){});}));",
-      "  }));",
-      "});",
-      "self.addEventListener('activate',function(e){",
-      "  e.waitUntil(caches.keys().then(function(keys){",
-      "    return Promise.all(keys.filter(function(k){return k!==CACHE;}).map(function(k){return caches.delete(k);}));",
-      "  }));",
-      "  self.clients.claim();",
-      "});",
-      "self.addEventListener('fetch',function(e){",
-      "  if(e.request.method!=='GET')return;",
-      "  var url=new URL(e.request.url);",
-      "  // Cross-origin (Open Food Facts, USDA, unpkg, Google Sheets): always go straight to network, never cache.",
-      "  if(url.origin!==self.location.origin)return;",
-      "  // Same-origin but cache-busted (quotes.json?v=..., weight_reactions.json?v=...): network-first, fall back to cache offline.",
-      "  if(url.search){",
-      "    e.respondWith(",
-      "      fetch(e.request).then(function(fresh){",
-      "        caches.open(CACHE).then(function(c){c.put(e.request,fresh.clone()).catch(function(){});});",
-      "        return fresh;",
-      "      }).catch(function(){return caches.match(e.request);})",
-      "    );",
-      "    return;",
-      "  }",
-      "  // Same-origin app shell (index.html, manifest, icon, plain quotes.json): stale-while-revalidate.",
-      "  // Serve cache instantly for fast startup, refresh the cache in the background for next launch.",
-      "  e.respondWith(",
-      "    caches.match(e.request).then(function(cached){",
-      "      var network=fetch(e.request).then(function(fresh){",
-      "        caches.open(CACHE).then(function(c){c.put(e.request,fresh.clone()).catch(function(){});});",
-      "        return fresh;",
-      "      }).catch(function(){return cached;});",
-      "      return cached||network;",
-      "    })",
-      "  );",
-      "});"
-    ].join("\n");
-    var swBlob=new Blob([swCode],{type:"application/javascript"});
-    var swUrl=URL.createObjectURL(swBlob);
-    navigator.serviceWorker.register(swUrl).catch(function(){});
-    navigator.serviceWorker.getRegistrations().then(function(regs){
-      regs.forEach(function(r){r.update().catch(function(){});});
-    }).catch(function(){});
-  }catch(e){}
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){r.unregister().catch(function(){});});
+  }).catch(function(){});
+}
+if("caches" in window){
+  caches.keys().then(function(keys){
+    keys.forEach(function(k){caches.delete(k).catch(function(){});});
+  }).catch(function(){});
 }
 
 function syncORMsFromLive(){
