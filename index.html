@@ -1467,6 +1467,7 @@ var PLAYTESTER_SHEET_URL="https://script.google.com/macros/s/AKfycbyZY0ljj6wmeAD
 var PLAYTESTER_FDC_KEY="cgYh3ZegjtLwvbhppgBYz6wKI0YcTKe99FKyrlcF";
 var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
+var _activeCardioZoneCap=null; // set by renderTrain from getLabLoadConstraints, read by updateCardioHRPreview
 var timerInt=null, timerLeft=0;
 
 function load(){
@@ -1835,7 +1836,7 @@ function weeksIntoPhase(){var ph=currentPhase();var ps=new Date(ph.start+"T00:00
 function currentFatigue(){if(selFatigue)return selFatigue;var t=todayStr();for(var i=DB.readiness.length-1;i>=0;i--){if(DB.readiness[i].d===t){var e=DB.readiness[i].energy;return e==="high"?"good":e==="mod"?"mod":e==="low"?"low":null;}}var w=DB.workouts.slice(-1);if(w.length&&w[0].fatigue)return w[0].fatigue;return null;}
 function recentLowReadiness(){var c=0;DB.readiness.slice(-3).forEach(function(x){if(x.energy==="low")c++;});DB.workouts.slice(-3).forEach(function(x){if(x.fatigue==="low")c++;});return c;}
 function daySessions(dayName){return DB.workouts.filter(function(w){return w.day===dayName&&w.ex&&Object.keys(w.ex).length;}).length;}
-function computeAdaptive(ex,holdToday,pauseVolume,wip,fatigueTier){
+function computeAdaptive(ex,holdToday,pauseVolume,wip,fatigueTier,labC){
   // fatigueTier: "good" | "mod" | "low" | null
   // Only use minimum necessary adjustments per tier
   var ph=currentPhase();var base=ex.s;
@@ -1881,12 +1882,22 @@ function computeAdaptive(ex,holdToday,pauseVolume,wip,fatigueTier){
   sets=Math.max(ex.bone?2:1, sets+setAdj);
   sets=Math.min(sets, base+ADAPT.maxAddSets);
 
+  // ── LAB-DRIVEN ENFORCEMENT (numeric, not just displayed text) ──────────────
+  // See LAB_LOAD_RULES / getLabLoadConstraints for where these numbers come from.
+  if(labC&&labC.setsMultPct!=null&&labC.setsMultPct<1){
+    sets=Math.max(ex.bone?2:1, Math.round(sets*labC.setsMultPct));
+  }
+
   // Apply rep adjustments
   var adjLo=ex.lo+loAdj;
   var adjHi=Math.max(adjLo, ex.hi+hiAdj);
 
   // ── RIR ───────────────────────────────────────────────────────
   var effRIR=Math.max(0, tRIR+rirAdj+(isDeload()?2:0));
+  if(labC){
+    if(labC.rirAdd)effRIR+=labC.rirAdd;
+    if(labC.boneOnlyRirAdd&&ex.bone)effRIR+=labC.boneOnlyRirAdd;
+  }
 
   // ── LOAD ──────────────────────────────────────────────────────
   var est=liveE1RM(ex.n);
@@ -1898,6 +1909,11 @@ function computeAdaptive(ex,holdToday,pauseVolume,wip,fatigueTier){
     load=load*0.95; // drop ~5% on low energy days
   } else if(fatigueTier==="good"&&!isDeload()&&!holdToday){
     load=load*1.02; // tiny push on good days
+  }
+  // Lab-driven load cut, applied on top of (not instead of) the fatigue-tier modifier above --
+  // worst case wins since both represent independent reasons to be conservative today.
+  if(labC&&labC.loadMult!=null&&labC.loadMult<1){
+    load=load*labC.loadMult;
   }
 
   // ── PROGRESSION CUES ─────────────────────────────────────────
@@ -1948,7 +1964,8 @@ function computeAdaptive(ex,holdToday,pauseVolume,wip,fatigueTier){
     loadStr:loadStr,rec:rec,est:Math.round(est),
     tRIR:Math.round(effRIR*10)/10,
     extra:extra,downtrend:downtrend,
-    fatigueNote:fatigueNote
+    fatigueNote:fatigueNote,
+    labSources:(labC&&labC.sources&&labC.sources.length)?labC.sources:null
   };
 }
 
@@ -1961,15 +1978,27 @@ function renderTrain(){
   var chips=split.map(function(d,i){return '<span class="daychip '+(i===selDay?"sel":"")+(d.rest?" rest":"")+'" onclick="pickDay('+i+')">'+d.day+'</span>';}).join("");
   document.getElementById("dayChips").innerHTML=chips;
   var d=split[selDay];
+  var labC=getLabLoadConstraints?getLabLoadConstraints():null;
   if(d.rest){document.getElementById("dayNote").textContent="Rest day. Walk the dog, hit 10k steps, light mobility.";document.getElementById("workoutArea").innerHTML="";return;}
   if(d.cardio){
-    document.getElementById("dayNote").textContent="Zone 2 cardio 40-50 min plus core and mobility. Steer by the talk test.";
+    var labFullHoldCardio=labC&&labC.fullHold;
+    var zoneCap=labC&&labC.cardioZoneCap;
+    _activeCardioZoneCap=zoneCap||null;
+    if(labFullHoldCardio){
+      var holdSrc=(labC.sources||[]).map(function(s){return s.label;}).join(", ");
+      document.getElementById("dayNote").innerHTML='<div class="adapt-panel held">&#9888; Medical hold active ('+holdSrc+'). Zone 1 walk only today \u2014 see Labs tab for the full note.</div>';
+    } else if(zoneCap){
+      var capSrc=(labC.sources||[]).map(function(s){return s.label;}).join(", ");
+      document.getElementById("dayNote").innerHTML='<div class="adapt-panel held">&#9888; Cardio capped to Zone '+zoneCap+' today ('+capSrc+'). Steer by the talk test, not the usual Zone 2 target.</div>';
+    } else {
+      document.getElementById("dayNote").textContent="Zone 2 cardio 40-50 min plus core and mobility. Steer by the talk test.";
+    }
     var medC=getMedicationConstraints?getMedicationConstraints():null;
     var hrUnreliable=medC&&medC.hrZoneUnreliable;
     var hrMedNote=hrUnreliable?('<div class="note dim" style="margin-top:6px;color:var(--gold);">Medication on board alters heart rate response ('+(medC.hrZoneDirection||"altered")+'). Zones aren\u2019t estimated below \u2014 use RPE and the talk test instead.</div>'):'';
     document.getElementById("workoutArea").innerHTML=
       '<div class="sec"><div class="sec-h">Conditioning</div>'+
-      '<label class="fld">Minutes Zone 2</label><input type="number" id="cardioMin" inputmode="numeric" placeholder="45">'+
+      '<label class="fld">Minutes'+(zoneCap?(" Zone "+zoneCap):" Zone 2")+'</label><input type="number" id="cardioMin" inputmode="numeric" placeholder="45">'+
       '<div class="row3" style="margin-top:10px;">'+
         '<div><label class="fld">Avg HR</label><input type="number" id="cardioAvgHR" inputmode="numeric" placeholder="bpm" oninput="updateCardioHRPreview()"></div>'+
         '<div><label class="fld">Peak HR</label><input type="number" id="cardioPeakHR" inputmode="numeric" placeholder="bpm" oninput="updateCardioHRPreview()"></div>'+
@@ -1988,6 +2017,12 @@ function renderTrain(){
       wa.insertBefore(cc,wa.firstChild);
     }
     updateCardioHRPreview();
+    return;
+  }
+  if(labC&&labC.fullHold){
+    var fhSrc=(labC.sources||[]).map(function(s){return s.label+" ("+s.tier+")";}).join(", ");
+    document.getElementById("dayNote").innerHTML='<div class="adapt-panel held">&#9888; Medical hold active: '+fhSrc+'. Today\u2019s lifting session is replaced with light movement only \u2014 see the Labs tab for the full note from your last panel. This isn\u2019t a soft suggestion; the source lab value explicitly says to stop normal-intensity training.</div>';
+    document.getElementById("workoutArea").innerHTML='<div class="sec"><div class="note dim">Suggested: a 15-20 minute easy walk, light stretching, or nothing at all. Resume normal programming once the flagged value is rechecked and no longer critical.</div></div>';
     return;
   }
 
@@ -2043,7 +2078,7 @@ function renderTrain(){
 
   var html2="";
   exList.forEach(function(ex,ei){
-    var a=computeAdaptive(ex,holdToday,pauseVolume,wip,todayFat);
+    var a=computeAdaptive(ex,holdToday,pauseVolume,wip,todayFat,labC);
     if(_sessionSets[ei]!==undefined)a.sets=_sessionSets[ei];
     var rows="";var last=lastSetData(ex.n);
     for(var si=0;si<a.sets;si++){
@@ -2059,7 +2094,9 @@ function renderTrain(){
       return mc&&mc.standalone?mc.standalone:"This exercise involves a movement pattern flagged by this medication.";
     }).join("\n\n"):"";
     var medBadge=medNote?' <span class="pill medcaution" onclick="event.stopPropagation();showMedNotePopup(this)" data-medtext="'+medFullText.replace(/"/g,"&quot;")+'">&#9888; Med Note</span>':'';
-    var badges=(ex.bone?' <span class="pill bone">Bone</span>':'')+(ex.added?' <span class="pill added">Added</span>':'')+(holdToday?' <span class="pill held">Held</span>':'')+(a.extra>0?' <span class="pill added">+'+a.extra+' set</span>':'')+medBadge;
+    var labBadgeText=(a.labSources&&a.labSources.length)?a.labSources.map(function(s){return s.label+" ("+s.tier+")";}).join("\n"):"";
+    var labBadge=labBadgeText?' <span class="pill medcaution" onclick="event.stopPropagation();showMedNotePopup(this)" data-medtext="'+labBadgeText.replace(/"/g,"&quot;")+'">&#9888; Lab Adj.</span>':'';
+    var badges=(ex.bone?' <span class="pill bone">Bone</span>':'')+(ex.added?' <span class="pill added">Added</span>':'')+(holdToday?' <span class="pill held">Held</span>':'')+(a.extra>0?' <span class="pill added">+'+a.extra+' set</span>':'')+medBadge+labBadge;
     html2+='<div class="ex" data-name="'+ex.n+'">'+
       '<div class="ex-h" onclick="toggleEx(this)">'+
         '<div><div class="ex-name">'+ex.n+badges+'</div>'+
@@ -2296,7 +2333,13 @@ function updateCardioHRPreview(){
       parts.push("Avg "+avg+" bpm logged. Zone not estimated \u2014 medication alters HR response, go by RPE/talk test.");
     }else{
       var z=hrZoneInfo(avg);
-      if(z)parts.push("Avg "+avg+" bpm \u2014 "+z.label+" ("+z.pct+"% of est. max "+z.maxHR+" bpm).");
+      if(z){
+        parts.push("Avg "+avg+" bpm \u2014 "+z.label+" ("+z.pct+"% of est. max "+z.maxHR+" bpm).");
+        var zoneNum=parseInt(z.label.replace(/[^0-9]/g,""));
+        if(_activeCardioZoneCap&&zoneNum>_activeCardioZoneCap){
+          parts.push("That's above your lab-capped Zone "+_activeCardioZoneCap+" \u2014 worth pulling back today.");
+        }
+      }
       else parts.push("Avg "+avg+" bpm. Add your known max HR in Setup (or age at onboarding) to estimate a zone.");
     }
   }
@@ -5225,7 +5268,7 @@ function addSessionSet(ei){
   exList=exList.filter(function(e){return !_sessionRemoved[e.n];});
   var ex=exList[ei];if(!ex)return;
   var hold=(currentFatigue()==="low");var pv=(recentLowReadiness()>=2);
-  var a=computeAdaptive(ex,hold,pv,weeksIntoPhase(),currentFatigue());
+  var a=computeAdaptive(ex,hold,pv,weeksIntoPhase(),currentFatigue(),getLabLoadConstraints?getLabLoadConstraints():null);
   _sessionSets[ei]=(_sessionSets[ei]!==undefined?_sessionSets[ei]:a.sets)+1;
   renderTrain();
 }
@@ -5235,7 +5278,7 @@ function removeSessionSet(ei){
   exList=exList.filter(function(e){return !_sessionRemoved[e.n];});
   var ex=exList[ei];if(!ex)return;
   var hold=(currentFatigue()==="low");var pv=(recentLowReadiness()>=2);
-  var a=computeAdaptive(ex,hold,pv,weeksIntoPhase(),currentFatigue());
+  var a=computeAdaptive(ex,hold,pv,weeksIntoPhase(),currentFatigue(),getLabLoadConstraints?getLabLoadConstraints():null);
   var cur=(_sessionSets[ei]!==undefined?_sessionSets[ei]:a.sets);
   _sessionSets[ei]=Math.max(ex.bone?2:1,cur-1);
   renderTrain();
@@ -5823,6 +5866,83 @@ var TRAIN_TIPS={"Hemoglobin": {"low": "ANEMIA FLAG: Hemoglobin below normal. Hea
 "Magnesium": {"low": "Low magnesium impairs muscle contraction and recovery. Supplement and increase dietary sources. Can cause cramping and sleep disruption.", "critLow": "Critically low magnesium: discuss with your doctor before high-intensity training. Cardiac arrhythmia risk."},
 "FastingInsulin": {"high": "Elevated fasting insulin: increase Zone 2 cardio to 5 sessions/week, add post-meal walks. Resistance training is your second most effective tool for insulin sensitivity."}};
 var _activePanel="CBC";
+
+/* Track A-for-labs: structured, enforceable numbers extracted from the TRAIN_TIPS text above.
+   This is the single source of truth for the actual weight-math enforcement in computeAdaptive()
+   -- the TRAIN_TIPS prose is descriptive (what gets shown), this table is normative (what gets
+   applied). Only tiers where the source text states an actual number, or an explicit "stop
+   entirely / walk only / light movement only / recovery-only" instruction, get an entry here.
+   Tiers with purely qualitative text ("discuss with your doctor", "avoid high-intensity") are
+   deliberately left out rather than assigned a guessed number -- e.g. TestosteroneTotal,
+   Magnesium, SerumIron, Ferritin, FastingInsulin, Glucose/HbA1c (cardio-emphasis only, no
+   resistance load number stated), and VitaminD's critLow tier (text says "reduce bone-loading
+   exercises" with no stated amount -- the "low" tier above it does have a number and is used as
+   the floor; see getLabLoadConstraints' crit-fallback logic).
+   fullHold:true means "do not run the normal lifting/cardio session today" -- enforced in
+   renderTrain() as a full day override, not as a load multiplier. */
+var LAB_LOAD_RULES={
+  "Hemoglobin":{
+    low:{loadMult:0.775,rirAdd:2,cardioZoneCap:1},   // "reduce compound loads by 20-25%" (midpoint), "RIR target by 2", "Zone 1 only"
+    critLow:{fullHold:true}                           // "Stop high-intensity training entirely. Walk only."
+  },
+  "Hematocrit":{
+    low:{loadMult:0.85,cardioZoneCap:2}                // "reduce compound loads by 15%", "Zone 1-2 only"
+    // No critLow entry in TRAIN_TIPS at all for this lab (a real gap, not just an unquantified
+    // one) -- the crit-fallback logic below applies this "low" rule as a floor when critically low.
+  },
+  "TSH":{
+    high:{setsMultPct:0.75},                           // "Reduce training volume by 20-30%" (midpoint)
+    critHigh:{fullHold:true}                           // "limit to light movement only"
+  },
+  "VitaminD":{
+    low:{boneOnlyRirAdd:1}                             // "increase RIR target by 1" on bone-density exercises specifically
+  },
+  "hsCRP":{
+    high:{setsMultPct:0.75},                           // "Reduce training volume by 20-30%" (midpoint)
+    critHigh:{fullHold:true}                           // "Drop to recovery-only work (Zone 1 walks, mobility)"
+  }
+};
+
+/* Merges every currently-flagged lab value with a LAB_LOAD_RULES entry into one enforcement
+   object, worst-case wins per field. Crit-tier fallback: if a lab is critically low/high but
+   LAB_LOAD_RULES has no entry for that specific crit tier, the same-direction non-crit rule
+   (low/high) is applied as a floor rather than enforcing nothing, since "critically X" is by
+   definition also "X" -- e.g. a critically low Hematocrit with no critLow rule still gets the
+   "low" tier's -15% load cut rather than no enforcement at all. */
+function getLabLoadConstraints(){
+  var last=lastLabEntry();
+  if(!last)return null;
+  var merged={loadMult:1,rirAdd:0,boneOnlyRirAdd:0,setsMultPct:1,cardioZoneCap:null,fullHold:false,sources:[]};
+  var any=false;
+  Object.keys(LAB_LOAD_RULES).forEach(function(key){
+    var val=last[key];if(val===undefined||val==="")return;
+    var r=LAB_REF[key];if(!r)return;
+    var v=parseFloat(val);
+    var st=getLabStatus(key,val,last); // "ok"|"low"|"high"|"crit"
+    if(st==="ok")return;
+    var rules=LAB_LOAD_RULES[key];
+    var applied=null,tierUsed=null;
+    if(st==="crit"){
+      var dirLow=(r.critLow!=null&&v<r.critLow);
+      var critKey=dirLow?"critLow":"critHigh";
+      var baseKey=dirLow?"low":"high";
+      if(rules[critKey]){applied=rules[critKey];tierUsed=critKey;}
+      else if(rules[baseKey]){applied=rules[baseKey];tierUsed=baseKey+" (floor applied at crit)";}
+    } else if(rules[st]){
+      applied=rules[st];tierUsed=st;
+    }
+    if(!applied)return;
+    any=true;
+    merged.sources.push({key:key,tier:tierUsed,label:r.label||key});
+    if(applied.fullHold)merged.fullHold=true;
+    if(applied.loadMult!=null)merged.loadMult=Math.min(merged.loadMult,applied.loadMult);
+    if(applied.rirAdd!=null)merged.rirAdd=Math.max(merged.rirAdd,applied.rirAdd);
+    if(applied.boneOnlyRirAdd!=null)merged.boneOnlyRirAdd=Math.max(merged.boneOnlyRirAdd,applied.boneOnlyRirAdd);
+    if(applied.setsMultPct!=null)merged.setsMultPct=Math.min(merged.setsMultPct,applied.setsMultPct);
+    if(applied.cardioZoneCap!=null)merged.cardioZoneCap=(merged.cardioZoneCap===null)?applied.cardioZoneCap:Math.min(merged.cardioZoneCap,applied.cardioZoneCap);
+  });
+  return any?merged:null;
+}
 
 function getTCHDLRatio(entry){
   if(!entry||!entry.TotalCholesterol||!entry.HDL)return null;
