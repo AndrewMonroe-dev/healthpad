@@ -438,6 +438,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     <div id="paceNote" style="display:none;"></div>
     <div id="progressionBanner" style="display:none;"></div>
 
+    <div style="margin-top:12px;"><button class="btn sm dark" style="width:100%;touch-action:manipulation;" onclick="showEndOfDayRecap()">&#128203; End of Day Recap</button></div>
+
     <div class="sec">
       <div class="sec-h">Morning Readiness</div>
       <label class="fld">Sleep quality</label>
@@ -2009,7 +2011,6 @@ function renderTrain(){
       '</div></div>';
   });
   html2+='<div style="margin-top:14px;"><button class="btn sm ghost" style="width:100%;touch-action:manipulation;" onclick="showAddExModal()">+ Add Exercise to Today</button></div>';
-  html2+='<div style="margin-top:8px;"><button class="btn sm dark" style="width:100%;touch-action:manipulation;" onclick="showEndOfDayRecap()">&#128203; End of Day Recap</button></div>';
   document.getElementById("workoutArea").innerHTML=html2;
 }
 function pickDay(i){
