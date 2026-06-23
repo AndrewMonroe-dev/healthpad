@@ -525,6 +525,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div id="dayChips" style="margin-bottom:8px;"></div>
       <div style="margin-bottom:10px;"><span class="phase-pill deload" id="trainDeload" style="display:none;">Deload &mdash; cut sets ~50%</span></div>
       <div class="note" id="dayNote"></div>
+      <button class="btn sm ghost" style="margin-top:10px;width:100%;touch-action:manipulation;" onclick="toggleAdhoc()" id="adhocToggleBtn">Quick / Ad-Hoc Workout</button>
     </div>
     <div class="sec">
       <div class="sec-h">Energy Flag</div>
@@ -532,7 +533,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="note" id="fatigueNote" style="margin-top:11px;"></div>
     </div>
     <div id="workoutArea"></div>
-    <button class="btn" onclick="saveWorkout()">Save Session</button>
+    <button class="btn" onclick="_adhocMode?saveAdHocWorkout():saveWorkout()">Save Session</button>
     <div class="btn-row" style="margin-top:10px;">
       <button class="btn sm dark" onclick="startTimer(getBPRestSec(180))">Rest 3:00+</button>
       <button class="btn sm dark" onclick="startTimer(getBPRestSec(90))">Rest 1:30+</button>
@@ -1489,7 +1490,7 @@ var SPLIT_HEAVY=[
 // (no copy-paste needed on their end) while still saving locally on their device from then on.
 var PLAYTESTER_SHEET_URL="https://script.google.com/macros/s/AKfycbyZY0ljj6wmeADNHVics-gKR4cV7i3614ngVl7ZVGxkCVOYLC1VJ_ZbDMklcQQsNOzw-Q/exec";
 var PLAYTESTER_FDC_KEY="cgYh3ZegjtLwvbhppgBYz6wKI0YcTKe99FKyrlcF";
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],medasDaily:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null,digestEmail:""},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],medasDaily:[],workoutTemplates:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null,digestEmail:""},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var _activeCardioZoneCap=null; // set by renderTrain from getLabLoadConstraints, read by updateCardioHRPreview
 var timerInt=null, timerLeft=0;
@@ -1500,6 +1501,7 @@ function load(){
   if(!DB.settings||typeof DB.settings!=="object")DB.settings={};
   if(DB.settings.sheetUrl===undefined)DB.settings.sheetUrl="";
   if(DB.settings.digestEmail===undefined)DB.settings.digestEmail="";
+  if(DB.workoutTemplates===undefined)DB.workoutTemplates=[];
   if(DB.settings.fdcKey===undefined)DB.settings.fdcKey="";
   if(DB.settings.trackingStyle===undefined)DB.settings.trackingStyle="calories";
   if(DB.settings.pointsBudgetOverride===undefined)DB.settings.pointsBudgetOverride=null;
@@ -1996,6 +1998,9 @@ function computeAdaptive(ex,holdToday,pauseVolume,wip,fatigueTier,labC){
 }
 
 function renderTrain(){
+  var btn=document.getElementById("adhocToggleBtn");
+  if(btn)btn.textContent=_adhocMode?"Back to Program":"Quick / Ad-Hoc Workout";
+  if(_adhocMode){renderAdhocArea();return;}
   var ph=currentPhase();
   document.getElementById("trainPhaseTag").textContent=ph.key+" • "+ph.name;
   document.getElementById("trainDeload").style.display=isDeload()?"inline-block":"none";
@@ -4401,6 +4406,7 @@ function handleExRowTap(row){
   var name=row.dataset.name;
   var action=row.dataset.action;
   if(action==="addEx"){addExToSession(name);}
+  else if(action==="addExAdhoc"){addExToAdhoc(name);}
   else if(action==="addPermEx"){addPermEx(parseInt(row.dataset.day),name);}
   else if(action==="pickFood"){pickFood(row.dataset.id);}
 }
@@ -5108,7 +5114,7 @@ function executeReset(){
   try{localStorage.removeItem("hp_dp");}catch(e){}
   // Reset DB to factory defaults
   DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],
-      oneRM:{},foodLog:[],myFoods:[],medasDaily:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,knownMaxHR:null,digestEmail:""},
+      oneRM:{},foodLog:[],myFoods:[],medasDaily:[],workoutTemplates:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,knownMaxHR:null,digestEmail:""},
       goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},
       milestones:[],program:null};
   save();
@@ -5441,6 +5447,192 @@ function addExToSession(name){
   var m=document.getElementById("addExModal");if(m)m.remove();
   _sessionAdded.push({n:name,s:3,lo:8,hi:12});
   renderTrain();toast(name+" added for today.");
+}
+
+/* ============ AD-HOC / QUICK WORKOUTS + TEMPLATES ============ */
+// A separate, lighter-weight logging path for days off the structured program (or any day you
+// just want to freelance). Bypasses computeAdaptive() entirely -- no targets, no rep ranges, no
+// lab/BP load adjustments -- since there's no programmed baseline to adapt from. Med-conflict
+// badges ARE still shown (safety-relevant, cheap to keep). Logged sessions land in the same
+// DB.workouts array as structured days (day:"Ad-Hoc", adHoc:true) so they still count toward PRs,
+// the Trends charts, and the weekly digest's training summary.
+var _adhocMode=false;
+var _adhocEx=[];      // [{n:exerciseName}]
+var _adhocSets={};    // ei -> set count, default 3
+
+function toggleAdhoc(){
+  _adhocMode=!_adhocMode;
+  if(!_adhocMode){_adhocEx=[];_adhocSets={};}
+  renderTrain();
+}
+function adhocSetCount(ei){return _adhocSets[ei]!==undefined?_adhocSets[ei]:3;}
+function addAdhocSet(ei){_adhocSets[ei]=adhocSetCount(ei)+1;renderAdhocArea();}
+function removeAdhocSet(ei){_adhocSets[ei]=Math.max(1,adhocSetCount(ei)-1);renderAdhocArea();}
+function removeAdhocEx(ei){
+  _adhocEx.splice(ei,1);
+  var ns={};Object.keys(_adhocSets).forEach(function(k){var ki=parseInt(k);if(ki<ei)ns[ki]=_adhocSets[k];else if(ki>ei)ns[ki-1]=_adhocSets[k];});
+  _adhocSets=ns;
+  renderAdhocArea();
+}
+function loadAdhocTemplate(id){
+  if(!id){_adhocEx=[];_adhocSets={};renderAdhocArea();return;}
+  var t=(DB.workoutTemplates||[]).filter(function(x){return x.id===id;})[0];
+  if(!t)return;
+  _adhocEx=t.exercises.map(function(e){return {n:e.n};});
+  _adhocSets={};
+  renderAdhocArea();
+  toast("Loaded \u201c"+t.name+"\u201d");
+}
+// Pulls the most recent logged session (structured or ad-hoc, lifting only -- cardio has no
+// exercise list to repeat) and pre-loads its exercise names. Doesn't copy weights/reps; those
+// still pull live from lastSetData() per exercise the same way structured days do.
+function loadLastSessionAdhoc(){
+  var liftSessions=(DB.workouts||[]).filter(function(w){return !w.cardio&&w.ex&&Object.keys(w.ex).length;});
+  if(!liftSessions.length){toast("No previous lifting session found.");return;}
+  var sorted=liftSessions.slice().sort(function(a,b){return a.d<b.d?-1:1;});
+  var last=sorted[sorted.length-1];
+  _adhocEx=Object.keys(last.ex).map(function(n){return {n:n};});
+  _adhocSets={};
+  renderAdhocArea();
+  toast("Loaded "+last.d+"\u2019s session ("+_adhocEx.length+" exercises).");
+}
+function saveAdhocAsTemplate(){
+  if(!_adhocEx.length){toast("Add at least one exercise first.");return;}
+  var name=window.prompt("Name this template (e.g. \u201cPush Day A\u201d):","");
+  if(!name||!name.trim())return;
+  var t={id:Date.now().toString(),name:name.trim(),exercises:_adhocEx.map(function(e){return {n:e.n};})};
+  if(!DB.workoutTemplates)DB.workoutTemplates=[];
+  DB.workoutTemplates.push(t);
+  save();trySheetSync();renderAdhocArea();
+  toast("Template \u201c"+t.name+"\u201d saved.");
+}
+function deleteAdhocTemplate(id){
+  var t=(DB.workoutTemplates||[]).filter(function(x){return x.id===id;})[0];
+  if(!t)return;
+  if(!window.confirm("Delete template \u201c"+t.name+"\u201d? This only removes the saved exercise list, not any logged workouts."))return;
+  DB.workoutTemplates=DB.workoutTemplates.filter(function(x){return x.id!==id;});
+  save();trySheetSync();renderAdhocArea();
+  toast("Template deleted.");
+}
+function showAddExModalAdhoc(){
+  var existing=_adhocEx.map(function(e){return e.n;});
+  var available=Object.keys(DEFAULT_1RM).sort().filter(function(n){return existing.indexOf(n)===-1;});
+  var modal=document.createElement("div");
+  modal.id="addExModal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
+  modal.innerHTML=
+    '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:70vh;display:flex;flex-direction:column;color:var(--ink);">'+
+    '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
+      '<div style="font-weight:700;font-size:16px;">Add Exercise</div>'+
+      '<button data-close="addExModal" onclick="closeExModal(this.dataset.close)" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
+    '</div>'+
+    '<input id="addExSearch" type="text" placeholder="Search..." '+
+      'style="margin:12px 16px;padding:10px 14px;background:var(--surf);border:1.5px solid var(--border);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500;">'+
+    '<div id="addExList" style="overflow-y:auto;flex:1;padding:0 16px 20px;">'+
+      (function(){var medR=getMedicationConstraints();return available.map(function(n){
+        var note=getExerciseConflictNote(n,medR);
+        var badge=note?' <span class="pill medcaution">'+note+'</span>':'';
+        return '<div class="add-ex-row" data-name="'+n+'" data-action="addExAdhoc" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+n+badge+'</div>';
+      }).join("");})()+
+    '</div></div>';
+  document.body.appendChild(modal);
+  setTimeout(function(){
+    var si=document.getElementById("addExSearch");
+    if(si){si.addEventListener("input",function(){filterAddExList(si.value);});si.focus();}
+  },50);
+}
+function addExToAdhoc(name){
+  var m=document.getElementById("addExModal");if(m)m.remove();
+  _adhocEx.push({n:name});
+  renderAdhocArea();
+}
+function renderAdhocArea(){
+  document.getElementById("dayChips").innerHTML="";
+  document.getElementById("dayNote").innerHTML='<div class="note dim">Freeform logging \u2014 no programmed targets or load adjustments here. Pick a saved template, repeat your last session, or build one from scratch. Med-conflict warnings still apply.</div>';
+  var medR=getMedicationConstraints?getMedicationConstraints():null;
+  var templates=DB.workoutTemplates||[];
+  var html='<div class="sec">'+
+    '<div class="sec-h">Templates</div>'+
+    '<select id="adhocTemplatePick" onchange="loadAdhocTemplate(this.value)" style="margin-bottom:10px;">'+
+      '<option value="">\u2014 Start blank \u2014</option>'+
+      templates.map(function(t){return '<option value="'+t.id+'">'+t.name+' ('+t.exercises.length+' ex)</option>';}).join("")+
+    '</select>'+
+    '<div class="btn-row">'+
+      '<button class="btn sm ghost" style="flex:1;touch-action:manipulation;" onclick="loadLastSessionAdhoc()">Repeat Last Session</button>'+
+      '<button class="btn sm ghost" style="flex:1;touch-action:manipulation;" onclick="saveAdhocAsTemplate()">Save as Template</button>'+
+    '</div>'+
+    (templates.length?('<div style="margin-top:10px;">'+templates.map(function(t){
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px;">'+
+        '<span>'+t.name+' &middot; '+t.exercises.length+' exercises</span>'+
+        '<button class="btn sm dark" style="padding:3px 9px;font-size:11px;touch-action:manipulation;" onclick="deleteAdhocTemplate(&quot;'+t.id+'&quot;)">Delete</button></div>';
+    }).join("")+'</div>'):'')+
+  '</div>';
+  html+='<div class="sec"><div class="sec-h">Today\u2019s Exercises</div>';
+  if(!_adhocEx.length){
+    html+='<div class="note dim">No exercises yet \u2014 add one below, or load a template/last session above.</div>';
+  }
+  _adhocEx.forEach(function(ex,ei){
+    var sets=adhocSetCount(ei);
+    var last=lastSetData(ex.n);
+    var rows="";
+    for(var si=0;si<sets;si++){
+      var pw=last&&last[si]?last[si].w:"";
+      rows+='<div class="setrow"><span class="sn">'+(si+1)+'</span>'+
+        '<input type="number" inputmode="decimal" placeholder="lb" data-ex="'+ei+'" data-set="'+si+'" data-f="w" value="'+(pw||"")+'">'+
+        '<input type="number" inputmode="numeric" placeholder="reps" data-ex="'+ei+'" data-set="'+si+'" data-f="r">'+
+        '<input type="number" inputmode="decimal" placeholder="RIR" data-ex="'+ei+'" data-set="'+si+'" data-f="rir"></div>';
+    }
+    var medNote=medR?getExerciseConflictNote(ex.n,medR):null;
+    var medFullText=medNote?medNote.split(", ").map(function(cls){
+      var mc=MED_TRAIN_CONTEXT[cls];
+      return mc&&mc.standalone?mc.standalone:"This exercise involves a movement pattern flagged by this medication.";
+    }).join("\n\n"):"";
+    var medBadge=medNote?' <span class="pill medcaution" onclick="event.stopPropagation();showMedNotePopup(this)" data-medtext="'+medFullText.replace(/"/g,"&quot;")+'">&#9888; Med Note</span>':'';
+    html+='<div class="ex" data-name="'+ex.n+'">'+
+      '<div class="ex-h" onclick="toggleEx(this)">'+
+        '<div><div class="ex-name">'+ex.n+medBadge+'</div></div>'+
+        '<div style="display:flex;align-items:center;gap:8px;">'+
+          '<button class="btn sm dark" style="padding:4px 10px;font-size:12px;touch-action:manipulation;" onclick="event.stopPropagation();removeAdhocEx('+ei+')">Remove</button>'+
+          '<span style="color:var(--faint);">\u25be</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="ex-body">'+
+        '<div class="setlbl"><span></span><span>Weight</span><span>Reps</span><span>RIR</span></div>'+rows+
+        '<div style="display:flex;gap:8px;margin-top:8px;">'+
+          '<button class="btn sm ghost" style="flex:1;touch-action:manipulation;" onclick="addAdhocSet('+ei+')">+ Set</button>'+
+          '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="removeAdhocSet('+ei+')">- Set</button>'+
+        '</div>'+
+      '</div></div>';
+  });
+  html+='<div style="margin-top:14px;"><button class="btn sm ghost" style="width:100%;touch-action:manipulation;" onclick="showAddExModalAdhoc()">+ Add Exercise</button></div>';
+  html+='</div>';
+  document.getElementById("workoutArea").innerHTML=html;
+}
+function saveAdHocWorkout(){
+  if(!_adhocEx.length){toast("Add at least one exercise before saving.");return;}
+  var rec={d:todayStr(),day:"Ad-Hoc",phase:(currentPhase()?currentPhase().key:""),week:weekNumber(),fatigue:selFatigue,adHoc:true,ex:{}};
+  var inputs=document.querySelectorAll("#workoutArea input[data-ex]");
+  var temp={};
+  inputs.forEach(function(inp){
+    var ei=inp.dataset.ex,si=inp.dataset.set,f=inp.dataset.f;
+    var ex=_adhocEx[ei];if(!ex)return;
+    var exName=ex.n;
+    if(!temp[exName])temp[exName]={};
+    if(!temp[exName][si])temp[exName][si]={};
+    var val=parseFloat(inp.value);
+    if(!isNaN(val))temp[exName][si][f]=val;
+  });
+  Object.keys(temp).forEach(function(name){
+    var arr=Object.keys(temp[name]).sort().map(function(k){return temp[name][k];}).filter(function(s){return s.w||s.r;});
+    if(arr.length){rec.ex[name]=arr;updatePR(name,arr);}
+  });
+  if(!Object.keys(rec.ex).length){toast("No sets with weight or reps entered \u2014 nothing saved.");return;}
+  DB.workouts=DB.workouts.filter(function(w){return !(w.d===rec.d&&w.day===rec.day);});
+  DB.workouts.push(rec);
+  save();toast("Ad-hoc session saved to the ledger");
+  trySheetSync();
+  _adhocMode=false;_adhocEx=[];_adhocSets={};
+  renderTrain();
 }
 
 /* ============ FOOD LOG ============ */
