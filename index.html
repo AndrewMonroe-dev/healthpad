@@ -831,6 +831,16 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       </div>
       <div class="note dim" id="syncNote" style="margin-top:10px;"></div>
       <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line2);">
+        <div class="note dim" style="margin-bottom:10px;">Weekly email digest (training, Mediterranean Diet score, RHR, cardio HR zones, latest labs). Sent automatically every Monday morning if your Apps Script trigger is set up, or send one immediately below.</div>
+        <label class="fld">Digest Email</label>
+        <input type="email" id="inDigestEmail" placeholder="you@example.com">
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="btn sm dark" onclick="saveDigestEmail()">Save Email</button>
+          <button class="btn sm gold" onclick="sendDigestNow()">Send Digest Now</button>
+        </div>
+        <div class="note dim" id="digestNote" style="margin-top:10px;"></div>
+      </div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line2);">
         <div class="note dim" style="margin-bottom:10px;">Pull your last-synced backup back from Sheets. Use this if local data disappears (a wiped browser, a new device, an update gone wrong).</div>
         <button class="btn sm ghost" onclick="confirmRestore()">Restore from Sheets</button>
         <div id="restoreConfirm" style="display:none;margin-top:12px;padding:14px;border:1.5px solid var(--gold);border-radius:12px;background:rgba(203,162,76,.08);">
@@ -1479,7 +1489,7 @@ var SPLIT_HEAVY=[
 // (no copy-paste needed on their end) while still saving locally on their device from then on.
 var PLAYTESTER_SHEET_URL="https://script.google.com/macros/s/AKfycbyZY0ljj6wmeADNHVics-gKR4cV7i3614ngVl7ZVGxkCVOYLC1VJ_ZbDMklcQQsNOzw-Q/exec";
 var PLAYTESTER_FDC_KEY="cgYh3ZegjtLwvbhppgBYz6wKI0YcTKe99FKyrlcF";
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],medasDaily:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],medasDaily:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null,digestEmail:""},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var _activeCardioZoneCap=null; // set by renderTrain from getLabLoadConstraints, read by updateCardioHRPreview
 var timerInt=null, timerLeft=0;
@@ -1489,6 +1499,7 @@ function load(){
   if(!DB.oneRM||Object.keys(DB.oneRM).length===0){DB.oneRM=Object.assign({},DEFAULT_1RM);}
   if(!DB.settings||typeof DB.settings!=="object")DB.settings={};
   if(DB.settings.sheetUrl===undefined)DB.settings.sheetUrl="";
+  if(DB.settings.digestEmail===undefined)DB.settings.digestEmail="";
   if(DB.settings.fdcKey===undefined)DB.settings.fdcKey="";
   if(DB.settings.trackingStyle===undefined)DB.settings.trackingStyle="calories";
   if(DB.settings.pointsBudgetOverride===undefined)DB.settings.pointsBudgetOverride=null;
@@ -3058,6 +3069,7 @@ function renderSetup(){
   renderProgramExEditor();
   renderOneRMList("");
   document.getElementById("inSheetUrl").value=DB.settings.sheetUrl||"";
+  document.getElementById("inDigestEmail").value=DB.settings.digestEmail||"";
   var fdcInput=document.getElementById("inFdcKey");if(fdcInput)fdcInput.value=DB.settings.fdcKey||"";
   loadTrackingStyle();
   // phase overview — goal-aware
@@ -3167,6 +3179,10 @@ function saveOneRMs(){
 }
 function saveSheetUrl(){
   DB.settings.sheetUrl=document.getElementById("inSheetUrl").value.trim();save();toast("URL saved");
+}
+function saveDigestEmail(){
+  DB.settings.digestEmail=document.getElementById("inDigestEmail").value.trim();save();toast("Email saved");
+  trySheetSync();
 }
 function saveFdcKey(){
   var key=document.getElementById("inFdcKey").value.trim();
@@ -3586,6 +3602,37 @@ function pullFromSheets(){
     .catch(function(){
       if(note)note.textContent="Restore failed \u2014 check the Apps Script URL and that it's deployed with \"Anyone\" access.";
     });
+}
+
+/* ============ SEND DIGEST NOW (manual trigger, mirrors the weekly time-based trigger) ============ */
+// Requires Apps Script v5 (adds the ?action=digestNow doGet branch). Older deployments will
+// return the old {status:"ok",tabs:[...]} shape with no recognizable digest response -- handled
+// explicitly below rather than assumed.
+function sendDigestNow(){
+  var note=document.getElementById("digestNote");
+  if(!DB.settings.sheetUrl){if(note)note.textContent="Add your Apps Script URL first.";return;}
+  var email=(DB.settings.digestEmail||"").trim();
+  if(!email){if(note)note.textContent="Add a digest email above and save it first.";return;}
+  var userName=DB.settings.userName||"Default";
+  if(note)note.textContent="Sending\u2026";
+  // Sync first so the digest reflects today's entries, then request the send.
+  trySheetSync();
+  var url=DB.settings.sheetUrl+"?action=digestNow&user="+encodeURIComponent(userName)+"&email="+encodeURIComponent(email);
+  setTimeout(function(){
+    fetch(url)
+      .then(function(r){return r.json();})
+      .then(function(res){
+        if(!res||res.status!=="ok"){
+          if(note)note.textContent="Digest failed"+(res&&res.message?(": "+res.message):" \u2014 check the Apps Script URL.");
+          return;
+        }
+        if(note)note.textContent="Digest sent to "+email+".";
+        toast("Digest sent");
+      })
+      .catch(function(){
+        if(note)note.textContent="Digest failed \u2014 your Apps Script may need to be redeployed as a new version (Deploy > Manage deployments > New version).";
+      });
+  },600); // small delay so the no-cors sync above has a moment to land before the digest reads it back
 }
 
 /* ============ TIMER ============ */
@@ -5061,7 +5108,7 @@ function executeReset(){
   try{localStorage.removeItem("hp_dp");}catch(e){}
   // Reset DB to factory defaults
   DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],
-      oneRM:{},foodLog:[],myFoods:[],medasDaily:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,knownMaxHR:null},
+      oneRM:{},foodLog:[],myFoods:[],medasDaily:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,knownMaxHR:null,digestEmail:""},
       goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},
       milestones:[],program:null};
   save();
