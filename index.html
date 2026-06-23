@@ -581,10 +581,10 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     </div>
 
     <div class="sec">
-      <div class="sec-h">Mediterranean Diet Check-In</div>
-      <div class="note dim" style="margin-bottom:10px;">The 14-item MEDAS screener \u2014 the same self-report checklist used in the PREDIMED trial to measure adherence. Answer for the past week, roughly once a week. Each "yes" is one point.</div>
+      <div class="sec-h">Mediterranean Diet — Today</div>
+      <div class="note dim" style="margin-bottom:10px;">Based on the 14-item MEDAS screener (the real PREDIMED-trial adherence instrument), logged daily instead of recalled weekly. Check off or enter what applied today — your rolling 7-day score updates automatically.</div>
       <div id="medasCheckinArea"></div>
-      <button class="btn sm ghost" style="margin-top:12px;width:100%;" onclick="saveMedasCheckin()">Save Check-In</button>
+      <button class="btn sm ghost" style="margin-top:12px;width:100%;" onclick="saveMedasDaily()">Save Today</button>
       <div class="note dim" id="medasLastScore" style="margin-top:10px;"></div>
     </div>
 
@@ -755,13 +755,13 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       </div>
       <div id="trackingStyleCounter" style="text-align:right;font-size:11px;color:var(--dim,#888);letter-spacing:.4px;margin-bottom:12px;"></div>
       <div id="pointsBudgetFields" style="display:none;">
-        <div class="note dim" style="margin-bottom:10px;background:rgba(203,162,76,.10);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;">Points here use an unofficial, commonly-cited approximation of WW's SmartPoints formula (calories, saturated fat, sugar, protein). It will not exactly match your real WW app \u2014 treat it as a reasonable estimate, not a substitute for WW's own tracker.</div>
+        <div class="note dim" style="margin-bottom:10px;background:rgba(203,162,76,.10);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;">Points here use an unofficial, commonly-cited approximation of WW's SmartPoints formula (calories, saturated fat, sugar, protein). It will not exactly match your real WW app — treat it as a reasonable estimate, not a substitute for WW's own tracker.</div>
         <label class="fld">Daily Points Budget</label>
         <input type="number" inputmode="numeric" id="inPointsBudget" placeholder="auto-estimated from your calorie target" style="margin-bottom:6px;">
         <div class="note dim" id="pointsBudgetEstimateNote" style="margin-bottom:10px;"></div>
       </div>
       <div id="macroRatioFields" style="display:none;">
-        <div class="note dim" style="margin-bottom:10px;">Targets are grams per day, derived from your calorie target using the ratio below. Defaults to 30% protein / 40% carb / 30% fat \u2014 adjust to taste. Must add up to 100%.</div>
+        <div class="note dim" style="margin-bottom:10px;">Targets are grams per day, derived from your calorie target using the ratio below. Defaults to 30% protein / 40% carb / 30% fat — adjust to taste. Must add up to 100%.</div>
         <div class="row3" style="margin-top:0;">
           <div><label class="fld">Protein %</label><input type="number" inputmode="numeric" id="inMacroProPct" placeholder="30" oninput="updateMacroRatioNote()"></div>
           <div><label class="fld">Carb %</label><input type="number" inputmode="numeric" id="inMacroCarbPct" placeholder="40" oninput="updateMacroRatioNote()"></div>
@@ -783,7 +783,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     </div>
     <div class="sec">
       <div class="sec-h">Cardio Heart Rate</div>
-      <div class="note dim" style="margin-bottom:8px;">Optional. Overrides the 220-minus-age estimate used for HR zone display on cardio days. Leave blank to use the age-based estimate, or enter a measured/known max if you have one \u2014 the 220-age formula carries roughly \u00B110-12 bpm error person to person.</div>
+      <div class="note dim" style="margin-bottom:8px;">Optional. Overrides the 220-minus-age estimate used for HR zone display on cardio days. Leave blank to use the age-based estimate, or enter a measured/known max if you have one — the 220-age formula carries roughly ±10-12 bpm error person to person.</div>
       <label class="fld">Known Max HR (bpm)</label>
       <input type="number" id="inMaxHR" inputmode="numeric" placeholder="e.g. 178">
       <button class="btn sm ghost" style="margin-top:8px;" onclick="saveMaxHR()">Save</button>
@@ -811,7 +811,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     </div>
     <div class="sec">
       <div class="sec-h">USDA FoodData Central</div>
-      <div class="note dim">Covers generic whole foods (chicken breast, rice, an apple) that Open Food Facts mostly doesn't have, since OFF is built from packaged-product barcode scans. Free key from <span style="color:var(--gold);">fdc.nal.usda.gov/api-key-signup</span> \u2014 tied to your account, never shared publicly.</div>
+      <div class="note dim">Covers generic whole foods (chicken breast, rice, an apple) that Open Food Facts mostly doesn't have, since OFF is built from packaged-product barcode scans. Free key from <span style="color:var(--gold);">fdc.nal.usda.gov/api-key-signup</span> — tied to your account, never shared publicly.</div>
       <label class="fld">FDC API Key</label>
       <input type="password" id="inFdcKey" placeholder="Paste your USDA API key">
       <div class="btn-row" style="margin-top:12px;">
@@ -1479,7 +1479,7 @@ var SPLIT_HEAVY=[
 // (no copy-paste needed on their end) while still saving locally on their device from then on.
 var PLAYTESTER_SHEET_URL="https://script.google.com/macros/s/AKfycbyZY0ljj6wmeADNHVics-gKR4cV7i3614ngVl7ZVGxkCVOYLC1VJ_ZbDMklcQQsNOzw-Q/exec";
 var PLAYTESTER_FDC_KEY="cgYh3ZegjtLwvbhppgBYz6wKI0YcTKe99FKyrlcF";
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],medas:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],medasDaily:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var _activeCardioZoneCap=null; // set by renderTrain from getLabLoadConstraints, read by updateCardioHRPreview
 var timerInt=null, timerLeft=0;
@@ -1498,7 +1498,7 @@ function load(){
   if(DB.settings.waterTarget===undefined)DB.settings.waterTarget=64;
   if(!DB.foodLog)DB.foodLog=[];
   if(!DB.myFoods)DB.myFoods=[];
-  if(!DB.medas)DB.medas=[];
+  if(!DB.medasDaily)DB.medasDaily=[];
 }
 function save(){try{localStorage.setItem("healthpad_db",JSON.stringify(DB));}catch(e){}}
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
@@ -2379,7 +2379,7 @@ function renderLog(){
   if(lw&&(_gt==="weight_loss"||_gt==="recomp")){var _tw=DB.goal&&DB.goal.targetWeight?DB.goal.targetWeight:null;if(_tw)_echoTxt+=" \u2022 "+(lw-_tw).toFixed(1)+" lb to "+_tw+" lbs.";}
   else if(lw&&_gt==="muscle"&&DB.weights.length>1)_echoTxt+=" \u2022 +"+(lw-DB.weights[0].w).toFixed(1)+" lb since start.";
   document.getElementById("weightEcho").textContent=_echoTxt;
-  renderMedasCheckin();
+  renderMedasDaily();
 }
 function renderFoodsTab(){
   var ph=currentPhase();
@@ -2805,21 +2805,23 @@ function drawCardioHR(){
   box.innerHTML=_lineChart(series,"var(--red)","var(--gold)");
   document.getElementById("cardioHRTrendNote").textContent=_trendNote(series,"avg cardio HR","bpm",0,"A downward trend at similar pace/duration generally reflects improving aerobic fitness.");
 }
-/* Mediterranean Diet (MEDAS) trend chart + cross-referenced suggestions. The chart is just the
-   0-14 score over time -- the more useful part is below it: for each item NOT met on the most
-   recent check-in, if that item's overlap labs (see MEDAS_ITEMS) are currently flagged abnormal
-   by getDietFlags(), the actual existing DIET_TIPS text for that lab is pulled in directly rather
-   than writing a second, possibly-inconsistent tip. This is the literal cross-reference the
-   feature was built for: tying an unmet Mediterranean-pattern item to a real flagged lab value
-   using the guidance that already exists for that lab. */
+/* Mediterranean Diet (MEDAS) trend chart + cross-referenced suggestions. The chart plots the
+   rolling 7-day score (medasRollingScore) for every distinct date you've logged at least one
+   day's items, recalculated fresh per date rather than stored as a weekly snapshot. The more
+   useful part is below it: for each item NOT met in the trailing 7-day window, if that item's
+   overlap labs (see MEDAS_ITEMS) are currently flagged abnormal by getDietFlags(), the actual
+   existing DIET_TIPS text for that lab is pulled in directly rather than writing a second,
+   possibly-inconsistent tip -- the literal cross-reference the feature was built for. */
 function drawMedasTrend(){
   var box=document.getElementById("medasChart");
   if(!box)return;
-  var series=(DB.medas||[]).map(function(e){return {d:e.d,v:medasScore(e)};});
-  if(series.length<2){
-    box.innerHTML='<div class="chart-empty">Log at least two weekly check-ins to see your trend.</div>';
+  var dates=(DB.medasDaily||[]).map(function(e){return e.d;});
+  dates=dates.filter(function(d,i){return dates.indexOf(d)===i;}).sort();
+  if(dates.length<2){
+    box.innerHTML='<div class="chart-empty">Log at least two days to see your rolling 7-day trend.</div>';
     var noteEl=document.getElementById("medasTrendNote");if(noteEl)noteEl.textContent="";
   } else {
+    var series=dates.map(function(d){return {d:d,v:medasRollingScore(d).score};});
     box.innerHTML=_lineChart(series,"var(--red)","var(--gold)");
     document.getElementById("medasTrendNote").textContent=_trendNote(series,"Mediterranean score","points",1,"Higher adherence to this pattern has the strongest cardiovascular outcome evidence of any dietary score in the literature (PREDIMED trial).");
   }
@@ -2828,24 +2830,30 @@ function drawMedasTrend(){
 function renderMedasSuggestions(){
   var area=document.getElementById("medasSuggestArea");
   if(!area)return;
-  var last=lastMedasEntry();
-  if(!last){area.innerHTML="";return;}
+  if(!DB.medasDaily||!DB.medasDaily.length){area.innerHTML="";return;}
+  var res=medasRollingScore(todayStr());
+  if(!res.daysLogged){area.innerHTML="";return;}
   var dietFlags=getDietFlags?getDietFlags():[];
   var flaggedKeys={};
   dietFlags.forEach(function(f){flaggedKeys[f.key]=f;});
-  var unmet=MEDAS_ITEMS.filter(function(it){return !last[it.id];});
-  if(!unmet.length){area.innerHTML='<div class="note dim" style="margin-top:8px;">Every item met on your last check-in \u2014 nothing to flag.</div>';return;}
-  var h='<div class="note dim" style="margin-top:8px;margin-bottom:8px;">Not met on your last check-in:</div>';
+  var unmet=res.perItem.filter(function(it){return !it.met;});
+  if(!unmet.length){area.innerHTML='<div class="note dim" style="margin-top:8px;">Every item met over the trailing 7 days \u2014 nothing to flag.</div>';return;}
+  var h='<div class="note dim" style="margin-top:8px;margin-bottom:8px;">Not met over the trailing 7 days ('+res.daysLogged+' day'+(res.daysLogged===1?"":"s")+' logged):</div>';
   unmet.forEach(function(it){
-    var overlapHits=(it.overlap||[]).filter(function(k){return flaggedKeys[k];});
-    h+='<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line);">'+
-      '<div style="font-size:13px;color:var(--ink2);">'+it.text+'</div>';
-    if(overlapHits.length){
-      overlapHits.forEach(function(k){
-        var f=flaggedKeys[k];
-        h+='<div style="font-size:12.5px;color:var(--gold);margin-top:4px;">&#9888; Also relevant to your flagged '+f.label+': '+f.tip+'</div>';
-      });
+    var detail;
+    if(it.direction==="atLeast"){
+      detail=it.actual+" of "+it.weeklyTarget+(it.unit?(" "+it.unit):" days")+" \u2014 "+it.pct+"% of target";
+    } else {
+      detail=it.actual+(it.unit?(" "+it.unit):" days")+" this week, over your "+it.weeklyTarget+(it.unit?(" "+it.unit):" day")+" cap";
     }
+    h+='<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line);">'+
+      '<div style="font-size:13px;color:var(--ink2);">'+it.label+'</div>'+
+      '<div style="font-size:12px;color:var(--faint);margin-top:2px;">'+detail+'</div>';
+    var overlapHits=(it.overlap||[]).filter(function(k){return flaggedKeys[k];});
+    overlapHits.forEach(function(k){
+      var f=flaggedKeys[k];
+      h+='<div style="font-size:12.5px;color:var(--gold);margin-top:4px;">&#9888; Also relevant to your flagged '+f.label+': '+f.tip+'</div>';
+    });
     h+='</div>';
   });
   area.innerHTML=h;
@@ -5053,7 +5061,7 @@ function executeReset(){
   try{localStorage.removeItem("hp_dp");}catch(e){}
   // Reset DB to factory defaults
   DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],
-      oneRM:{},foodLog:[],myFoods:[],medas:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,knownMaxHR:null},
+      oneRM:{},foodLog:[],myFoods:[],medasDaily:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,knownMaxHR:null},
       goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},
       milestones:[],program:null};
   save();
@@ -5919,70 +5927,107 @@ var DIET_TIPS={"PSA": "Low-carbohydrate dietary patterns have shown slower PSA d
 "Magnesium": "Low magnesium: increase dark leafy greens, nuts, seeds, legumes, whole grains. Magnesium supports muscle function, sleep quality, and blood pressure.",
 "FastingInsulin": "Elevated fasting insulin indicates insulin resistance. Reduce refined carbohydrates and sugar, increase fiber and protein, prioritize resistance training and Zone 2 cardio."};
 
-/* MEDAS (14-item Mediterranean Diet Adherence Screener, Schroder et al. 2011) -- the actual
-   self-report instrument used to measure adherence in the PREDIMED trial, not something derived
-   from logged nutrient totals. Each item's "yes" threshold is the validated PREDIMED criterion;
-   phrasing here folds the threshold into the question so it renders as a single yes/no checkbox
-   rather than a numeric-entry field, matching how most digital implementations present it.
+/* MEDAS (14-item Mediterranean Diet Adherence Screener, Schroder et al. 2011) -- the validated
+   instrument used to measure adherence in the PREDIMED trial. Each item below carries its real
+   PREDIMED weekly threshold (weeklyTarget) and direction (atLeast = more is better, atMost = a
+   cap not to exceed), but is logged DAILY rather than recalled once a week -- a same-day yes/no
+   or quantity is real-time data, not a week recalled from memory, which avoids the recall bias
+   inherent to the original weekly-recall format this replaced.
+   type:"check" -- daily yes/no, summed as a count of true days over the trailing 7-day window.
+   type:"numeric" -- daily quantity (tbsp/servings/glasses), summed over the trailing 7-day window.
+   A day with no entry at all contributes 0 to every item for that day (not excluded from the
+   window) -- the denominator for "3+ times this week" is always the calendar week, not however
+   many days happened to get logged, so partial logging can't artificially inflate the score.
    overlap: lab keys (matching LAB_REF/DIET_TIPS) where this item's target food/behavior has
-   evidence overlapping with that lab's existing dietary guidance -- used to cross-reference this
-   score against your actual flagged labs rather than just scoring in isolation. */
+   evidence overlapping with that lab's existing dietary guidance -- used to cross-reference
+   unmet items against your actual flagged labs rather than just scoring in isolation. */
 var MEDAS_ITEMS=[
-  {id:"oliveOilMain",text:"Do you use olive oil as your main culinary fat (instead of butter, margarine, or other oils)?",overlap:["LDL","TotalCholesterol","HDL"]},
-  {id:"oliveOil4tbsp",text:"Do you consume 4+ tablespoons of olive oil per day (including oil used in cooking, salads, and meals out)?",overlap:["LDL","TotalCholesterol","HDL"]},
-  {id:"veg2serv",text:"Do you eat 2+ servings of vegetables per day (at least one raw or as a salad)?",overlap:["Glucose","HbA1c","hsCRP"]},
-  {id:"fruit3serv",text:"Do you eat 3+ pieces of fruit (or 100% fruit juice) per day?",overlap:["hsCRP","Potassium"]},
-  {id:"lowRedMeat",text:"Do you eat less than 1 serving per day of red meat, hamburgers, or processed meat (ham, sausage, etc.)?",overlap:["LDL","TotalCholesterol","Triglycerides"]},
-  {id:"lowButterCream",text:"Do you eat less than 1 serving per day of butter, margarine, or cream?",overlap:["LDL","TotalCholesterol"]},
-  {id:"lowSweetDrinks",text:"Do you drink less than 1 sugar-sweetened or carbonated beverage per day?",overlap:["Glucose","HbA1c","EstAvgGlucose","Triglycerides","FastingInsulin"]},
-  {id:"wineModerate",text:"Do you drink wine with meals, 7+ glasses per week (skip this one if you don't drink alcohol \u2014 it's not a recommendation to start)?",overlap:[]},
-  {id:"legumes3wk",text:"Do you eat 3+ servings of legumes (beans, lentils, chickpeas) per week?",overlap:["Glucose","HbA1c","LDL"]},
-  {id:"fish3wk",text:"Do you eat 3+ servings of fish or seafood per week?",overlap:["Triglycerides","HDL","PSA"]},
-  {id:"lowPastries",text:"Do you eat commercial pastries or sweets (not homemade) less than 3 times per week?",overlap:["Glucose","HbA1c","Triglycerides","FastingInsulin"]},
-  {id:"nuts3wk",text:"Do you eat 3+ servings of nuts (including peanuts) per week?",overlap:["LDL","HDL"]},
-  {id:"poultryOverRedMeat",text:"Do you preferentially choose chicken, turkey, or fish over red meat or sausage?",overlap:["LDL","TotalCholesterol","Triglycerides"]},
-  {id:"sofrito2wk",text:"Do you eat vegetables, pasta, rice, or other dishes prepared with a tomato-onion-garlic-olive oil base (sofrito-style) 2+ times per week?",overlap:["TotalCholesterol","hsCRP"]}
+  {id:"oliveOilMain",label:"Olive oil was my main cooking fat today",type:"check",direction:"atLeast",weeklyTarget:4,unit:null,overlap:["LDL","TotalCholesterol","HDL"]},
+  {id:"oliveOilTbsp",label:"Olive oil",type:"numeric",direction:"atLeast",weeklyTarget:28,unit:"tbsp",overlap:["LDL","TotalCholesterol","HDL"]},
+  {id:"vegServ",label:"Vegetable servings",type:"numeric",direction:"atLeast",weeklyTarget:14,unit:"servings",overlap:["Glucose","HbA1c","hsCRP"]},
+  {id:"fruitServ",label:"Fruit servings",type:"numeric",direction:"atLeast",weeklyTarget:21,unit:"servings",overlap:["hsCRP","Potassium"]},
+  {id:"redMeat",label:"Ate red or processed meat today",type:"check",direction:"atMost",weeklyTarget:6,unit:null,overlap:["LDL","TotalCholesterol","Triglycerides"]},
+  {id:"butterCream",label:"Had butter, margarine, or cream today",type:"check",direction:"atMost",weeklyTarget:6,unit:null,overlap:["LDL","TotalCholesterol"]},
+  {id:"sweetDrinks",label:"Had a sugary or carbonated drink today",type:"check",direction:"atMost",weeklyTarget:6,unit:null,overlap:["Glucose","HbA1c","EstAvgGlucose","Triglycerides","FastingInsulin"]},
+  {id:"wineGlasses",label:"Wine with a meal",type:"numeric",direction:"atLeast",weeklyTarget:7,unit:"glasses",overlap:[]},
+  {id:"legumes",label:"Ate legumes today",type:"check",direction:"atLeast",weeklyTarget:3,unit:null,overlap:["Glucose","HbA1c","LDL"]},
+  {id:"fish",label:"Ate fish or seafood today",type:"check",direction:"atLeast",weeklyTarget:3,unit:null,overlap:["Triglycerides","HDL","PSA"]},
+  {id:"pastries",label:"Had a commercial pastry or sweet today",type:"check",direction:"atMost",weeklyTarget:2,unit:null,overlap:["Glucose","HbA1c","Triglycerides","FastingInsulin"]},
+  {id:"nuts",label:"Ate nuts today",type:"check",direction:"atLeast",weeklyTarget:3,unit:null,overlap:["LDL","HDL"]},
+  {id:"poultryOverRedMeat",label:"Chose poultry/fish over red meat today",type:"check",direction:"atLeast",weeklyTarget:4,unit:null,overlap:["LDL","TotalCholesterol","Triglycerides"]},
+  {id:"sofrito",label:"Had a sofrito-style dish today (tomato-onion-garlic-olive oil base)",type:"check",direction:"atLeast",weeklyTarget:2,unit:null,overlap:["TotalCholesterol","hsCRP"]}
 ];
-function medasScore(entry){
-  if(!entry)return 0;
-  var s=0;
-  MEDAS_ITEMS.forEach(function(it){if(entry[it.id])s++;});
-  return s;
+function todayMedasEntry(){
+  if(!DB.medasDaily)return null;
+  var t=todayStr();
+  return DB.medasDaily.filter(function(x){return x.d===t;})[0]||null;
 }
-function lastMedasEntry(){
-  if(!DB.medas||!DB.medas.length)return null;
-  return DB.medas[DB.medas.length-1];
+/* Trailing 7 calendar days ending at endDateStr (inclusive), rolling -- matches the cardio/RHR
+   chart pattern elsewhere, recalculated fresh for any end date rather than a fixed Mon-Sun bucket. */
+function medasWindowEntries(endDateStr){
+  var end=new Date(endDateStr+"T00:00:00");
+  var start=new Date(end);start.setDate(start.getDate()-6);
+  return (DB.medasDaily||[]).filter(function(x){
+    var d=new Date(x.d+"T00:00:00");
+    return d>=start&&d<=end;
+  });
 }
-function renderMedasCheckin(){
+function medasRollingScore(endDateStr){
+  var entries=medasWindowEntries(endDateStr);
+  var perItem=[],score=0;
+  MEDAS_ITEMS.forEach(function(it){
+    var actual=0;
+    entries.forEach(function(e){
+      if(it.type==="numeric")actual+=(parseFloat(e[it.id])||0);
+      else if(e[it.id])actual+=1;
+    });
+    var met=it.direction==="atLeast"?(actual>=it.weeklyTarget):(actual<=it.weeklyTarget);
+    if(met)score++;
+    var pct=it.direction==="atLeast"?(it.weeklyTarget>0?Math.min(100,Math.round(actual/it.weeklyTarget*100)):100):null;
+    perItem.push({id:it.id,label:it.label,type:it.type,direction:it.direction,weeklyTarget:it.weeklyTarget,unit:it.unit,actual:actual,met:met,pct:pct,overlap:it.overlap});
+  });
+  return {score:score,perItem:perItem,daysLogged:entries.length};
+}
+function renderMedasDaily(){
   var area=document.getElementById("medasCheckinArea");
   if(!area)return;
-  var last=lastMedasEntry()||{};
+  var today=todayMedasEntry()||{};
   var h="";
   MEDAS_ITEMS.forEach(function(it){
-    var checked=last[it.id]?"checked":"";
-    h+='<label style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;">'+
-      '<input type="checkbox" id="medas_'+it.id+'" '+checked+' style="margin-top:3px;flex-shrink:0;width:18px;height:18px;">'+
-      '<span style="font-size:13.5px;line-height:1.4;">'+it.text+'</span></label>';
+    if(it.type==="numeric"){
+      var val=today[it.id]!==undefined?today[it.id]:"";
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);">'+
+        '<span style="font-size:13.5px;line-height:1.4;flex:1;">'+it.label+'</span>'+
+        '<input type="number" inputmode="decimal" id="medas_'+it.id+'" value="'+val+'" placeholder="0" style="width:70px;text-align:center;flex-shrink:0;">'+
+        '<span style="font-size:11px;color:var(--faint);width:54px;flex-shrink:0;">'+it.unit+'</span></div>';
+    } else {
+      var checked=today[it.id]?"checked":"";
+      h+='<label style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;">'+
+        '<input type="checkbox" id="medas_'+it.id+'" '+checked+' style="margin-top:3px;flex-shrink:0;width:18px;height:18px;">'+
+        '<span style="font-size:13.5px;line-height:1.4;">'+it.label+'</span></label>';
+    }
   });
   area.innerHTML=h;
   var scoreTag=document.getElementById("medasLastScore");
   if(scoreTag){
-    var le=lastMedasEntry();
-    scoreTag.textContent=le?("Last check-in ("+le.d+"): "+medasScore(le)+"/14"):"No check-ins yet.";
+    var res=medasRollingScore(todayStr());
+    scoreTag.textContent=res.daysLogged?("Rolling 7-day score: "+res.score+"/14 ("+res.daysLogged+" day"+(res.daysLogged===1?"":"s")+" logged in the window)"):"No days logged yet this week.";
   }
 }
-function saveMedasCheckin(){
+function saveMedasDaily(){
   var entry={d:todayStr()};
   MEDAS_ITEMS.forEach(function(it){
     var el=document.getElementById("medas_"+it.id);
-    entry[it.id]=!!(el&&el.checked);
+    if(!el)return;
+    entry[it.id]=it.type==="numeric"?(parseFloat(el.value)||0):!!el.checked;
   });
-  if(!DB.medas)DB.medas=[];
-  DB.medas=DB.medas.filter(function(x){return x.d!==entry.d;});
-  DB.medas.push(entry);
+  if(!DB.medasDaily)DB.medasDaily=[];
+  DB.medasDaily=DB.medasDaily.filter(function(x){return x.d!==entry.d;});
+  DB.medasDaily.push(entry);
   save();
-  renderMedasCheckin();
-  toast("Mediterranean check-in saved \u2014 "+medasScore(entry)+"/14");
+  renderMedasDaily();
+  var res=medasRollingScore(todayStr());
+  toast("Today logged \u2014 rolling 7-day score: "+res.score+"/14");
   trySheetSync();
 }
 var TRAIN_TIPS={"Hemoglobin": {"low": "ANEMIA FLAG: Hemoglobin below normal. Heavy compound loading and high-intensity intervals are contraindicated until this is addressed medically. Drop all work to Zone 1 only, reduce compound loads by 20-25%, and increase RIR target by 2. Discuss with your oncologist before pushing hard again.", "critLow": "CRITICAL ANEMIA: Hemoglobin critically low. Stop high-intensity training entirely. Walk only. Contact your oncologist."}, "Hematocrit": {"low": "Low hematocrit reduces oxygen delivery to muscle. Reduce cardio intensity to Zone 1-2 only and reduce compound loads by 15%. Discuss with your oncologist."}, "Glucose": {"high": "Elevated fasting glucose: increase Zone 2 cardio to 5 sessions per week. Post-meal walks of 10+ minutes have strong evidence for glucose control. Cardio day becomes mandatory.", "critHigh": "Fasting glucose meets clinical diabetes threshold. Significantly increase aerobic volume. Discuss with your doctor."}, "HbA1c": {"high": "Elevated HbA1c: aerobic exercise is the most effective intervention. Add one extra Zone 2 cardio session per week and make the mid-week cardio day mandatory. Target 200+ minutes of Zone 2 weekly.", "critHigh": "HbA1c at diabetic threshold. Significantly increase aerobic volume. Discuss with your doctor before continuing current program."}, "EstAvgGlucose": {"high": "Increase Zone 2 cardio emphasis. Make cardio day mandatory."}, "TotalCholesterol": {"high": "Elevated cholesterol: resistance training is the strongest exercise intervention for lipids. Prioritize lifting days over substitutions.", "critHigh": "High cholesterol: maintain all resistance days without fail."}, "LDL": {"high": "Elevated LDL: resistance training is your most effective exercise tool. Do not skip lifting days.", "critHigh": "High LDL: prioritize resistance days. Discuss with your doctor as statin therapy may be indicated."}, "HDL": {"low": "Low HDL: aerobic exercise is the most effective exercise intervention for raising HDL. Increase Zone 2 cardio minutes and do not skip the cardio recovery day.", "critLow": "Critically low HDL: make all cardio sessions mandatory and discuss cardiovascular risk with your doctor."}, "Triglycerides": {"high": "Elevated triglycerides: both cardio and resistance training help, but dietary carbohydrate reduction has the strongest evidence. Maintain full training program.", "critHigh": "Very high triglycerides: discuss with your doctor. Maintain training but do not increase intensity."},
