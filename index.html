@@ -6180,8 +6180,8 @@ function runIntroAnimation(){
   var canvas=document.getElementById("introCanvas");
   if(!splash||!canvas){return;}
   if(!window.gsap){ // GSAP failed to load (offline first launch, CDN blocked, etc.) -- degrade
-    // gracefully to the old plain fade rather than getting stuck on a half-built intro forever.
-    setTimeout(function(){splash.classList.add("hide");},1800);
+    // gracefully to a quick plain fade rather than getting stuck on a half-built intro forever.
+    setTimeout(function(){finishIntro();},1800);
     return;
   }
   _introCtx=canvas.getContext("2d");
@@ -6263,6 +6263,7 @@ function finishIntro(){
   setTimeout(function(){
     if(splash)splash.style.display="none";
     _introParticles=[];_introCtx=null;
+    safeBoot(runPostIntroChecks,"postIntroChecks");
   },750);
 }
 var _introTimeline=null;
@@ -6283,17 +6284,15 @@ safeBoot(loadMedStack,"loadMedStack");
 safeBoot(loadGoalSettings,"loadGoalSettings");
 safeBoot(loadTrackingStyle,"loadTrackingStyle");
 safeBoot(loadUserName,"loadUserName");
-safeBoot(function(){
-  setTimeout(function(){
-    try{
-      if(!DB.settings.hasOnboarded){obShow();return;}
-      setTimeout(function(){safeBoot(checkDietPopup,"checkDietPopup");},800);
-      setTimeout(function(){safeBoot(checkBPPrompt,"checkBPPrompt");},2000);
-      setTimeout(function(){safeBoot(loadAndShowQuote,"loadAndShowQuote");},200);
-      setTimeout(function(){safeBoot(maybeShowWeeklyRecapPopup,"maybeShowWeeklyRecapPopup");},2800);
-    }catch(e){}
-  },3400);
-},"onboardingGate");
+function runPostIntroChecks(){
+  try{
+    if(!DB.settings.hasOnboarded){obShow();return;}
+    setTimeout(function(){safeBoot(checkDietPopup,"checkDietPopup");},800);
+    setTimeout(function(){safeBoot(checkBPPrompt,"checkBPPrompt");},2000);
+    setTimeout(function(){safeBoot(loadAndShowQuote,"loadAndShowQuote");},200);
+    setTimeout(function(){safeBoot(maybeShowWeeklyRecapPopup,"maybeShowWeeklyRecapPopup");},2800);
+  }catch(e){}
+}
 // PWA: service worker with offline shell caching — meets Chrome install criteria
 // Service worker (stale-while-revalidate app-shell cache, "A1") intentionally removed.
 // Per MASTER_CONTEXT this was tried previously, failed on-device, and was rolled back via
