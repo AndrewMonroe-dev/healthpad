@@ -184,8 +184,10 @@ select{appearance:none;-webkit-appearance:none;background-image:url("data:image/
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 
 /* BUTTONS */
-.btn{display:block;width:100%;font-family:var(--font);font-size:17px;letter-spacing:.4px;font-weight:700;background:linear-gradient(135deg,var(--red),var(--red-deep));color:#fff;border:none;border-radius:14px;padding:15px;margin-top:14px;cursor:pointer;box-shadow:0 4px 12px rgba(192,40,30,.22);transition:transform .12s,box-shadow .12s;}
-.btn:active{transform:scale(.975);box-shadow:0 3px 10px rgba(224,56,46,.22);}
+.btn{display:block;width:100%;font-family:var(--font);font-size:17px;letter-spacing:.4px;font-weight:700;background:linear-gradient(135deg,var(--red),var(--red-deep));color:#fff;border:none;border-radius:14px;padding:15px;margin-top:14px;cursor:pointer;box-shadow:0 4px 12px rgba(192,40,30,.22);transition:transform .1s ease,box-shadow .1s ease;}
+.btn:active{transform:scale(.955);box-shadow:0 2px 7px rgba(224,56,46,.20);}
+button:active,.navb:active,[onclick]:active{transition:transform .08s ease;}
+.navb:active{transform:scale(.9);}
 .btn.gold{background:linear-gradient(135deg,var(--gold),#8a6a28);box-shadow:0 6px 18px rgba(203,162,76,.26);}
 .btn.ghost{background:transparent;color:var(--red);border:1.5px solid var(--red);box-shadow:none;}
 .btn.dark{background:var(--surf3);color:var(--ink);box-shadow:none;border:1px solid var(--line2);}
@@ -1893,16 +1895,19 @@ function computeHealthOrbScore(){
   var proTarget=tgt.proMin||PROTEIN_TARGET;
   var weights={workout:16,protein:14,fiber:9,water:9,sugar:7,sodium:7,satFat:6,calorie:9,veg:8,potassium:4,calcium:3,weight:8};
 
+  function orbEverLogged(field){
+    return (DB.nutrition||[]).some(function(r){return (r[field]||0)>0;});
+  }
   var weekComponents={
     protein:orbBandScore(weekRows,"pro",proTarget,"atLeast"),
     fiber:orbBandScore(weekRows,"fiber",tgt.fiberGood,"atLeast"),
     sugar:orbBandScore(weekRows,"sugar",tgt.sugarMax,"atMost"),
     sodium:orbBandScore(weekRows,"sodium",tgt.sodiumMax,"atMost"),
-    water:orbBandScore(weekRows,"water",waterTarget,"atLeast"),
+    water:orbEverLogged("water")?orbBandScore(weekRows,"water",waterTarget,"atLeast"):null,
     satFat:orbBandScore(weekRows,"satFat",tgt.satFatMax,"atMost"),
-    veg:orbBandScore(weekRows,"veg",tgt.vegMin,"atLeast"),
-    potassium:orbBandScore(weekRows,"potassium",tgt.potassiumMin,"atLeast"),
-    calcium:orbBandScore(weekRows,"calcium",tgt.calciumMin,"atLeast"),
+    veg:orbEverLogged("veg")?orbBandScore(weekRows,"veg",tgt.vegMin,"atLeast"):null,
+    potassium:orbEverLogged("potassium")?orbBandScore(weekRows,"potassium",tgt.potassiumMin,"atLeast"):null,
+    calcium:orbEverLogged("calcium")?orbBandScore(weekRows,"calcium",tgt.calciumMin,"atLeast"):null,
     calorie:orbCalBandScore(weekRows,tgt.calLow,tgt.calHigh)
   };
   var weekStart=dateNDaysAgo(6);
@@ -1946,11 +1951,11 @@ function computeHealthOrbScore(){
     fiber:orbBandScore(todayRows,"fiber",tgt.fiberGood,"atLeast"),
     sugar:orbBandScore(todayRows,"sugar",tgt.sugarMax,"atMost"),
     sodium:orbBandScore(todayRows,"sodium",tgt.sodiumMax,"atMost"),
-    water:orbBandScore(todayRows,"water",waterTarget,"atLeast"),
+    water:orbEverLogged("water")?orbBandScore(todayRows,"water",waterTarget,"atLeast"):null,
     satFat:orbBandScore(todayRows,"satFat",tgt.satFatMax,"atMost"),
-    veg:orbBandScore(todayRows,"veg",tgt.vegMin,"atLeast"),
-    potassium:orbBandScore(todayRows,"potassium",tgt.potassiumMin,"atLeast"),
-    calcium:orbBandScore(todayRows,"calcium",tgt.calciumMin,"atLeast"),
+    veg:orbEverLogged("veg")?orbBandScore(todayRows,"veg",tgt.vegMin,"atLeast"):null,
+    potassium:orbEverLogged("potassium")?orbBandScore(todayRows,"potassium",tgt.potassiumMin,"atLeast"):null,
+    calcium:orbEverLogged("calcium")?orbBandScore(todayRows,"calcium",tgt.calciumMin,"atLeast"):null,
     calorie:orbCalBandScore(todayRows,tgt.calLow,tgt.calHigh),
     workout:hasEverWorkedOut?((DB.workouts||[]).some(function(w){return w.d===todayD;})?1:0):null,
     weight:weightScore
@@ -4187,6 +4192,14 @@ document.addEventListener("click",function(e){
     readyPick[grp]=v;
   }
 });
+
+/* ============ TAP HAPTIC ============ */
+/* Fires a light haptic on interactive taps. navigator.vibrate is a no-op on iOS Safari
+   (unsupported) but works on Android; wrapped so it never throws on any platform. */
+function tapHaptic(){try{if(navigator.vibrate)navigator.vibrate(8);}catch(e){}}
+document.addEventListener("click",function(e){
+  if(e.target.closest("button, .navb, .btn, [onclick], .choice, .ob-opt, a"))tapHaptic();
+},true);
 
 
 /* ============ BLOOD PRESSURE ============ */
