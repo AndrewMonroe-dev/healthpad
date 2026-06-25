@@ -127,7 +127,7 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ring-sub{font-size:9px;color:var(--faint);margin-top:2px;line-height:1.2;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;}
-.hero-row{display:flex;gap:16px;align-items:flex-start;justify-content:center;flex-wrap:wrap;width:100%;}
+.hero-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;}
 .hero-col{display:flex;flex-direction:column;align-items:center;}
 .hero .ring{width:148px;height:148px;}
 .orb-breakdown{margin-top:14px;width:100%;max-width:320px;background:var(--surf);border:1px solid var(--line2);border-radius:var(--r);padding:10px 14px;font-size:12px;}
@@ -405,7 +405,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
               <circle id="orbCore" cx="65" cy="65" r="42" fill="url(#orbGrad)"/>
             </svg>
           </div>
-          <div class="ring-lbl" style="margin-top:8px;cursor:pointer;" onclick="toggleOrbBreakdown()">Orb of Health</div>
+          <div class="ring-lbl" style="margin-top:8px;cursor:pointer;font-family:'Luminari','Papyrus',fantasy;" onclick="toggleOrbBreakdown()">Orb of Health</div>
         </div>
       </div>
       <div class="hero-date" id="heroDate">&mdash;</div>
