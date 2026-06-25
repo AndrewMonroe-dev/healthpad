@@ -79,8 +79,8 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ring-fill.liquid-ring{transition:none;}
 .ring-fill.goal-reached,.ring-fill.over-budget{will-change:filter;}
 @media (prefers-reduced-motion: reduce){
-  .ring-fill.goal-reached{filter:drop-shadow(0 0 8px var(--ring-glow-color, rgba(255,255,255,.45))) !important;}
-  .ring-fill.over-budget{filter:drop-shadow(0 0 7px rgba(196,138,30,.50)) !important;}
+  .ring-fill.goal-reached{filter:drop-shadow(0 0 14px var(--ring-glow-color, rgba(255,255,255,.65))) !important;}
+  .ring-fill.over-budget{filter:drop-shadow(0 0 13px rgba(196,138,30,.70)) !important;}
 }
 .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
 .ring-val{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1;}
@@ -1614,8 +1614,8 @@ function ringGlowTick(ts){
     var info=_glowingRings[id];
     var phase=(ts/1300)%(2*Math.PI);
     var wave=0.5+0.5*Math.sin(phase);
-    var blur=5+9*wave;
-    var alpha=info.type==="budget"?(0.32+0.30*wave):(0.28+0.34*wave);
+    var blur=7+16*wave;
+    var alpha=info.type==="budget"?(0.45+0.40*wave):(0.40+0.45*wave);
     var color=info.type==="budget"?"rgba(196,138,30,"+alpha+")":ringColorWithAlpha(info.color,alpha);
     c.style.filter="drop-shadow(0 0 "+blur.toFixed(1)+"px "+color+")";
   }
@@ -1630,7 +1630,7 @@ function updateRingStatus(c,id,rawPct,prevPct){
     if(rawPct>1){
       c.classList.add("over-budget");
       _glowingRings[id]={type:"budget"};
-      if(!ringReducedMotion())ensureRingGlowLoop();else c.style.filter="drop-shadow(0 0 7px rgba(196,138,30,.50))";
+      if(!ringReducedMotion())ensureRingGlowLoop();else c.style.filter="drop-shadow(0 0 13px rgba(196,138,30,.70))";
       if(justOver)fireRingAmberPulse(c);
     } else {
       stopRingGlow(c,id);
@@ -1642,7 +1642,7 @@ function updateRingStatus(c,id,rawPct,prevPct){
       c.classList.add("goal-reached");
       _glowingRings[id]={type:"good",color:color};
       if(!ringReducedMotion()){c.style.setProperty("--ring-glow-color",color);ensureRingGlowLoop();}
-      else c.style.filter="drop-shadow(0 0 8px "+color+")";
+      else c.style.filter="drop-shadow(0 0 14px "+color+")";
       if(justReached)fireRingRipple(c);
     } else {
       stopRingGlow(c,id);
