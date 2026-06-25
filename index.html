@@ -377,7 +377,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     <div class="hero">
       <div class="hero-row">
         <div class="hero-col">
-          <div class="ring">
+          <div class="ring" id="goalRingWrap" onclick="openGoalQuickModal()" style="cursor:pointer;">
             <svg viewBox="0 0 130 130" width="148" height="148">
               <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
               <circle class="ring-fill red" id="ringCampaign" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -385,7 +385,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
             <div class="ring-center">
               <div class="ring-val sm" id="cdDays">&mdash;</div>
               <div class="ring-lbl" id="cdLabel">Days to Goal</div>
-              <div class="ring-lbl" id="cdHint" style="margin-top:2px;display:none;">Setup &rarr; Goal</div>
+              <div class="ring-lbl" id="cdHint" style="margin-top:2px;display:none;">Tap to set</div>
             </div>
           </div>
         </div>
@@ -405,7 +405,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
               <circle id="orbCore" cx="65" cy="65" r="42" fill="url(#orbGrad)"/>
             </svg>
           </div>
-          <div class="ring-lbl" style="margin-top:8px;cursor:pointer;font-family:'Luminari','Papyrus',fantasy;" onclick="toggleOrbBreakdown()">Orb of Health</div>
+          <div class="ring-lbl" style="margin-top:8px;cursor:pointer;font-family:'Luminari','Papyrus',fantasy;color:var(--ink);opacity:.85;" onclick="toggleOrbBreakdown()">Orb of Health</div>
         </div>
       </div>
       <div class="hero-date" id="heroDate">&mdash;</div>
@@ -645,8 +645,9 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
           <div id="dietChip_dash" onclick="selectDiet('dash')" style="flex:1;min-width:60px;text-align:center;padding:8px 4px;border-radius:18px;border:1.5px solid var(--line2);background:var(--surf);color:var(--ink2);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;">DASH</div>
           <div id="dietChip_mind" onclick="selectDiet('mind')" style="flex:1;min-width:60px;text-align:center;padding:8px 4px;border-radius:18px;border:1.5px solid var(--line2);background:var(--surf);color:var(--ink2);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;">MIND</div>
           <div id="dietChip_tlc" onclick="selectDiet('tlc')" style="flex:1;min-width:56px;text-align:center;padding:8px 4px;border-radius:18px;border:1.5px solid var(--line2);background:var(--surf);color:var(--ink2);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;">TLC</div>
+          <div id="dietChip_hpdi" onclick="selectDiet('hpdi')" style="flex:1;min-width:56px;text-align:center;padding:8px 4px;border-radius:18px;border:1.5px solid var(--line2);background:var(--surf);color:var(--ink2);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;">hPDI</div>
         </div>
-        <div class="note dim" style="margin:10px 0;">Pick a diet to track. Each is logged daily with a rolling 7-day adherence score. Mediterranean uses the validated 14-item MEDAS (PREDIMED) screener; DASH, MIND, and TLC use daily adaptations of their published guidance.</div>
+        <div class="note dim" style="margin:10px 0;">Pick a diet to track. Each is logged daily with a rolling 7-day adherence score. Mediterranean uses the validated 14-item MEDAS (PREDIMED) screener; DASH, MIND, TLC, and hPDI use daily adaptations of their published guidance.</div>
         <div id="medasCheckinArea"></div>
         <button class="btn sm ghost" id="dietSaveBtn" style="margin-top:12px;width:100%;" onclick="saveMedasDaily()">Save Today</button>
         <div class="note dim" id="medasLastScore" style="margin-top:10px;"></div>
@@ -1087,6 +1088,34 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
         <button id="obNext" class="btn" style="flex:2;touch-action:manipulation;" onclick="obNext()">Next</button>
       </div>
       <div id="obError" style="color:#ff6b6b;font-size:13px;text-align:center;margin-top:12px;min-height:18px;"></div>
+    </div>
+  </div>
+
+  <!-- QUICK GOAL MODAL -->
+  <div id="goalQuickModal" style="display:none;position:fixed;inset:0;background:rgba(10,6,4,.78);z-index:4500;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:var(--surf);border:1px solid var(--line2);border-radius:var(--r);padding:22px 20px;max-width:380px;width:100%;max-height:90vh;overflow-y:auto;">
+      <div class="sec-h" style="margin-bottom:4px;">Set Your Goal</div>
+      <div class="note dim" style="margin-bottom:14px;">Drives the countdown ring and milestones on Home.</div>
+      <label class="fld">Primary Goal</label>
+      <select id="qgType" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:14px;margin-bottom:12px;">
+        <option value="weight_loss">Lose Weight</option>
+        <option value="muscle">Gain Muscle</option>
+        <option value="vo2max">Grow VO2 Max</option>
+        <option value="heart">Heart Health</option>
+        <option value="strength">Maximize Strength</option>
+        <option value="recomp">Body Recomposition</option>
+        <option value="endurance">Build Endurance</option>
+        <option value="custom">Custom</option>
+      </select>
+      <label class="fld">Goal Name / Description</label>
+      <input type="text" id="qgName" placeholder="e.g. Get to 200 lbs, Run a 5K, Hit 315 deadlift" style="margin-bottom:12px;">
+      <label class="fld">Target Date</label>
+      <input type="date" id="qgDate" style="margin-bottom:12px;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:14px;width:100%;">
+      <label class="fld">Start Date</label>
+      <input type="date" id="qgStart" style="margin-bottom:14px;background:var(--bg);border:1px solid var(--border);color:var(--fg);padding:10px;border-radius:6px;font-size:14px;width:100%;">
+      <div id="qgError" style="color:#ff6b6b;font-size:12px;margin-bottom:8px;min-height:16px;"></div>
+      <button class="btn sm" onclick="saveGoalQuick()">Save Goal</button>
+      <button class="btn sm" style="background:var(--surf2);color:var(--ink);box-shadow:none;margin-top:8px;" onclick="closeGoalQuickModal()">Cancel</button>
     </div>
   </div>
 
@@ -1842,6 +1871,18 @@ function orbCalBandScore(rows,calLow,calHigh){
   var dist=avg<calLow?(calLow-avg):(avg-calHigh);
   return clamp01(1-dist/(halfRange*1.5));
 }
+function orbDaysSinceFirstLog(){
+  var dates=[];
+  (DB.nutrition||[]).forEach(function(r){if(r.d)dates.push(r.d);});
+  (DB.workouts||[]).forEach(function(r){if(r.d)dates.push(r.d);});
+  (DB.weights||[]).forEach(function(r){if(r.d)dates.push(r.d);});
+  if(!dates.length)return 0;
+  dates.sort();
+  var first=new Date(dates[0]+"T00:00:00");
+  var today=new Date(todayStr()+"T00:00:00");
+  var days=Math.round((today-first)/86400000)+1;
+  return Math.max(1,days);
+}
 function computeHealthOrbScore(){
   var hasAnyHistory=(DB.nutrition&&DB.nutrition.length)||(DB.workouts&&DB.workouts.length)||(DB.weights&&DB.weights.length);
   if(!hasAnyHistory)return {score:null,weekScore:null,todayScore:null,components:{},energyMod:0};
@@ -1867,7 +1908,9 @@ function computeHealthOrbScore(){
   var weekStart=dateNDaysAgo(6);
   var hasEverWorkedOut=!!(DB.workouts&&DB.workouts.length);
   var workoutDays=(DB.workouts||[]).filter(function(w){return w.d>=weekStart;}).length;
-  weekComponents.workout=hasEverWorkedOut?clamp01(workoutDays/4):null;
+  var effectiveWindowDays=Math.min(7,orbDaysSinceFirstLog());
+  var workoutTarget=4*(effectiveWindowDays/7);
+  weekComponents.workout=hasEverWorkedOut?clamp01(workoutTarget>0?workoutDays/workoutTarget:0):null;
 
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
   var weightScore=null;
@@ -4541,6 +4584,40 @@ function saveBPModal(){
 
 
 /* ============ GOAL SETTINGS ============ */
+function openGoalQuickModal(){
+  var g=DB.goal||{};
+  var t=document.getElementById("qgType"),n=document.getElementById("qgName"),d=document.getElementById("qgDate"),s=document.getElementById("qgStart");
+  if(t)t.value=g.type||"weight_loss";
+  if(n)n.value=g.name||"";
+  if(d)d.value=g.targetDate||"";
+  if(s)s.value=g.startDate||todayStr();
+  var err=document.getElementById("qgError");if(err)err.textContent="";
+  var ov=document.getElementById("goalQuickModal");
+  if(ov)ov.style.display="flex";
+}
+function closeGoalQuickModal(){
+  var ov=document.getElementById("goalQuickModal");
+  if(ov)ov.style.display="none";
+}
+function saveGoalQuick(){
+  var dateVal=document.getElementById("qgDate").value;
+  if(!dateVal){
+    var err=document.getElementById("qgError");
+    if(err)err.textContent="Please choose a target date.";
+    return;
+  }
+  DB.goal=DB.goal||{};
+  DB.goal.type=document.getElementById("qgType").value;
+  DB.goal.name=document.getElementById("qgName").value.trim();
+  DB.goal.targetDate=dateVal;
+  DB.goal.startDate=document.getElementById("qgStart").value||todayStr();
+  save();
+  closeGoalQuickModal();
+  renderHome();
+  if(typeof renderMilestoneEditor==="function")renderMilestoneEditor();
+  if(typeof loadGoalSettings==="function")loadGoalSettings();
+  toast("Goal saved");
+}
 function saveGoalSettings(){
   DB.goal=DB.goal||{};
   DB.goal.type=document.getElementById("inGoalType").value;
@@ -6939,6 +7016,33 @@ var TLC_ITEMS=[
   {id:"transFat",label:"Avoided trans fats / fried foods today",type:"check",direction:"atLeast",weeklyTarget:6,unit:null,overlap:["LDL","HDL","Triglycerides"]},
   {id:"redMeat",label:"Ate red or processed meat today",type:"check",direction:"atMost",weeklyTarget:4,unit:null,overlap:["LDL","TotalCholesterol"]}
 ];
+/* hPDI (healthful Plant-Based Diet Index; Satija et al. 2016/2017, Harvard) -- 18 food groups
+   in 3 categories: healthy plant foods (more is better), less-healthy plant foods (less is
+   better), and animal foods (less is better, including fish/dairy/eggs, not just red meat --
+   this is a defining and sometimes-debated feature of hPDI versus other plant-leaning patterns).
+   Published methodology scores each group by population quintile; this is a daily-logged
+   adaptation using absolute thresholds, same approach as DASH/MIND/TLC above -- not the literal
+   quintile instrument, for the same reasons given in that comment block. */
+var HPDI_ITEMS=[
+  {id:"wholeGrains",label:"Whole grain servings",type:"numeric",direction:"atLeast",weeklyTarget:21,unit:"servings",overlap:["Glucose","HbA1c","Triglycerides"]},
+  {id:"fruitServ",label:"Fruit servings",type:"numeric",direction:"atLeast",weeklyTarget:21,unit:"servings",overlap:["hsCRP","Potassium"]},
+  {id:"vegServ",label:"Vegetable servings",type:"numeric",direction:"atLeast",weeklyTarget:28,unit:"servings",overlap:["Glucose","HbA1c","hsCRP","Potassium"]},
+  {id:"nuts",label:"Ate nuts today",type:"check",direction:"atLeast",weeklyTarget:5,unit:null,overlap:["LDL","HDL"]},
+  {id:"legumes",label:"Ate legumes today",type:"check",direction:"atLeast",weeklyTarget:4,unit:null,overlap:["Glucose","HbA1c","LDL"]},
+  {id:"vegOil",label:"Used a plant oil (olive, canola, etc.) as my main fat today",type:"check",direction:"atLeast",weeklyTarget:5,unit:null,overlap:["LDL","TotalCholesterol","HDL"]},
+  {id:"teaCoffee",label:"Had tea or coffee today",type:"check",direction:"atLeast",weeklyTarget:5,unit:null,overlap:[]},
+  {id:"fruitJuice",label:"Had fruit juice today",type:"check",direction:"atMost",weeklyTarget:2,unit:null,overlap:["Glucose","HbA1c","Triglycerides"]},
+  {id:"refinedGrains",label:"Ate refined grains (white bread, white rice, pastries) today",type:"check",direction:"atMost",weeklyTarget:4,unit:null,overlap:["Glucose","HbA1c","Triglycerides"]},
+  {id:"potatoes",label:"Ate potatoes or fries today",type:"check",direction:"atMost",weeklyTarget:3,unit:null,overlap:["Glucose","HbA1c"]},
+  {id:"sweetDrinks",label:"Had a sugar-sweetened beverage today",type:"check",direction:"atMost",weeklyTarget:2,unit:null,overlap:["Glucose","HbA1c","Triglycerides","FastingInsulin"]},
+  {id:"sweets",label:"Had sweets or dessert today",type:"check",direction:"atMost",weeklyTarget:3,unit:null,overlap:["Glucose","HbA1c","Triglycerides"]},
+  {id:"animalFat",label:"Used animal fat (butter, lard, etc.) today",type:"check",direction:"atMost",weeklyTarget:3,unit:null,overlap:["LDL","TotalCholesterol"]},
+  {id:"dairy",label:"Had dairy today",type:"check",direction:"atMost",weeklyTarget:5,unit:null,overlap:["Calcium"]},
+  {id:"eggs",label:"Ate eggs today",type:"check",direction:"atMost",weeklyTarget:3,unit:null,overlap:["LDL","TotalCholesterol"]},
+  {id:"fishSeafood",label:"Ate fish or seafood today",type:"check",direction:"atMost",weeklyTarget:2,unit:null,overlap:["Triglycerides","HDL"]},
+  {id:"meat",label:"Ate meat (red, processed, or poultry) today",type:"check",direction:"atMost",weeklyTarget:3,unit:null,overlap:["LDL","TotalCholesterol","Triglycerides"]},
+  {id:"otherAnimal",label:"Had other animal-based foods today (mayo, lard-based items, etc.)",type:"check",direction:"atMost",weeklyTarget:4,unit:null,overlap:[]}
+];
 /* The registry. med points at the existing MEDAS machinery; the other three use the generalized
    layer. evidenceNote feeds the trend chart's contextual line. */
 var DIETS={
@@ -6949,7 +7053,9 @@ var DIETS={
   mind:{id:"mind",label:"MIND",items:MIND_ITEMS,max:15,legacy:false,
         evidenceNote:"MIND (Mediterranean-DASH hybrid) was designed and validated specifically around slower cognitive decline (Rush University)."},
   tlc:{id:"tlc",label:"TLC",items:TLC_ITEMS,max:8,legacy:false,
-       evidenceNote:"TLC (NIH/NCEP) is built specifically to lower LDL cholesterol -- cross-reference this against your lipid labs."}
+       evidenceNote:"TLC (NIH/NCEP) is built specifically to lower LDL cholesterol -- cross-reference this against your lipid labs."},
+  hpdi:{id:"hpdi",label:"hPDI",items:HPDI_ITEMS,max:18,legacy:false,
+        evidenceNote:"hPDI (Satija et al., Harvard) rewards more healthy plant foods AND less of both refined plant foods and animal foods -- including fish, dairy, and eggs, not just red meat. Associated with lower cardiovascular and type 2 diabetes risk in large cohort studies."}
 };
 var _activeDiet="med"; // which diet the panel + trend chart are currently showing
 
