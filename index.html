@@ -404,10 +404,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
               <circle id="orbGlow1" cx="65" cy="65" r="49" fill="#3f4750" opacity="0.16"/>
               <circle id="orbCore" cx="65" cy="65" r="42" fill="url(#orbGrad)"/>
             </svg>
-            <div class="ring-center">
-              <div class="ring-lbl">Health Orb</div>
-            </div>
           </div>
+          <div class="ring-lbl" style="margin-top:8px;cursor:pointer;" onclick="toggleOrbBreakdown()">Orb of Health</div>
         </div>
       </div>
       <div class="hero-date" id="heroDate">&mdash;</div>
@@ -1835,6 +1833,15 @@ function orbBandScore(rows,field,target,direction){
   var ratio=avg/target;
   return clamp01(1-Math.max(0,ratio-1)*1.5);
 }
+function orbCalBandScore(rows,calLow,calHigh){
+  var vals=rows.filter(function(r){return r.cal!==undefined&&r.cal!==null;});
+  if(!vals.length)return null;
+  var avg=vals.reduce(function(s,r){return s+(r.cal||0);},0)/vals.length;
+  if(avg>=calLow&&avg<=calHigh)return 1;
+  var halfRange=Math.max(1,(calHigh-calLow)/2);
+  var dist=avg<calLow?(calLow-avg):(avg-calHigh);
+  return clamp01(1-dist/(halfRange*1.5));
+}
 function computeHealthOrbScore(){
   var hasAnyHistory=(DB.nutrition&&DB.nutrition.length)||(DB.workouts&&DB.workouts.length)||(DB.weights&&DB.weights.length);
   if(!hasAnyHistory)return {score:null,weekScore:null,todayScore:null,components:{},energyMod:0};
@@ -1843,18 +1850,24 @@ function computeHealthOrbScore(){
   var tgt=getNutTargets();
   var waterTarget=(DB.settings&&DB.settings.waterTarget)||64;
   var proTarget=tgt.proMin||PROTEIN_TARGET;
-  var weights={protein:20,fiber:15,sugar:10,sodium:10,water:15,workout:20,weight:10};
+  var weights={workout:16,protein:14,fiber:9,water:9,sugar:7,sodium:7,satFat:6,calorie:9,veg:8,potassium:4,calcium:3,weight:8};
 
   var weekComponents={
     protein:orbBandScore(weekRows,"pro",proTarget,"atLeast"),
     fiber:orbBandScore(weekRows,"fiber",tgt.fiberGood,"atLeast"),
     sugar:orbBandScore(weekRows,"sugar",tgt.sugarMax,"atMost"),
     sodium:orbBandScore(weekRows,"sodium",tgt.sodiumMax,"atMost"),
-    water:orbBandScore(weekRows,"water",waterTarget,"atLeast")
+    water:orbBandScore(weekRows,"water",waterTarget,"atLeast"),
+    satFat:orbBandScore(weekRows,"satFat",tgt.satFatMax,"atMost"),
+    veg:orbBandScore(weekRows,"veg",tgt.vegMin,"atLeast"),
+    potassium:orbBandScore(weekRows,"potassium",tgt.potassiumMin,"atLeast"),
+    calcium:orbBandScore(weekRows,"calcium",tgt.calciumMin,"atLeast"),
+    calorie:orbCalBandScore(weekRows,tgt.calLow,tgt.calHigh)
   };
   var weekStart=dateNDaysAgo(6);
+  var hasEverWorkedOut=!!(DB.workouts&&DB.workouts.length);
   var workoutDays=(DB.workouts||[]).filter(function(w){return w.d>=weekStart;}).length;
-  weekComponents.workout=clamp01(workoutDays/4);
+  weekComponents.workout=hasEverWorkedOut?clamp01(workoutDays/4):null;
 
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
   var weightScore=null;
@@ -1891,7 +1904,12 @@ function computeHealthOrbScore(){
     sugar:orbBandScore(todayRows,"sugar",tgt.sugarMax,"atMost"),
     sodium:orbBandScore(todayRows,"sodium",tgt.sodiumMax,"atMost"),
     water:orbBandScore(todayRows,"water",waterTarget,"atLeast"),
-    workout:(DB.workouts||[]).some(function(w){return w.d===todayD;})?1:0,
+    satFat:orbBandScore(todayRows,"satFat",tgt.satFatMax,"atMost"),
+    veg:orbBandScore(todayRows,"veg",tgt.vegMin,"atLeast"),
+    potassium:orbBandScore(todayRows,"potassium",tgt.potassiumMin,"atLeast"),
+    calcium:orbBandScore(todayRows,"calcium",tgt.calciumMin,"atLeast"),
+    calorie:orbCalBandScore(todayRows,tgt.calLow,tgt.calHigh),
+    workout:hasEverWorkedOut?((DB.workouts||[]).some(function(w){return w.d===todayD;})?1:0):null,
     weight:weightScore
   };
   var todayScore=weighted(todayComponents);
@@ -1980,10 +1998,15 @@ function toggleOrbBreakdown(){
     var r=window._lastOrbResult||computeHealthOrbScore();
     var c=r.components;
     var items=[
+      {label:"Calorie adherence (week)",val:c.calorie},
       {label:"Protein (week)",val:c.protein},
       {label:"Fiber (week)",val:c.fiber},
+      {label:"Vegetable servings (week)",val:c.veg},
       {label:"Sugar (week, under budget)",val:c.sugar},
       {label:"Sodium (week, under budget)",val:c.sodium},
+      {label:"Saturated fat (week, under budget)",val:c.satFat},
+      {label:"Potassium (week)",val:c.potassium},
+      {label:"Calcium (week)",val:c.calcium},
       {label:"Water (week)",val:c.water},
       {label:"Workouts (last 7 days)",val:c.workout},
       {label:"Weight trend",val:c.weight}
@@ -5466,6 +5489,11 @@ function executeReset(){
       goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},
       milestones:[],program:null};
   save();
+  // Defensively clear in-memory animation state (no page reload happens on reset)
+  _orbColors=null;_orbGlowRunning=false;_orbIntensity=0;
+  _glowingRings={};_glowLoopRunning=false;
+  selFatigue=null;selDay=null;
+  document.querySelectorAll('[id^="halo_"]').forEach(function(h){h.remove();});
   // Hide confirm box
   var c=document.getElementById("resetConfirm");
   if(c)c.style.display="none";
