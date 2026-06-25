@@ -127,7 +127,15 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ring-sub{font-size:9px;color:var(--faint);margin-top:2px;line-height:1.2;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;}
-.hero .ring{width:210px;height:210px;}
+.hero-row{display:flex;gap:16px;align-items:flex-start;justify-content:center;flex-wrap:wrap;width:100%;}
+.hero-col{display:flex;flex-direction:column;align-items:center;}
+.hero .ring{width:150px;height:150px;}
+.hero .ring-val{font-size:30px;}
+.orb-breakdown{margin-top:14px;width:100%;max-width:320px;background:var(--surf);border:1px solid var(--line2);border-radius:var(--r);padding:10px 14px;font-size:12px;}
+.orb-breakdown .obr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);}
+.orb-breakdown .obr:last-child{border-bottom:none;}
+.orb-breakdown .obr-lbl{opacity:.7;}
+.orb-breakdown .obr-val{font-weight:600;}
 .hero-date{font-size:13px;color:var(--gold);font-family:var(--serif);font-style:italic;margin-top:12px;}
 .ringrow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;margin-bottom:14px;}
 .ringrow-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px;}
@@ -363,17 +371,43 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
   <!-- HOME -->
   <div class="view active" id="v-home">
     <div class="hero">
-      <div class="ring">
-        <svg viewBox="0 0 200 200" width="210" height="210">
-          <circle class="ring-track" cx="100" cy="100" r="86" stroke-width="14"/>
-          <circle class="ring-fill red" id="ringCampaign" cx="100" cy="100" r="86" stroke-width="14"/>
-        </svg>
-        <div class="ring-center">
-          <div class="ring-val" id="cdDays">&mdash;</div>
-          <div class="ring-lbl" id="cdLabel">Days to Goal</div>
+      <div class="hero-row">
+        <div class="hero-col">
+          <div class="ring">
+            <svg viewBox="0 0 200 200" width="210" height="210">
+              <circle class="ring-track" cx="100" cy="100" r="86" stroke-width="14"/>
+              <circle class="ring-fill red" id="ringCampaign" cx="100" cy="100" r="86" stroke-width="14"/>
+            </svg>
+            <div class="ring-center">
+              <div class="ring-val" id="cdDays">&mdash;</div>
+              <div class="ring-lbl" id="cdLabel">Days to Goal</div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-col">
+          <div class="ring" id="orbWrap" onclick="toggleOrbBreakdown()" style="cursor:pointer;">
+            <svg viewBox="0 0 200 200" width="210" height="210" overflow="visible">
+              <defs>
+                <radialGradient id="orbGrad" cx="36%" cy="30%" r="72%">
+                  <stop offset="0%" id="orbStopCore" stop-color="#5a6472"/>
+                  <stop offset="45%" id="orbStopMid" stop-color="#3f4750"/>
+                  <stop offset="100%" id="orbStopEdge" stop-color="#2a3038"/>
+                </radialGradient>
+              </defs>
+              <circle id="orbGlow3" cx="100" cy="100" r="94" fill="#3f4750" opacity="0.06"/>
+              <circle id="orbGlow2" cx="100" cy="100" r="84" fill="#3f4750" opacity="0.10"/>
+              <circle id="orbGlow1" cx="100" cy="100" r="76" fill="#3f4750" opacity="0.16"/>
+              <circle id="orbCore" cx="100" cy="100" r="64" fill="url(#orbGrad)"/>
+            </svg>
+            <div class="ring-center">
+              <div class="ring-val sm" id="orbLabel">&mdash;</div>
+              <div class="ring-lbl">Health Orb</div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="hero-date" id="heroDate">&mdash;</div>
+      <div id="orbBreakdown" class="orb-breakdown" style="display:none;"></div>
     </div>
 
     <div class="ringrow">
@@ -1784,8 +1818,189 @@ function nav(v){
 }
 
 /* ============ HOME ============ */
+/* ============ HEALTH ORB ============ */
+function clamp01(v){return Math.max(0,Math.min(1,v));}
+function dateNDaysAgo(n){var d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-n);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+function lastNDaysNutrition(n){var cutoff=dateNDaysAgo(n-1);return (DB.nutrition||[]).filter(function(x){return x.d>=cutoff;});}
+function orbBandScore(rows,field,target,direction){
+  var vals=rows.filter(function(r){return r[field]!==undefined&&r[field]!==null;});
+  if(!vals.length)return null;
+  var avg=vals.reduce(function(s,r){return s+(r[field]||0);},0)/vals.length;
+  if(direction==="atLeast")return clamp01(target>0?avg/target:0);
+  if(target<=0)return 1;
+  var ratio=avg/target;
+  return clamp01(1-Math.max(0,ratio-1)*1.5);
+}
+function computeHealthOrbScore(){
+  var hasAnyHistory=(DB.nutrition&&DB.nutrition.length)||(DB.workouts&&DB.workouts.length)||(DB.weights&&DB.weights.length);
+  if(!hasAnyHistory)return {score:null,weekScore:null,todayScore:null,components:{},energyMod:0};
+  var todayD=todayStr();
+  var weekRows=lastNDaysNutrition(7);
+  var tgt=getNutTargets();
+  var waterTarget=(DB.settings&&DB.settings.waterTarget)||64;
+  var proTarget=tgt.proMin||PROTEIN_TARGET;
+  var weights={protein:20,fiber:15,sugar:10,sodium:10,water:15,workout:20,weight:10};
+
+  var weekComponents={
+    protein:orbBandScore(weekRows,"pro",proTarget,"atLeast"),
+    fiber:orbBandScore(weekRows,"fiber",tgt.fiberGood,"atLeast"),
+    sugar:orbBandScore(weekRows,"sugar",tgt.sugarMax,"atMost"),
+    sodium:orbBandScore(weekRows,"sodium",tgt.sodiumMax,"atMost"),
+    water:orbBandScore(weekRows,"water",waterTarget,"atLeast")
+  };
+  var weekStart=dateNDaysAgo(6);
+  var workoutDays=(DB.workouts||[]).filter(function(w){return w.d>=weekStart;}).length;
+  weekComponents.workout=clamp01(workoutDays/4);
+
+  var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
+  var weightScore=null;
+  if(DB.weights&&DB.weights.length>=2){
+    var recentCut=dateNDaysAgo(13);
+    var older=DB.weights.filter(function(w){return w.d<recentCut;});
+    var recent=DB.weights.filter(function(w){return w.d>=recentCut;});
+    if(older.length&&recent.length){
+      var oldSlice=older.slice(-5);
+      var oldAvg=oldSlice.reduce(function(s,w){return s+w.w;},0)/oldSlice.length;
+      var newAvg=recent.reduce(function(s,w){return s+w.w;},0)/recent.length;
+      var delta=newAvg-oldAvg;
+      if(goalType==="weight_loss")weightScore=clamp01(0.5-delta*0.5);
+      else if(goalType==="muscle")weightScore=clamp01(0.5+delta*0.5);
+      else weightScore=clamp01(1-Math.abs(delta)*0.4);
+    }
+  }
+  weekComponents.weight=weightScore;
+
+  function weighted(components){
+    var w=0,t=0;
+    Object.keys(weights).forEach(function(k){
+      var v=components[k];
+      if(v!==null&&v!==undefined){w+=v*weights[k];t+=weights[k];}
+    });
+    return t>0?(w/t)*100:null;
+  }
+  var weekScore=weighted(weekComponents);
+
+  var todayRows=(DB.nutrition||[]).filter(function(r){return r.d===todayD;});
+  var todayComponents={
+    protein:orbBandScore(todayRows,"pro",proTarget,"atLeast"),
+    fiber:orbBandScore(todayRows,"fiber",tgt.fiberGood,"atLeast"),
+    sugar:orbBandScore(todayRows,"sugar",tgt.sugarMax,"atMost"),
+    sodium:orbBandScore(todayRows,"sodium",tgt.sodiumMax,"atMost"),
+    water:orbBandScore(todayRows,"water",waterTarget,"atLeast"),
+    workout:(DB.workouts||[]).some(function(w){return w.d===todayD;})?1:0,
+    weight:weightScore
+  };
+  var todayScore=weighted(todayComponents);
+
+  var fatigue=typeof currentFatigue==="function"?currentFatigue():null;
+  var energyMod=fatigue==="low"?-6:(fatigue==="good"?4:0);
+
+  var blended=null;
+  if(weekScore===null&&todayScore===null)blended=null;
+  else if(weekScore===null)blended=todayScore;
+  else if(todayScore===null)blended=weekScore;
+  else blended=weekScore*0.7+todayScore*0.3;
+  if(blended!==null)blended=clamp01((blended+energyMod)/100)*100;
+
+  return {score:blended,weekScore:weekScore,todayScore:todayScore,components:weekComponents,energyMod:energyMod};
+}
+var ORB_STOPS=[
+  {pos:0,  core:"#2a2420",mid:"#1a1614",edge:"#0a0807",glow:"#000000"},
+  {pos:20, core:"#5c2a1e",mid:"#451f16",edge:"#2c130d",glow:"#3d1a10"},
+  {pos:40, core:"#7a5230",mid:"#5f3f22",edge:"#3f2814",glow:"#5c3a1a"},
+  {pos:60, core:"#e8b84a",mid:"#c98f2e",edge:"#9a6e28",glow:"#c98f2e"},
+  {pos:80, core:"#ffd968",mid:"#f5a623",edge:"#d97b0a",glow:"#f5a623"},
+  {pos:100,core:"#fff8e0",mid:"#ffd23f",edge:"#ff9d0a",glow:"#ffe066"}
+];
+function _orbHexToRgb(hex){hex=hex.replace("#","");return {r:parseInt(hex.substring(0,2),16),g:parseInt(hex.substring(2,4),16),b:parseInt(hex.substring(4,6),16)};}
+function _orbRgbToHex(r,g,b){function h(v){v=Math.max(0,Math.min(255,Math.round(v)));var s=v.toString(16);return s.length<2?"0"+s:s;}return "#"+h(r)+h(g)+h(b);}
+function _orbHexLerp(a,b,t){var ca=_orbHexToRgb(a),cb=_orbHexToRgb(b);return _orbRgbToHex(ca.r+(cb.r-ca.r)*t,ca.g+(cb.g-ca.g)*t,ca.b+(cb.b-ca.b)*t);}
+function orbColorsForScore(score){
+  if(score===null||score===undefined)return {core:"#5a6472",mid:"#3f4750",edge:"#2a3038",glow:"#3f4750",dormant:true};
+  score=Math.max(0,Math.min(100,score));
+  for(var i=0;i<ORB_STOPS.length-1;i++){
+    var a=ORB_STOPS[i],b=ORB_STOPS[i+1];
+    if(score>=a.pos&&score<=b.pos){
+      var t=(score-a.pos)/(b.pos-a.pos);
+      return {core:_orbHexLerp(a.core,b.core,t),mid:_orbHexLerp(a.mid,b.mid,t),edge:_orbHexLerp(a.edge,b.edge,t),glow:_orbHexLerp(a.glow,b.glow,t),dormant:false};
+    }
+  }
+  var last=ORB_STOPS[ORB_STOPS.length-1];
+  return {core:last.core,mid:last.mid,edge:last.edge,glow:last.glow,dormant:false};
+}
+var _orbGlowRunning=false,_orbColors=null,_orbIntensity=0;
+function orbGlowTick(ts){
+  if(!_orbColors){_orbGlowRunning=false;return;}
+  var g1=document.getElementById("orbGlow1"),g2=document.getElementById("orbGlow2"),g3=document.getElementById("orbGlow3");
+  if(!g1||!g2||!g3){_orbGlowRunning=false;return;}
+  var phase=(ts/1800)%(2*Math.PI);
+  var wave=0.5+0.5*Math.sin(phase);
+  var baseAlpha=_orbColors.dormant?0.10:(0.16+_orbIntensity*0.22);
+  g1.setAttribute("fill",_orbColors.glow);g1.setAttribute("opacity",(baseAlpha*1.0*(0.7+0.3*wave)).toFixed(3));
+  g2.setAttribute("fill",_orbColors.glow);g2.setAttribute("opacity",(baseAlpha*0.65*(0.7+0.3*wave)).toFixed(3));
+  g3.setAttribute("fill",_orbColors.glow);g3.setAttribute("opacity",(baseAlpha*0.40*(0.7+0.3*wave)).toFixed(3));
+  requestAnimationFrame(orbGlowTick);
+}
+function renderHealthOrb(){
+  var wrap=document.getElementById("orbWrap");if(!wrap)return;
+  var result=computeHealthOrbScore();
+  var score=result.score;
+  var colors=orbColorsForScore(score);
+  _orbColors=colors;
+  _orbIntensity = score===null?0:clamp01(score/100);
+  var stopCore=document.getElementById("orbStopCore"),stopMid=document.getElementById("orbStopMid"),stopEdge=document.getElementById("orbStopEdge");
+  if(stopCore)stopCore.setAttribute("stop-color",colors.core);
+  if(stopMid)stopMid.setAttribute("stop-color",colors.mid);
+  if(stopEdge)stopEdge.setAttribute("stop-color",colors.edge);
+  var lbl=document.getElementById("orbLabel");
+  if(lbl){
+    if(score===null)lbl.textContent="\u2014";
+    else if(score>=85)lbl.textContent="Radiant";
+    else if(score>=70)lbl.textContent="Strong";
+    else if(score>=55)lbl.textContent="Steady";
+    else if(score>=40)lbl.textContent="Slipping";
+    else if(score>=20)lbl.textContent="Rough";
+    else lbl.textContent="Depleted";
+  }
+  if(!ringReducedMotion()){
+    if(!_orbGlowRunning){_orbGlowRunning=true;requestAnimationFrame(orbGlowTick);}
+  } else {
+    var g1=document.getElementById("orbGlow1"),g2=document.getElementById("orbGlow2"),g3=document.getElementById("orbGlow3");
+    var staticAlpha=colors.dormant?0.10:(0.16+_orbIntensity*0.22);
+    if(g1){g1.setAttribute("fill",colors.glow);g1.setAttribute("opacity",staticAlpha.toFixed(3));}
+    if(g2){g2.setAttribute("fill",colors.glow);g2.setAttribute("opacity",(staticAlpha*0.65).toFixed(3));}
+    if(g3){g3.setAttribute("fill",colors.glow);g3.setAttribute("opacity",(staticAlpha*0.40).toFixed(3));}
+  }
+  window._lastOrbResult=result;
+}
+function toggleOrbBreakdown(){
+  var box=document.getElementById("orbBreakdown");if(!box)return;
+  if(box.style.display==="none"||!box.style.display){
+    var r=window._lastOrbResult||computeHealthOrbScore();
+    var c=r.components;
+    function pctTxt(v){return v===null||v===undefined?"no data":Math.round(v*100)+"%";}
+    var rows=[
+      ["Protein (week)",pctTxt(c.protein)],
+      ["Fiber (week)",pctTxt(c.fiber)],
+      ["Sugar (week, under budget)",pctTxt(c.sugar)],
+      ["Sodium (week, under budget)",pctTxt(c.sodium)],
+      ["Water (week)",pctTxt(c.water)],
+      ["Workouts (last 7 days)",pctTxt(c.workout)],
+      ["Weight trend",pctTxt(c.weight)],
+      ["Energy/readiness",r.energyMod>0?"+"+r.energyMod:(r.energyMod<0?r.energyMod:"neutral")]
+    ];
+    box.innerHTML=rows.map(function(row){
+      return '<div class="obr"><span class="obr-lbl">'+row[0]+'</span><span class="obr-val">'+row[1]+'</span></div>';
+    }).join("");
+    box.style.display="block";
+  } else {
+    box.style.display="none";
+  }
+}
+
 function renderHome(){
   var t=new Date();t.setHours(0,0,0,0);
+  renderHealthOrb();
   // End of Day button: glow once on first-ever view, then never again
   var eodBox=document.getElementById("nbEodBox");
   if(eodBox){
