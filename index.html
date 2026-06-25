@@ -76,6 +76,21 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ring-fill{fill:none;stroke-linecap:round;transition:stroke-dashoffset 1.15s cubic-bezier(.22,.9,.3,1);}
 .ring-fill.red{stroke:var(--red);filter:drop-shadow(0 0 5px rgba(192,40,30,.30));}
 .ring-fill.gold{stroke:var(--gold);filter:drop-shadow(0 0 5px rgba(154,110,40,.28));}
+.ring-fill.liquid-ring{transition:none;}
+.ring-fill.goal-reached{animation:ringGoalGlow 2.6s ease-in-out infinite;}
+@keyframes ringGoalGlow{
+  0%,100%{filter:drop-shadow(0 0 5px var(--ring-glow-color, rgba(255,255,255,.30)));}
+  50%{filter:drop-shadow(0 0 13px var(--ring-glow-color, rgba(255,255,255,.62)));}
+}
+.ring-fill.over-budget{animation:ringAmberPulse 1.9s ease-in-out infinite;}
+@keyframes ringAmberPulse{
+  0%,100%{filter:drop-shadow(0 0 4px rgba(196,138,30,.35));}
+  50%{filter:drop-shadow(0 0 10px rgba(196,138,30,.60));}
+}
+@media (prefers-reduced-motion: reduce){
+  .ring-fill.goal-reached{animation:none;filter:drop-shadow(0 0 8px var(--ring-glow-color, rgba(255,255,255,.45))) !important;}
+  .ring-fill.over-budget{animation:none;filter:drop-shadow(0 0 7px rgba(196,138,30,.50)) !important;}
+}
 .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
 .ring-val{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1;}
 .ring-val.sm{font-size:28px;}
@@ -1547,7 +1562,103 @@ function pad(n){return n<10?"0"+n:""+n;}
 function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},1900);}
 function easeOut(p){return 1-Math.pow(1-p,3);}
 function countUp(id,target,dec,suffix){var el=document.getElementById(id);if(!el)return;target=target||0;var t0=null,from=0;function s(t){if(!t0)t0=t;var p=Math.min(1,(t-t0)/850);var v=from+(target-from)*easeOut(p);el.textContent=(dec?v.toFixed(dec):Math.round(v))+(suffix||"");if(p<1)requestAnimationFrame(s);}requestAnimationFrame(s);}
-function setRing(id,pct){var c=document.getElementById(id);if(!c)return;pct=Math.max(0,Math.min(1,pct||0));var r=parseFloat(c.getAttribute("r"));var circ=2*Math.PI*r;c.style.strokeDasharray=circ;c.style.strokeDashoffset=circ;void c.getBoundingClientRect();requestAnimationFrame(function(){c.style.strokeDashoffset=circ*(1-pct);});}
+var GOOD_RING_IDS={ringCampaign:1,ringWeight:1,ringPro:1,nbFiberRing:1,nbWaterRing:1,ringProMacro:1,ringProLog:1};
+var BUDGET_RING_IDS={nbCalRing:1,nbCarbRing:1,nbFatRing:1,nbSugarRing:1,nbSodiumRing:1,ringCarbMacro:1,ringFatMacro:1,ringCalLog:1};
+var LIQUID_RING_IDS={};
+(function(){for(var k in GOOD_RING_IDS)LIQUID_RING_IDS[k]=1;for(var k2 in BUDGET_RING_IDS)LIQUID_RING_IDS[k2]=1;})();
+function ringReducedMotion(){return !!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);}
+function easeOutElasticRing(t){if(t<=0)return 0;if(t>=1)return 1;var p=0.4;return Math.pow(2,-10*t)*Math.sin((t-p/4)*(2*Math.PI)/p)+1;}
+function fireRingRipple(c){
+  if(ringReducedMotion())return;
+  var svg=c.closest("svg");if(!svg)return;
+  var cx=c.getAttribute("cx"),cy=c.getAttribute("cy"),r=parseFloat(c.getAttribute("r"));
+  var color=getComputedStyle(c).stroke;
+  var ripple=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  ripple.setAttribute("cx",cx);ripple.setAttribute("cy",cy);ripple.setAttribute("r",r);
+  ripple.setAttribute("fill","none");ripple.setAttribute("stroke",color);ripple.setAttribute("stroke-width","3");
+  ripple.style.opacity="0.85";ripple.style.pointerEvents="none";
+  svg.appendChild(ripple);
+  var start=null,dur=900,maxExtra=18;
+  function rstep(ts){
+    if(!start)start=ts;
+    var t=Math.min(1,(ts-start)/dur);
+    ripple.setAttribute("r",r+maxExtra*t);
+    ripple.style.opacity=(0.85*(1-t)).toFixed(2);
+    if(t<1)requestAnimationFrame(rstep);else ripple.remove();
+  }
+  requestAnimationFrame(rstep);
+}
+function fireRingAmberPulse(c){
+  if(ringReducedMotion())return;
+  var svg=c.closest("svg");if(!svg)return;
+  var cx=c.getAttribute("cx"),cy=c.getAttribute("cy"),r=parseFloat(c.getAttribute("r"));
+  var pulse=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  pulse.setAttribute("cx",cx);pulse.setAttribute("cy",cy);pulse.setAttribute("r",r);
+  pulse.setAttribute("fill","none");pulse.setAttribute("stroke","rgba(196,138,30,0.85)");pulse.setAttribute("stroke-width","3");
+  pulse.style.opacity="0.85";pulse.style.pointerEvents="none";
+  svg.appendChild(pulse);
+  var start=null,dur=900,shrink=14;
+  function pstep(ts){
+    if(!start)start=ts;
+    var t=Math.min(1,(ts-start)/dur);
+    pulse.setAttribute("r",Math.max(2,r-shrink*t));
+    pulse.style.opacity=(0.85*(1-t)).toFixed(2);
+    if(t<1)requestAnimationFrame(pstep);else pulse.remove();
+  }
+  requestAnimationFrame(pstep);
+}
+function updateRingStatus(c,id,rawPct,prevPct){
+  var isBudget=!!BUDGET_RING_IDS[id];
+  if(isBudget){
+    var justOver=rawPct>1&&prevPct<=1;
+    if(rawPct>1){
+      c.classList.remove("goal-reached");
+      c.classList.add("over-budget");
+      if(justOver)fireRingAmberPulse(c);
+    } else {
+      c.classList.remove("over-budget");
+    }
+  } else {
+    var justReached=rawPct>=1&&prevPct<1;
+    if(rawPct>=1){
+      c.style.setProperty("--ring-glow-color",getComputedStyle(c).stroke);
+      c.classList.add("goal-reached");
+      if(justReached)fireRingRipple(c);
+    } else {
+      c.classList.remove("goal-reached");
+    }
+  }
+}
+function setRing(id,pct){
+  var c=document.getElementById(id);if(!c)return;
+  var rawPct=pct||0;
+  var drawPct=Math.max(0,Math.min(1,rawPct));
+  var r=parseFloat(c.getAttribute("r"));var circ=2*Math.PI*r;
+  c.style.strokeDasharray=circ;
+  var isLiquid=!!LIQUID_RING_IDS[id];
+  var prevPct=c.dataset.pct!==undefined?parseFloat(c.dataset.pct):0;
+  c.dataset.pct=rawPct;
+  if(!isLiquid||ringReducedMotion()){
+    c.style.strokeDashoffset=circ;void c.getBoundingClientRect();
+    requestAnimationFrame(function(){c.style.strokeDashoffset=circ*(1-drawPct);});
+    if(isLiquid)updateRingStatus(c,id,rawPct,prevPct);
+    return;
+  }
+  c.classList.add("liquid-ring");
+  var startOffset=parseFloat(c.style.strokeDashoffset);
+  if(isNaN(startOffset))startOffset=circ;
+  var targetOffset=circ*(1-drawPct);
+  var duration=1000,startTime=null;
+  function step(ts){
+    if(!startTime)startTime=ts;
+    var t=Math.min(1,(ts-startTime)/duration);
+    var eased=easeOutElasticRing(t);
+    c.style.strokeDashoffset=startOffset+(targetOffset-startOffset)*eased;
+    if(t<1){requestAnimationFrame(step);}
+    else{c.style.strokeDashoffset=targetOffset;updateRingStatus(c,id,rawPct,prevPct);}
+  }
+  requestAnimationFrame(step);
+}
 
 /* RPE / RIR autoregulation */
 var TARGET_RIR={P0:3,P1:2,P2:1.5,P3:1.5};
