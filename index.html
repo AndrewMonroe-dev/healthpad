@@ -603,9 +603,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
         <span id="medasChevron" style="color:var(--faint);transition:transform .2s;font-size:20px;line-height:1;">&#9662;</span>
       </div>
       <div id="medasBody" style="display:none;">
-        <div id="dietSubLabel" style="font-size:13px;font-weight:600;color:var(--red);margin:2px 0 10px;">Mediterranean — Today</div>
         <div style="display:flex;gap:6px;margin:4px 0 12px;flex-wrap:wrap;">
-          <div id="dietChip_med" onclick="selectDiet('med')" style="flex:1;min-width:72px;text-align:center;padding:8px 4px;border-radius:18px;border:1.5px solid var(--red);background:rgba(192,40,30,.10);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;">Mediterranean</div>
+          <div id="dietChip_med" onclick="selectDiet('med')" style="flex:1;min-width:56px;text-align:center;padding:8px 4px;border-radius:18px;border:1.5px solid var(--red);background:rgba(192,40,30,.10);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;">Med</div>
           <div id="dietChip_dash" onclick="selectDiet('dash')" style="flex:1;min-width:60px;text-align:center;padding:8px 4px;border-radius:18px;border:1.5px solid var(--line2);background:var(--surf);color:var(--ink2);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;">DASH</div>
           <div id="dietChip_mind" onclick="selectDiet('mind')" style="flex:1;min-width:60px;text-align:center;padding:8px 4px;border-radius:18px;border:1.5px solid var(--line2);background:var(--surf);color:var(--ink2);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;">MIND</div>
           <div id="dietChip_tlc" onclick="selectDiet('tlc')" style="flex:1;min-width:56px;text-align:center;padding:8px 4px;border-radius:18px;border:1.5px solid var(--line2);background:var(--surf);color:var(--ink2);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;">TLC</div>
@@ -6688,8 +6687,6 @@ function selectDiet(dietId){
     chip.style.background=on?"rgba(192,40,30,.10)":"var(--surf)";
     chip.style.color=on?"var(--ink)":"var(--ink2)";
   });
-  var hdr=document.getElementById("dietSubLabel");
-  if(hdr)hdr.textContent=diet.label+" \u2014 Today";
   var saveBtn=document.getElementById("dietSaveBtn");
   if(saveBtn)saveBtn.setAttribute("onclick",diet.legacy?"saveMedasDaily()":"saveDietDaily('"+dietId+"')");
   if(diet.legacy){
