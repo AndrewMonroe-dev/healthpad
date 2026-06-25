@@ -129,13 +129,17 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;}
 .hero-row{display:flex;gap:16px;align-items:flex-start;justify-content:center;flex-wrap:wrap;width:100%;}
 .hero-col{display:flex;flex-direction:column;align-items:center;}
-.hero .ring{width:150px;height:150px;}
-.hero .ring-val{font-size:30px;}
+.hero .ring{width:148px;height:148px;}
 .orb-breakdown{margin-top:14px;width:100%;max-width:320px;background:var(--surf);border:1px solid var(--line2);border-radius:var(--r);padding:10px 14px;font-size:12px;}
 .orb-breakdown .obr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);}
 .orb-breakdown .obr:last-child{border-bottom:none;}
 .orb-breakdown .obr-lbl{opacity:.7;}
 .orb-breakdown .obr-val{font-weight:600;}
+.orb-breakdown .obr-summary{font-size:13px;font-weight:600;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line2);}
+.orb-breakdown .obr-good{color:#2d8a35;}
+.orb-breakdown .obr-ok{color:var(--gold);}
+.orb-breakdown .obr-bad{color:var(--red);}
+.orb-breakdown .obr-none{color:var(--faint);font-weight:500;}
 .hero-date{font-size:13px;color:var(--gold);font-family:var(--serif);font-style:italic;margin-top:12px;}
 .ringrow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;margin-bottom:14px;}
 .ringrow-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px;}
@@ -374,19 +378,20 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="hero-row">
         <div class="hero-col">
           <div class="ring">
-            <svg viewBox="0 0 200 200" width="210" height="210">
-              <circle class="ring-track" cx="100" cy="100" r="86" stroke-width="14"/>
-              <circle class="ring-fill red" id="ringCampaign" cx="100" cy="100" r="86" stroke-width="14"/>
+            <svg viewBox="0 0 130 130" width="148" height="148">
+              <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
+              <circle class="ring-fill red" id="ringCampaign" cx="65" cy="65" r="54" stroke-width="11"/>
             </svg>
             <div class="ring-center">
-              <div class="ring-val" id="cdDays">&mdash;</div>
+              <div class="ring-val sm" id="cdDays">&mdash;</div>
               <div class="ring-lbl" id="cdLabel">Days to Goal</div>
+              <div class="ring-lbl" id="cdHint" style="margin-top:2px;display:none;">Setup &rarr; Goal</div>
             </div>
           </div>
         </div>
         <div class="hero-col">
           <div class="ring" id="orbWrap" onclick="toggleOrbBreakdown()" style="cursor:pointer;">
-            <svg viewBox="0 0 200 200" width="210" height="210" overflow="visible">
+            <svg viewBox="0 0 130 130" width="148" height="148" overflow="visible">
               <defs>
                 <radialGradient id="orbGrad" cx="36%" cy="30%" r="72%">
                   <stop offset="0%" id="orbStopCore" stop-color="#5a6472"/>
@@ -394,13 +399,12 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
                   <stop offset="100%" id="orbStopEdge" stop-color="#2a3038"/>
                 </radialGradient>
               </defs>
-              <circle id="orbGlow3" cx="100" cy="100" r="94" fill="#3f4750" opacity="0.06"/>
-              <circle id="orbGlow2" cx="100" cy="100" r="84" fill="#3f4750" opacity="0.10"/>
-              <circle id="orbGlow1" cx="100" cy="100" r="76" fill="#3f4750" opacity="0.16"/>
-              <circle id="orbCore" cx="100" cy="100" r="64" fill="url(#orbGrad)"/>
+              <circle id="orbGlow3" cx="65" cy="65" r="61" fill="#3f4750" opacity="0.06"/>
+              <circle id="orbGlow2" cx="65" cy="65" r="55" fill="#3f4750" opacity="0.10"/>
+              <circle id="orbGlow1" cx="65" cy="65" r="49" fill="#3f4750" opacity="0.16"/>
+              <circle id="orbCore" cx="65" cy="65" r="42" fill="url(#orbGrad)"/>
             </svg>
             <div class="ring-center">
-              <div class="ring-val sm" id="orbLabel">&mdash;</div>
               <div class="ring-lbl">Health Orb</div>
             </div>
           </div>
@@ -1952,16 +1956,6 @@ function renderHealthOrb(){
   if(stopCore)stopCore.setAttribute("stop-color",colors.core);
   if(stopMid)stopMid.setAttribute("stop-color",colors.mid);
   if(stopEdge)stopEdge.setAttribute("stop-color",colors.edge);
-  var lbl=document.getElementById("orbLabel");
-  if(lbl){
-    if(score===null)lbl.textContent="\u2014";
-    else if(score>=85)lbl.textContent="Radiant";
-    else if(score>=70)lbl.textContent="Strong";
-    else if(score>=55)lbl.textContent="Steady";
-    else if(score>=40)lbl.textContent="Slipping";
-    else if(score>=20)lbl.textContent="Rough";
-    else lbl.textContent="Depleted";
-  }
   if(!ringReducedMotion()){
     if(!_orbGlowRunning){_orbGlowRunning=true;requestAnimationFrame(orbGlowTick);}
   } else {
@@ -1973,25 +1967,48 @@ function renderHealthOrb(){
   }
   window._lastOrbResult=result;
 }
+function orbVerdict(v){
+  if(v===null||v===undefined)return {txt:"No data logged",cls:"obr-none"};
+  if(v>=0.85)return {txt:"On track",cls:"obr-good"};
+  if(v>=0.6)return {txt:"Decent, room to improve",cls:"obr-ok"};
+  if(v>=0.35)return {txt:"Needs attention",cls:"obr-bad"};
+  return {txt:"Off track",cls:"obr-bad"};
+}
 function toggleOrbBreakdown(){
   var box=document.getElementById("orbBreakdown");if(!box)return;
   if(box.style.display==="none"||!box.style.display){
     var r=window._lastOrbResult||computeHealthOrbScore();
     var c=r.components;
-    function pctTxt(v){return v===null||v===undefined?"no data":Math.round(v*100)+"%";}
-    var rows=[
-      ["Protein (week)",pctTxt(c.protein)],
-      ["Fiber (week)",pctTxt(c.fiber)],
-      ["Sugar (week, under budget)",pctTxt(c.sugar)],
-      ["Sodium (week, under budget)",pctTxt(c.sodium)],
-      ["Water (week)",pctTxt(c.water)],
-      ["Workouts (last 7 days)",pctTxt(c.workout)],
-      ["Weight trend",pctTxt(c.weight)],
-      ["Energy/readiness",r.energyMod>0?"+"+r.energyMod:(r.energyMod<0?r.energyMod:"neutral")]
+    var items=[
+      {label:"Protein (week)",val:c.protein},
+      {label:"Fiber (week)",val:c.fiber},
+      {label:"Sugar (week, under budget)",val:c.sugar},
+      {label:"Sodium (week, under budget)",val:c.sodium},
+      {label:"Water (week)",val:c.water},
+      {label:"Workouts (last 7 days)",val:c.workout},
+      {label:"Weight trend",val:c.weight}
     ];
-    box.innerHTML=rows.map(function(row){
-      return '<div class="obr"><span class="obr-lbl">'+row[0]+'</span><span class="obr-val">'+row[1]+'</span></div>';
+    var withData=items.filter(function(i){return i.val!==null&&i.val!==undefined;});
+    var summaryHtml="";
+    if(r.score===null){
+      summaryHtml='<div class="obr-summary">No data logged yet \u2014 log a meal, workout, or weigh-in to wake up your orb.</div>';
+    } else if(withData.length){
+      var weakest=withData.slice().sort(function(a,b){return a.val-b.val;})[0];
+      var strongest=withData.slice().sort(function(a,b){return b.val-a.val;})[0];
+      if(weakest.val<0.6){
+        summaryHtml='<div class="obr-summary">Biggest opportunity: <b>'+weakest.label.replace(/\s*\(.*\)/,"")+'</b>.</div>';
+      } else {
+        summaryHtml='<div class="obr-summary">Strongest area: <b>'+strongest.label.replace(/\s*\(.*\)/,"")+'</b>. Keep it up.</div>';
+      }
+    }
+    var rowsHtml=items.map(function(i){
+      var v=orbVerdict(i.val);
+      return '<div class="obr"><span class="obr-lbl">'+i.label+'</span><span class="obr-val '+v.cls+'">'+v.txt+'</span></div>';
     }).join("");
+    var energyTxt=r.energyMod>0?"Helping a bit (good readiness)":(r.energyMod<0?"Working against you (low readiness)":"Neutral");
+    var energyCls=r.energyMod>0?"obr-good":(r.energyMod<0?"obr-bad":"obr-ok");
+    rowsHtml+='<div class="obr"><span class="obr-lbl">Energy/readiness</span><span class="obr-val '+energyCls+'">'+energyTxt+'</span></div>';
+    box.innerHTML=summaryHtml+rowsHtml;
     box.style.display="block";
   } else {
     box.style.display="none";
@@ -2019,18 +2036,21 @@ function renderHome(){
   var gStart=g.startDate?new Date(g.startDate+"T00:00:00"):t;
   var gName=g.name||"";
   var cdLbl=document.getElementById("cdLabel");
+  var cdHint=document.getElementById("cdHint");
   var hd=document.getElementById("heroDate");
   if(!hasGoal){
     // No goal set yet — show blank state
     document.getElementById("cdDays").textContent="—";
     if(cdLbl)cdLbl.textContent="Set a goal";
-    if(hd)hd.textContent="Go to Setup → Your Goal to set a target date.";
+    if(cdHint)cdHint.style.display="block";
+    if(hd){hd.textContent="";hd.style.display="none";}
     setRing("ringCampaign",0);
   } else {
     var days=Math.ceil((gTarget-t)/(1000*60*60*24));
     countUp("cdDays",Math.max(0,days),0,"");
     if(cdLbl)cdLbl.textContent=gName?"Days to "+gName.substring(0,18):"Days to Goal";
-    if(hd)hd.textContent=gTarget.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})+(gName?" — "+gName:"");
+    if(cdHint)cdHint.style.display="none";
+    if(hd){hd.style.display="block";hd.textContent=gTarget.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})+(gName?" — "+gName:"");}
     var total=Math.max(1,gTarget-gStart),elapsed=t-gStart;
     var cpct=Math.max(0,Math.min(1,elapsed/total));
     setRing("ringCampaign",cpct);
