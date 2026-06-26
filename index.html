@@ -2348,7 +2348,13 @@ function orbColorsForScore(score){
    color/intensity. The glossy 3D material (highlight, streak, ambient occlusion, fresnel
    rim) is a CONSTANT property of the artifact, unaffected by health data. Breathing pulse
    is the only animation; nothing orbits or floats. */
-var orbAnim={phase:0};
+var orbAnim={phase:0,shimmerPhase:0};
+// Pure, DOM-free: a slow (~15s period) independent sweep value, 0..1, used to drift the glass
+// streak/secondary highlight across the surface — separate from and much slower than the
+// breathing pulse, per spec ("optional second, much slower 10-20s independent sweep").
+function computeOrbShimmer(shimmerPhase){
+  return (Math.sin(shimmerPhase)+1)/2;
+}
 var orbArrivalT0=null; // set when the Home tab opens; decays to 0 over ~700ms
 function triggerOrbArrival(){ orbArrivalT0=(typeof performance!=="undefined"?performance.now():Date.now()); }
 function orbArrivalBoost(){
@@ -2393,16 +2399,18 @@ function computeOrbPulse(components, phase){
   return clamp01(0.5+raw*0.5);
 }
 function drawOrbRadiance(ctx,cx,cy,R,score,pulse,boost){
-  // Radius is deliberately kept well inside the canvas's own half-width at every point in the
-  // breathing cycle, so the gradient always reaches true zero-opacity before it could ever
-  // reach a hard edge. `boost` (the one-shot Home-tab-arrival emphasis) ONLY brightens alpha,
-  // it never touches radius — that's what keeps the no-clipping guarantee true regardless of
-  // how the arrival pulse is tuned later.
+  // HARD CONSTRAINT (tested in test_orb_production.js, not just visually eyeballed): the
+  // outer radius must stay at least 10% smaller than the canvas's own half-width at every
+  // point in the breathing cycle — i.e. radius <= canvasHalf*0.9 — so the gradient always
+  // reaches true zero-opacity before it could ever reach a hard edge and clip into a square.
+  // For ORB_R=84 and a 260px canvas (half=130, 0.9*130=117), the multiplier below is capped
+  // at 1.38 (84*1.38=115.92), which satisfies the inequality with margin to spare.
+  // `boost` (the one-shot Home-tab-arrival emphasis) ONLY brightens alpha, never radius.
   boost=boost||0;
   var colors=orbColorsForScore(score);
   var blended=score===null?0.5:score/100;
   var warmAmt=clamp01((blended-0.4)/0.25);
-  var radius=Math.min(R*(1.0+pulse*0.45), R*1.45);
+  var radius=Math.min(R*(1.0+pulse*0.38), R*1.38);
   var g;
   if(warmAmt<1){
     var shadowAlpha=(1-warmAmt)*(0.36+pulse*0.40+boost*0.20);
@@ -2428,13 +2436,32 @@ function drawOrbSphereBase(ctx,cx,cy,R,score){
   ctx.fillStyle=g;
   ctx.beginPath();ctx.arc(cx,cy,R*0.995,0,Math.PI*2);ctx.fill();
 }
-function drawOrbGlossMaterial(ctx,cx,cy,R,pulse){
+var _orbBgToneCache=null;
+function getOrbBgTone(){
+  // Reads the page's own background color once and caches it, so the "see-through" smear
+  // uses whatever the surrounding page actually looks like rather than a hardcoded guess.
+  // Defensive: falls back to a neutral dark tone if getComputedStyle isn't available
+  // (e.g. under a stubbed test DOM), since this isn't part of the pure color/pulse logic.
+  if(_orbBgToneCache)return _orbBgToneCache;
+  try{
+    var v=getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    _orbBgToneCache=v||"#1a1612";
+  }catch(e){ _orbBgToneCache="#1a1612"; }
+  return _orbBgToneCache;
+}
+function drawOrbGlossMaterial(ctx,cx,cy,R,pulse,shimmer){
+  // Constant material — none of this changes with health data, only with the fixed pulse/
+  // shimmer animation values. Two highlights: a small sharp front-surface reflection and a
+  // larger, dimmer back-surface internal reflection on the roughly opposite side of the
+  // sphere, per spec. A see-through smear fakes depth using the page's own background tone.
   ctx.save();
   var soft=_orbCachedRadial(ctx,"orbSoftHL",cx-R*0.22,cy-R*0.32,R*1.1,[
     {pos:0,color:"rgba(255,255,255,0.22)"},{pos:0.5,color:"rgba(255,255,255,0.07)"},{pos:1,color:"rgba(255,255,255,0)"}
   ]);
   ctx.fillStyle=soft;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
 
+  // Highlight 1: small, sharp — front-surface reflection. Tiny shimmer tied to the breathing
+  // pulse (per spec: pulse drives "the emanation's intensity AND a tiny highlight shimmer").
   var hotAlpha=0.55*(0.92+pulse*0.08);
   var hot=ctx.createRadialGradient(cx-R*0.30,cy-R*0.40,0,cx-R*0.30,cy-R*0.40,R*0.55);
   hot.addColorStop(0,"rgba(255,255,255,"+hotAlpha+")");
@@ -2442,8 +2469,21 @@ function drawOrbGlossMaterial(ctx,cx,cy,R,pulse){
   hot.addColorStop(1,"rgba(255,255,255,0)");
   ctx.fillStyle=hot;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
 
+  // Highlight 2: larger, dimmer — back-surface internal reflection, roughly opposite the
+  // front highlight (lower-right vs. upper-left). This is what was missing before; a single
+  // highlight reads as solid material, two highlights at different sizes/sides reads as glass.
+  var backAlpha=0.18*(0.9+pulse*0.1);
+  var back=ctx.createRadialGradient(cx+R*0.34,cy+R*0.30,0,cx+R*0.34,cy+R*0.30,R*0.85);
+  back.addColorStop(0,"rgba(255,255,255,"+backAlpha+")");
+  back.addColorStop(0.55,"rgba(255,255,255,"+(backAlpha*0.35)+")");
+  back.addColorStop(1,"rgba(255,255,255,0)");
+  ctx.fillStyle=back;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+
+  // Soft secondary glass streak — slowly drifts across the surface via the independent
+  // ~15s shimmer cycle, instead of sitting frozen in one spot.
+  var sx=cx-R*0.30+shimmer*R*0.5, sy=cy-R*0.62+shimmer*R*0.18;
   ctx.save();
-  ctx.translate(cx-R*0.05,cy-R*0.55);ctx.rotate(-0.55);ctx.scale(1.9,0.4);
+  ctx.translate(sx,sy);ctx.rotate(-0.55);ctx.scale(1.9,0.4);
   var streak=ctx.createRadialGradient(0,0,0,0,0,R*0.55);
   streak.addColorStop(0,"rgba(255,255,255,0.14)");streak.addColorStop(1,"rgba(255,255,255,0)");
   ctx.fillStyle=streak;ctx.beginPath();ctx.arc(0,0,R*0.55,0,Math.PI*2);ctx.fill();
@@ -2454,11 +2494,41 @@ function drawOrbGlossMaterial(ctx,cx,cy,R,pulse){
   ]);
   ctx.fillStyle=ao;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
 
-  ctx.strokeStyle="rgba(255,255,255,0.22)";ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.arc(cx,cy,R-1,0,Math.PI*2);ctx.stroke();
+  // See-through smear — a very low-opacity, blurred patch near the lower third using the
+  // page's own background tone, faking glass transparency without real refraction math.
+  ctx.save();
+  ctx.filter="blur(6px)";
+  var bgTone=getOrbBgTone();
+  var smear=ctx.createRadialGradient(cx,cy+R*0.5,0,cx,cy+R*0.5,R*0.7);
+  smear.addColorStop(0,_orbHexToRgba(bgTone,0.16));
+  smear.addColorStop(1,_orbHexToRgba(bgTone,0));
+  ctx.fillStyle=smear;ctx.beginPath();ctx.arc(cx,cy+R*0.15,R*0.9,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
+}
+function drawOrbFresnelRim(ctx,cx,cy,R){
+  // Fresnel rim with a faint hue-shift across its arc — the subtle prism-edge cue visible in
+  // real glass references. Constant material property, segmented into a few arcs each with a
+  // slightly different pale hue rather than one flat white stroke.
+  var hues=[
+    "rgba(210,225,255,0.20)", // cool blue-white, top
+    "rgba(255,235,225,0.18)", // warm pale, right
+    "rgba(255,220,235,0.16)", // faint pink, bottom
+    "rgba(220,255,235,0.16)"  // faint mint, left
+  ];
+  ctx.save();
+  ctx.lineWidth=1.5;
+  for(var i=0;i<hues.length;i++){
+    var a0=(i/hues.length)*Math.PI*2, a1=((i+1)/hues.length)*Math.PI*2;
+    ctx.strokeStyle=hues[i];
+    ctx.beginPath();ctx.arc(cx,cy,R-1,a0,a1);ctx.stroke();
+  }
   ctx.restore();
 }
 function drawOrbShellRim(ctx,cx,cy,R,score){
+  // Shell depth — colored edge stroke + glassy highlight/shadow crescents. Distinct from
+  // drawOrbFresnelRim above, which adds the separate hue-shifted prism-edge cue on top.
   var colors=orbColorsForScore(score);
   ctx.save();
   ctx.lineWidth=2.5;ctx.strokeStyle=_orbHexToRgba(colors.edge,0.95);
@@ -2483,15 +2553,17 @@ function renderOrbCanvasFrame(){
   var result=window._lastOrbResult||computeHealthOrbScore();
   var score=result.score;
   var pulse=computeOrbPulse(result.components,orbAnim.phase);
+  var shimmer=computeOrbShimmer(orbAnim.shimmerPhase);
   var boost=orbArrivalBoost();
   ctx.clearRect(0,0,260,260);
   drawOrbRadiance(ctx,ORB_CX,ORB_CY,ORB_R,score,pulse,boost);
   ctx.save();
   ctx.beginPath();ctx.arc(ORB_CX,ORB_CY,ORB_R,0,Math.PI*2);ctx.clip();
   drawOrbSphereBase(ctx,ORB_CX,ORB_CY,ORB_R,score);
-  drawOrbGlossMaterial(ctx,ORB_CX,ORB_CY,ORB_R,pulse);
+  drawOrbGlossMaterial(ctx,ORB_CX,ORB_CY,ORB_R,pulse,shimmer);
   ctx.restore();
   drawOrbShellRim(ctx,ORB_CX,ORB_CY,ORB_R,score);
+  drawOrbFresnelRim(ctx,ORB_CX,ORB_CY,ORB_R);
   drawOrbRimPulse(ctx,ORB_CX,ORB_CY,ORB_R,pulse,boost);
 }
 function orbTick(ts){
@@ -2499,6 +2571,7 @@ function orbTick(ts){
   if(orbLastTs===null)orbLastTs=ts;
   var dt=Math.min(48,ts-orbLastTs);orbLastTs=ts;
   orbAnim.phase+=dt*0.0016;
+  orbAnim.shimmerPhase+=dt*0.00042; // independent, much slower (~15s period) sweep
   renderOrbCanvasFrame();
   requestAnimationFrame(orbTick);
 }
