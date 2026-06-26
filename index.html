@@ -2314,13 +2314,14 @@ function computeHealthOrbScore(){
 
   return {score:blended,weekScore:weekScore,todayScore:todayScore,components:weekComponents,energyMod:energyMod};
 }
-// Production color ramp for the Orb of Health: black/brown/red (struggling) through
-// amber/gold transition to an electric yellow/white/blue "alive" state. Replaces the
-// previous orange-only ramp per direct on-device feedback.
+// Production color ramp for the Orb of Health: a deep black/purple/red "bruise" at the bottom
+// (struggling), through an amber/gold transition, to an electric yellow/white/blue "alive"
+// state at the top. Bottom three stops intentionally read as bruised/damaged tissue rather
+// than warm brown, per explicit feedback that bad weeks weren't reading as bad enough.
 var ORB_STOPS=[
-  {pos:0,  core:"#15110d",mid:"#0c0a08",edge:"#050404",glow:"#1a0908"},
-  {pos:20, core:"#3a1712",mid:"#2a0f0c",edge:"#170806",glow:"#4a120c"},
-  {pos:40, core:"#6b2414",mid:"#4f180f",edge:"#2f0d09",glow:"#7a2812"},
+  {pos:0,  core:"#0d0610",mid:"#070409",edge:"#020103",glow:"#220818"},
+  {pos:20, core:"#3a0f2e",mid:"#280a20",edge:"#150512",glow:"#5c1240"},
+  {pos:40, core:"#7a1530",mid:"#5c1026",edge:"#3a0a18",glow:"#9c1838"},
   {pos:60, core:"#c97a1f",mid:"#a85f16",edge:"#704010",glow:"#c97a1f"},
   {pos:80, core:"#ffe34d",mid:"#ffc233",edge:"#f2900a",glow:"#fff066"},
   {pos:100,core:"#fffaf0",mid:"#ffe066",edge:"#7ec8ff",glow:"#a8e0ff"}
@@ -2416,7 +2417,7 @@ function drawOrbRadiance(ctx,cx,cy,R,score,pulse,boost){
     var shadowAlpha=(1-warmAmt)*(0.36+pulse*0.40+boost*0.20);
     g=ctx.createRadialGradient(cx,cy,R*0.15,cx,cy,radius);
     g.addColorStop(0,_orbHexToRgba(colors.glow,warmAmt*0.18*(0.5+pulse*0.5)+boost*0.10));
-    g.addColorStop(0.42,"rgba(28,9,34,"+(shadowAlpha*0.65)+")");
+    g.addColorStop(0.42,"rgba(42,8,26,"+(shadowAlpha*0.65)+")");
     g.addColorStop(0.78,"rgba(2,1,2,"+shadowAlpha+")");
     g.addColorStop(1,"rgba(0,0,0,0)");
   } else {
