@@ -62,6 +62,41 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .view.active{display:block;}
 @keyframes slideInR{from{opacity:.5;transform:translateX(100%);}to{opacity:1;transform:translateX(0);}}
 @keyframes slideInL{from{opacity:.5;transform:translateX(-100%);}to{opacity:1;transform:translateX(0);}}
+@keyframes viewUnfold{
+  0%{opacity:0;transform:translateY(14px) scale(.972);}
+  60%{opacity:1;}
+  100%{opacity:1;transform:translateY(0) scale(1);}
+}
+@keyframes navPop{
+  0%{transform:translateY(0) scale(1);}
+  45%{transform:translateY(-7px) scale(1.12);}
+  100%{transform:translateY(0) scale(1);}
+}
+.navb.nav-pop{animation:navPop .42s cubic-bezier(.34,1.56,.5,1);}
+@keyframes cardRise{
+  from{opacity:0;transform:translateY(15px) scale(.978);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+.view.active .stagger-in{animation:cardRise .42s cubic-bezier(.22,.9,.3,1) both;}
+@media (prefers-reduced-motion: reduce){
+  .navb.nav-pop{animation:none;}
+  .view.active .stagger-in{animation:none;opacity:1;transform:none;}
+}
+@keyframes viewUnfold{
+  0%{opacity:0;transform:translateY(14px) scale(.965);}
+  55%{opacity:1;}
+  82%{transform:translateY(-2px) scale(1.004);}
+  100%{opacity:1;transform:translateY(0) scale(1);}
+}
+@keyframes cardRise{
+  0%{opacity:0;transform:translateY(15px) scale(.975);}
+  100%{opacity:1;transform:translateY(0) scale(1);}
+}
+.card-rise{opacity:0;animation:cardRise .42s cubic-bezier(.22,.9,.3,1) forwards;}
+@media (prefers-reduced-motion: reduce){
+  @keyframes viewUnfold{from{opacity:0;}to{opacity:1;}}
+  .card-rise{animation:none;opacity:1;}
+}
 
 /* SECTIONS (full-bleed feel) */
 .sec{background:var(--surf);border:1px solid var(--line2);box-shadow:0 1px 4px rgba(0,0,0,0.07);border-radius:var(--r);padding:18px;margin-bottom:14px;}
@@ -1839,7 +1874,12 @@ function nav(v){
   document.querySelectorAll(".view").forEach(function(x){x.classList.remove("active");});
   var el=document.getElementById("v-"+v);
   el.classList.add("active");
-  document.querySelectorAll(".navb").forEach(function(b){b.classList.toggle("active",b.dataset.v===v);});
+  var tappedBtn=null;
+  document.querySelectorAll(".navb").forEach(function(b){
+    var isActive=b.dataset.v===v;
+    b.classList.toggle("active",isActive);
+    if(isActive)tappedBtn=b;
+  });
   var titles={home:"Home",foods:"Foods",train:"Train",log:"Log",prog:"Progress",setup:"Setup"};
   var tt=document.getElementById("appbarTitle"); if(tt)tt.textContent=titles[v]||"";
   if(v==="home")renderHome();
@@ -1851,10 +1891,40 @@ function nav(v){
   if(v==="log"){renderBPSection();renderStepsSection();renderRHRHistory();loadBPPromptPref();loadWeightReactionPref();renderLabs();}
   if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();loadMaxHR();renderMedTags();}
   window.scrollTo(0,0);
-  el.style.animation="none"; void el.offsetWidth;
-  el.style.animation="slideIn"+(dir>0?"R":"L")+" .34s cubic-bezier(.22,.9,.3,1)";
+  var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(reduced){
+    el.style.animation="none";
+  } else {
+    // "Unfold" the incoming view (grows up toward the tapped tab) instead of a flat slide
+    el.style.animation="none"; void el.offsetWidth;
+    el.style.animation="viewUnfold .4s cubic-bezier(.22,.9,.3,1)";
+    // Pop the tapped nav button with spring physics
+    if(tappedBtn){
+      tappedBtn.classList.remove("nav-pop"); void tappedBtn.offsetWidth;
+      tappedBtn.classList.add("nav-pop");
+      setTimeout(function(){tappedBtn.classList.remove("nav-pop");},460);
+    }
+    // Staggered rise-in for top-level cards on the destination view
+    applyStaggerIn(el);
+  }
   currentTab=v;
   try{navigator.vibrate&&navigator.vibrate(8);}catch(e){}
+}
+function applyStaggerIn(viewEl){
+  // Stagger the view's direct child blocks (cards/sections), capped so deep pages stay snappy
+  var kids=[];
+  Array.prototype.forEach.call(viewEl.children,function(ch){
+    if(ch.offsetParent!==null||ch.getClientRects().length)kids.push(ch);
+  });
+  var cap=Math.min(kids.length,9);
+  for(var i=0;i<cap;i++){
+    var k=kids[i];
+    k.classList.remove("stagger-in");
+    k.style.animationDelay="";
+    void k.offsetWidth;
+    k.style.animationDelay=(i*26)+"ms";
+    k.classList.add("stagger-in");
+  }
 }
 
 /* ============ HOME ============ */
