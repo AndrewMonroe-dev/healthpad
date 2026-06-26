@@ -62,8 +62,10 @@ update loop split, and performance guards before anything touches index.html.</d
     </select>
   </div>
   <div class="note">
-    Architecture notes: one canvas, one 2D context, five ordered draw passes per frame
-    (atmosphere → plasma+rivers → particles → satellites+field lines → pulse/foreground).
+    Architecture notes: one canvas, one 2D context, layered draw passes per frame
+    (mist → clipped sphere [plasma/cracks/shading] → shell → embers/sparks → pulse).
+    A single deterministic crack/vein network doubles as glowing filaments (thriving) or
+    damage cracks (failing) — same structure, recolored by the score, not swapped out.
     Health state (sliders) and visual state (what the renderer reads) are two separate objects —
     the slow tick converts one into the other; the fast tick never touches health state directly.
   </div>
@@ -244,7 +246,14 @@ var anim = {
   phase: 0,
   particles: [],
   satelliteAngles: METRICS.map(function(m,i){ return (i/METRICS.length)*Math.PI*2; }),
-  achievementBursts: [] // transient, self-expiring — see triggerAchievement()
+  achievementBursts: [], // transient, self-expiring — see triggerAchievement()
+  sparks: (function(){ // floating motes outside the sphere, used only when thriving
+    var arr=[];
+    for(var i=0;i<14;i++){
+      arr.push({ x:140+Math.sin(i*2.7)*90, y:140+Math.cos(i*2.7)*90, speed:0.5+Math.sin(i*1.3)*0.3+0.6, seed:i*1.37, size:0.8+Math.sin(i*0.9)*0.6 });
+    }
+    return arr;
+  })()
 };
 function rebuildParticles(){
   var n = PARTICLE_TIER[currentTier];
@@ -267,12 +276,11 @@ rebuildParticles();
 // as ordered function calls into ONE canvas rather than 15 stacked elements.
 
 function drawAura(ctx, cx, cy, R, vs){
-  // Tight aura, not a wide diffuse halo — this is meant to read as radiance FROM a solid
-  // object, not atmosphere AROUND a planet. Doing well: warm/electric colored glow. Doing
-  // poorly: the glow inverts into a black radiance bleeding outward instead of colored light.
+  // Tight aura, not a wide diffuse halo — radiance FROM a solid object, not atmosphere AROUND
+  // a planet. Thriving: warm/electric colored glow. Failing: inverts into black radiance.
   var colors = orbColorsForScore(vs.blended*100);
   var auraR = R * 1.22;
-  var warmAmt = clamp01((vs.blended - 0.35) / 0.3); // below ~0.35 leans fully toward black radiance
+  var warmAmt = clamp01((vs.blended - 0.35) / 0.3);
   var g;
   if(warmAmt < 1){
     var blackAlpha = (1-warmAmt) * (0.22 + vs.atmosphere.haze*0.14);
@@ -292,10 +300,31 @@ function drawAura(ctx, cx, cy, R, vs){
   ctx.beginPath(); ctx.arc(cx, cy, auraR, 0, Math.PI*2); ctx.fill();
 }
 
+function drawMist(ctx, cx, cy, R, vs, anim){
+  // Dead-world black mist with a purple accent, per the reference image — drawn OUTSIDE the
+  // sphere's clip, drifting near the base. Position varies every frame so these gradients are
+  // an intentional, low-count (4) exception to the "never build a gradient in the loop" rule.
+  var badAmt = clamp01((0.45 - vs.blended) / 0.45);
+  if(badAmt <= 0.02) return;
+  ctx.save();
+  for(var i=0;i<4;i++){
+    var ang = Math.PI*0.5 + Math.sin(anim.phase*0.3+i*1.7)*0.9;
+    var dist = R*0.55 + i*7;
+    var mx = cx + Math.cos(ang)*dist*0.5;
+    var my = cy + Math.sin(ang)*dist*0.5 + R*0.55;
+    var mr = R*(0.55+badAmt*0.45) * (0.7+0.3*Math.sin(anim.phase*0.4+i));
+    var purple = i%2===0;
+    var g = ctx.createRadialGradient(mx,my,0,mx,my,mr);
+    g.addColorStop(0, purple ? "rgba(60,15,75,"+(badAmt*0.30)+")" : "rgba(8,6,8,"+(badAmt*0.34)+")");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawOrbShell(ctx, cx, cy, R, vs){
-  // The actual tangible boundary of the artifact — a crisp rim with a glassy specular
-  // highlight and a dark shadow crescent, so it reads as a solid object with depth rather
-  // than a soft gradient that trails off into open space.
+  // The tangible boundary — crisp rim, glassy specular highlight, dark shadow crescent.
   var colors = orbColorsForScore(vs.blended*100);
   ctx.save();
   ctx.lineWidth = 2;
@@ -310,12 +339,30 @@ function drawOrbShell(ctx, cx, cy, R, vs){
   ctx.restore();
 }
 
+function drawSphereShading(ctx, cx, cy, R, vs){
+  // The single biggest fix for the "flat disc, not a 3D orb" feedback: an off-center
+  // specular highlight (simulated light source, upper-left) plus ambient-occlusion darkening
+  // toward the opposite rim. This is what actually sells "sphere" over "circle."
+  var hlX = cx - R*0.35, hlY = cy - R*0.4;
+  var g = cachedRadialGradient(ctx, "sphereHL", hlX, hlY, R*0.9, [
+    {pos:0, color:"rgba(255,255,255,0.22)"},
+    {pos:0.35, color:"rgba(255,255,255,0.06)"},
+    {pos:1, color:"rgba(255,255,255,0)"}
+  ]);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fill();
+
+  var g2 = cachedRadialGradient(ctx, "sphereAO", cx+R*0.4, cy+R*0.45, R*0.95, [
+    {pos:0, color:"rgba(0,0,0,0)"},
+    {pos:0.55, color:"rgba(0,0,0,0.05)"},
+    {pos:1, color:"rgba(0,0,0,0.30)"}
+  ]);
+  ctx.fillStyle = g2;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fill();
+}
+
 function drawPlasmaAndRivers(ctx, cx, cy, R, vs, anim){
-  // Core plasma now tracks the new black/brown-with-red-streaks (poor) to electric
-  // yellow/white/blue-corona (great) ramp, driven by the same 0-100 blended score.
-  // Brightness/turbulence still modulate intensity and motion on top of that base color,
-  // they don't replace it.
-  var coreR = R * 0.78;
+  var coreR = R * 0.85;
   var colors = orbColorsForScore(vs.blended*100);
   var g = cachedRadialGradient(ctx, "core_"+colors.core, cx, cy, coreR, [
     {pos:0, color: colors.core},
@@ -325,8 +372,6 @@ function drawPlasmaAndRivers(ctx, cx, cy, R, vs, anim){
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, Math.PI*2); ctx.fill();
 
-  // Internal energy rivers: color now follows the ramp too — red-hot veins when struggling,
-  // electric blue-white arcs when thriving, instead of always being a fixed warm gold.
   var riverColor = vs.blended < 0.35 ? "rgba(255,60,40,0.85)" :
                     vs.blended > 0.75 ? "rgba(170,220,255,0.85)" :
                     hexToRgba(colors.glow, 0.8);
@@ -347,50 +392,6 @@ function drawPlasmaAndRivers(ctx, cx, cy, R, vs, anim){
     ctx.moveTo(x1,y1); ctx.quadraticCurveTo(midx,midy,x2,y2); ctx.stroke();
   }
   ctx.restore();
-  drawDamageStreaksOrArcs(ctx, cx, cy, coreR, vs, anim);
-}
-
-function drawDamageStreaksOrArcs(ctx, cx, cy, coreR, vs, anim){
-  // Below ~0.5: literal jagged red streaks/cracks across the dark core, intensity scaling as
-  // the trend worsens — the "black and brown with streaks of red" feedback, made literal
-  // rather than just implied by the base gradient color.
-  if(vs.blended < 0.5){
-    var intensity = clamp01((0.5 - vs.blended) / 0.5); // 0 at midpoint, 1 at total failure
-    var streakCount = 2 + Math.round(intensity * 4);
-    ctx.save();
-    for(var i=0;i<streakCount;i++){
-      var seedAngle = (i / streakCount) * Math.PI*2 + Math.sin(anim.phase*0.4+i)*0.3;
-      var len = coreR * (0.5 + intensity*0.6);
-      var x1 = cx + Math.cos(seedAngle)*coreR*0.15;
-      var y1 = cy + Math.sin(seedAngle)*coreR*0.15;
-      var jagX = cx + Math.cos(seedAngle)*len + Math.sin(anim.phase*3+i)*4;
-      var jagY = cy + Math.sin(seedAngle)*len + Math.cos(anim.phase*3+i)*4;
-      var x2 = cx + Math.cos(seedAngle)*len;
-      var y2 = cy + Math.sin(seedAngle)*len;
-      ctx.strokeStyle = "rgba(220,30,20,"+(0.35+intensity*0.5)+")";
-      ctx.lineWidth = 1 + intensity*1.2;
-      ctx.beginPath();
-      ctx.moveTo(x1,y1); ctx.lineTo(jagX,jagY); ctx.lineTo(x2,y2); ctx.stroke();
-    }
-    ctx.restore();
-  }
-  // Above ~0.8: thin electric-blue arcs flickering around the bright core — the "electric sun"
-  // feel for a thriving trend, paired with the blue corona already in the color ramp's top stop.
-  if(vs.blended > 0.8){
-    var arcIntensity = clamp01((vs.blended-0.8)/0.2);
-    ctx.save();
-    ctx.globalAlpha = 0.25 + arcIntensity*0.5;
-    for(var j=0;j<3;j++){
-      var a = anim.phase*2 + j*2.1;
-      var ar = coreR * (0.95 + Math.sin(anim.phase*5+j)*0.08);
-      ctx.strokeStyle = "rgba(140,210,255,0.9)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(cx, cy, ar, a, a+0.6);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
 }
 
 function drawParticles(ctx, cx, cy, R, vs, anim, dt){
@@ -409,44 +410,97 @@ function drawParticles(ctx, cx, cy, R, vs, anim, dt){
   ctx.restore();
 }
 
-// Fixed, deterministic rune pattern — generated once, not regenerated per frame. These are
-// engraved INTO the surface (drawn right at the rim), not orbiting rings out in open space.
-var RUNE_SEGMENTS = (function(){
-  var segs=[], n=18;
+// Fixed, deterministic crack/vein network — generated once via a fixed formula (no
+// Math.random, so it's identical every load), not regenerated per frame. The SAME network
+// reads as glowing filaments when thriving or damage cracks when failing — one structural
+// system for both moods, matching the brief's "damage accumulates, recovery happens
+// gradually" idea, recolored by vs.blended rather than swapped out.
+var CRACK_NETWORK = (function(){
+  var trunks=[], n=9;
   for(var i=0;i<n;i++){
-    segs.push({ angle:(i/n)*Math.PI*2, kind:i%3, jitter: Math.sin(i*12.9)*0.15 });
+    var baseAngle = (i/n)*Math.PI*2 + Math.sin(i*3.7)*0.2;
+    var pts=[{a:baseAngle, r:0.12}];
+    var curAngle=baseAngle, segs=5;
+    for(var s=1;s<=segs;s++){
+      curAngle += Math.sin(i*7.3+s*2.1)*0.35;
+      pts.push({a:curAngle, r:0.12+(s/segs)*0.82});
+    }
+    trunks.push(pts);
+    if(i%3===0){
+      var branch=[pts[2]], bAngle=pts[2].a+0.6;
+      for(var s2=1;s2<=3;s2++){
+        bAngle += Math.sin(i*11+s2*3.3)*0.3;
+        branch.push({a:bAngle, r:pts[2].r+s2*0.18});
+      }
+      trunks.push(branch);
+    }
   }
-  return segs;
+  return trunks;
 })();
-function drawRuneEngravings(ctx, cx, cy, R, vs, anim){
-  // Stress (vs.field.distortion) drives a traveling red "crawl" pulse along the rune ring —
-  // the literal "red runes crawl across it when doing poorly" behavior. Calm/healthy state
-  // just shows a faint, steady engraved glow in the ramp's own color.
-  var colors = orbColorsForScore(vs.blended*100);
-  var crawl = vs.field.distortion;
+function strokePolyline(ctx, pts){
+  if(!pts.length) return;
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+  for(var i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
+}
+function drawCrackNetwork(ctx, cx, cy, R, vs, anim){
+  var goodAmt = clamp01((vs.blended-0.55)/0.35);
+  var badAmt = clamp01((0.45-vs.blended)/0.45);
   ctx.save();
-  RUNE_SEGMENTS.forEach(function(seg, i){
-    var a = seg.angle + seg.jitter*0.3;
-    var r1 = R*0.86, r2 = R*1.0;
-    var x1 = cx+Math.cos(a)*r1, y1=cy+Math.sin(a)*r1;
-    var x2 = cx+Math.cos(a)*r2, y2=cy+Math.sin(a)*r2;
-    var crawlPhase = (anim.phase*0.6 - i*0.35);
-    var pulse = crawl>0.15 ? clamp01(1 - Math.abs(Math.sin(crawlPhase))) * crawl : 0;
-    var baseAlpha = 0.16 + vs.blended*0.10;
-    var isRed = vs.blended<0.45 || pulse>0.3;
-    ctx.strokeStyle = isRed ? "rgba(225,40,30,"+(baseAlpha+pulse*0.6)+")" : hexToRgba(colors.glow, baseAlpha+pulse*0.25);
-    ctx.lineWidth = 1 + pulse*1.4;
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-    if(seg.kind===2){
-      ctx.beginPath(); ctx.arc(cx, cy, (r1+r2)/2, a-0.05, a+0.05); ctx.stroke();
+  CRACK_NETWORK.forEach(function(trunk, ti){
+    var pts = trunk.map(function(p){ return { x: cx+Math.cos(p.a)*p.r*R, y: cy+Math.sin(p.a)*p.r*R }; });
+    if(badAmt>0.02){
+      ctx.strokeStyle = "rgba(10,6,8,"+(0.25+badAmt*0.55)+")";
+      ctx.lineWidth = 1.2+badAmt*1.6;
+      strokePolyline(ctx, pts);
+      var flick = 0.5+0.5*Math.sin(anim.phase*4+ti*1.7);
+      ctx.strokeStyle = "rgba(225,40,30,"+(badAmt*0.55*flick)+")";
+      ctx.lineWidth = 0.8+badAmt*0.8;
+      strokePolyline(ctx, pts);
+      if(ti%4===0){ // occasional purple ember accent, per feedback ("if you need to add purple, so be it")
+        ctx.strokeStyle = "rgba(140,40,160,"+(badAmt*0.35*flick)+")";
+        ctx.lineWidth = 0.6;
+        strokePolyline(ctx, pts);
+      }
+    }
+    if(goodAmt>0.02){
+      var hueMode = ti%3; // gold / white / electric blue, mixed per filament — matches reference image
+      var veinColor = hueMode===0?"rgba(255,210,90,":hueMode===1?"rgba(255,250,235,":"rgba(120,200,255,";
+      var twinkle = 0.6+0.4*Math.sin(anim.phase*3+ti*2.3);
+      ctx.strokeStyle = veinColor+(goodAmt*0.7*twinkle)+")";
+      ctx.lineWidth = 0.8+goodAmt*1.2;
+      strokePolyline(ctx, pts);
     }
   });
   ctx.restore();
 }
 
-function drawSatellites(ctx, cx, cy, R, vs, anim, dt){
-  // Tight to the surface now — "distance beyond the rim", not a wide planetary orbit — and
-  // drawn as small rotated diamond glyphs (runes/motes) rather than glowing dots, per feedback.
+function drawFloatingSparks(ctx, cx, cy, R, vs, anim, dt){
+  // Bright motes drifting upward outside the sphere when thriving — the reference image's
+  // floating-spark field. Silent (alpha 0) when not thriving, so it costs nothing visually
+  // and very little to compute even when inactive.
+  var goodAmt = clamp01((vs.blended-0.55)/0.35);
+  if(goodAmt<=0.02) return;
+  ctx.save();
+  anim.sparks.forEach(function(p){
+    p.y -= p.speed*goodAmt*dt*0.02;
+    p.x += Math.sin(anim.phase*1.2+p.seed)*0.15;
+    if(p.y < cy-R*1.6){ p.y = cy+R*1.3; p.x = cx+(p.seed%1-0.5)*R*2.2; }
+    var alpha = goodAmt*(0.3+0.5*Math.sin(anim.phase*2+p.seed));
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.fillStyle = "#fff3c4";
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawEmbers(ctx, cx, cy, R, vs, anim, dt){
+  // Replaces the old per-metric-colored diamond satellites. Per feedback: no need to tie
+  // color to the individual metric — these now read as part of the overall mood (warm ember
+  // motes when thriving, dull red embers when failing), using the metrics only for
+  // speed/size/timing variety, not hue.
+  var badAmt = clamp01((0.45-vs.blended)/0.45);
+  var emberColor = badAmt>0.3 ? "200,40,30" : "255,225,140";
   vs.satellites.forEach(function(sat, i){
     anim.satelliteAngles[i] += sat.orbitSpeed * dt * 0.001;
     var a = anim.satelliteAngles[i] + sat.angleOffset;
@@ -454,13 +508,9 @@ function drawSatellites(ctx, cx, cy, R, vs, anim, dt){
     var x = cx + Math.cos(a) * rr;
     var y = cy + Math.sin(a) * rr * 0.72;
     ctx.save();
-    ctx.translate(x, y); ctx.rotate(a);
-    ctx.globalAlpha = sat.brightness;
-    ctx.fillStyle = sat.color;
-    var s = sat.size;
-    ctx.beginPath();
-    ctx.moveTo(0,-s); ctx.lineTo(s*0.55,0); ctx.lineTo(0,s); ctx.lineTo(-s*0.55,0); ctx.closePath();
-    ctx.fill();
+    ctx.globalAlpha = sat.brightness*0.8;
+    ctx.fillStyle = "rgb("+emberColor+")";
+    ctx.beginPath(); ctx.arc(x, y, sat.size*0.7, 0, Math.PI*2); ctx.fill();
     ctx.restore();
   });
 }
@@ -516,17 +566,19 @@ function renderOrbFrame(ctx, cx, cy, R, dt){
   ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
   var vs = visualState;
   drawAura(ctx, cx, cy, R, vs);
-  // Hard-clip the plasma/rivers/particles to the orb's own circular boundary — this is the
-  // single biggest change from the "diffused sun" look: everything inside is contained by a
-  // real edge instead of fading into open space.
+  drawMist(ctx, cx, cy, R, vs, anim);
+  // Hard-clip plasma/cracks/shading to the orb's own circular boundary — a real edge instead
+  // of fading into open space, which is what makes this read as a solid object.
   ctx.save();
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.clip();
   drawPlasmaAndRivers(ctx, cx, cy, R, vs, anim);
   drawParticles(ctx, cx, cy, R, vs, anim, dt);
+  drawCrackNetwork(ctx, cx, cy, R, vs, anim);
+  drawSphereShading(ctx, cx, cy, R, vs);
   ctx.restore();
   drawOrbShell(ctx, cx, cy, R, vs);
-  drawRuneEngravings(ctx, cx, cy, R, vs, anim);
-  drawSatellites(ctx, cx, cy, R, vs, anim, dt);
+  drawEmbers(ctx, cx, cy, R, vs, anim, dt);
+  drawFloatingSparks(ctx, cx, cy, R, vs, anim, dt);
   drawPulseOverlay(ctx, cx, cy, R, vs, anim);
   drawAchievementBursts(ctx, cx, cy, anim, dt);
 }
@@ -537,15 +589,17 @@ function renderOrbFrame(ctx, cx, cy, R, dt){
 function renderStaticFrame(ctx, cx, cy, R){
   ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
   var vs = visualState;
+  var staticAnim = { phase:0, satelliteAngles: anim.satelliteAngles.slice() };
   drawAura(ctx, cx, cy, R, vs);
+  drawMist(ctx, cx, cy, R, vs, staticAnim);
   ctx.save();
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.clip();
-  drawPlasmaAndRivers(ctx, cx, cy, R, vs, {phase:0});
+  drawPlasmaAndRivers(ctx, cx, cy, R, vs, staticAnim);
+  drawCrackNetwork(ctx, cx, cy, R, vs, staticAnim);
+  drawSphereShading(ctx, cx, cy, R, vs);
   ctx.restore();
   drawOrbShell(ctx, cx, cy, R, vs);
-  drawRuneEngravings(ctx, cx, cy, R, vs, {phase:0});
-  var staticAnim = { satelliteAngles: anim.satelliteAngles.slice() };
-  drawSatellites(ctx, cx, cy, R, vs, staticAnim, 0);
+  drawEmbers(ctx, cx, cy, R, vs, staticAnim, 0);
 }
 
 // ---------- UPDATE LOOP (fast tick) WITH PAUSE/RESUME ----------
@@ -554,6 +608,7 @@ var ctx = canvas.getContext("2d");
 var CX = canvas.width/2, CY = canvas.height/2, RADIUS = 70;
 
 var loopRunning = false;
+var pausedAt = null; // performance.now() at the moment we paused — lets resume prove how long it was actually off
 var lastTs = null;
 var fpsHud = document.getElementById("hud");
 var fpsAccum = 0, fpsFrames = 0, fpsLastReport = 0;
@@ -584,9 +639,13 @@ function tick(ts){
 
 function startLoop(){
   if(loopRunning) return;
+  if(pausedAt!==null){
+    var awaySec = ((performance.now() - pausedAt)/1000).toFixed(1);
+    fpsHud.textContent = "resumed — was paused " + awaySec + "s";
+    pausedAt = null;
+  }
   if(reducedMotionActive()){
     renderStaticFrame(ctx, CX, CY, RADIUS);
-    fpsHud.textContent = "static (reduced motion)";
     return;
   }
   loopRunning = true;
@@ -594,6 +653,7 @@ function startLoop(){
   requestAnimationFrame(tick);
 }
 function stopLoop(){
+  if(loopRunning) pausedAt = performance.now();
   loopRunning = false;
   fpsHud.textContent = "paused";
 }
