@@ -162,7 +162,7 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 .ring-sub{font-size:9px;color:var(--faint);margin-top:2px;line-height:1.2;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .hero{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px;}
-.hero-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;}
+.hero-row{display:flex;flex-direction:column;align-items:center;width:100%;gap:4px;}
 .hero-col{display:flex;flex-direction:column;align-items:center;}
 .hero .ring{width:148px;height:148px;}
 .orb-breakdown{margin-top:14px;width:100%;max-width:320px;background:var(--surf);border:1px solid var(--line2);border-radius:var(--r);padding:10px 14px;font-size:12px;}
@@ -414,6 +414,12 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     <div class="hero">
       <div class="hero-row">
         <div class="hero-col">
+          <div class="ring" id="orbWrap" onclick="toggleOrbBreakdown()" style="cursor:pointer;width:260px;height:260px;">
+            <canvas id="orbCanvas" width="260" height="260" style="width:260px;height:260px;display:block;"></canvas>
+          </div>
+          <div class="ring-lbl" style="margin-top:8px;cursor:pointer;font-family:'Luminari','Papyrus',fantasy;color:var(--ink);opacity:.85;font-size:15px;" onclick="toggleOrbBreakdown()">Orb of Health</div>
+        </div>
+        <div class="hero-col" style="margin-top:16px;">
           <div class="ring" id="goalRingWrap" onclick="openGoalQuickModal()" style="cursor:pointer;">
             <svg viewBox="0 0 130 130" width="148" height="148">
               <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -425,24 +431,6 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
               <div class="ring-lbl" id="cdHint" style="margin-top:2px;display:none;">Tap to set</div>
             </div>
           </div>
-        </div>
-        <div class="hero-col">
-          <div class="ring" id="orbWrap" onclick="toggleOrbBreakdown()" style="cursor:pointer;">
-            <svg viewBox="0 0 130 130" width="148" height="148" overflow="visible">
-              <defs>
-                <radialGradient id="orbGrad" cx="36%" cy="30%" r="72%">
-                  <stop offset="0%" id="orbStopCore" stop-color="#5a6472"/>
-                  <stop offset="45%" id="orbStopMid" stop-color="#3f4750"/>
-                  <stop offset="100%" id="orbStopEdge" stop-color="#2a3038"/>
-                </radialGradient>
-              </defs>
-              <circle id="orbGlow3" cx="65" cy="65" r="61" fill="#3f4750" opacity="0.06"/>
-              <circle id="orbGlow2" cx="65" cy="65" r="55" fill="#3f4750" opacity="0.10"/>
-              <circle id="orbGlow1" cx="65" cy="65" r="49" fill="#3f4750" opacity="0.16"/>
-              <circle id="orbCore" cx="65" cy="65" r="42" fill="url(#orbGrad)"/>
-            </svg>
-          </div>
-          <div class="ring-lbl" style="margin-top:8px;cursor:pointer;font-family:'Luminari','Papyrus',fantasy;color:var(--ink);opacity:.85;" onclick="toggleOrbBreakdown()">Orb of Health</div>
         </div>
       </div>
       <div class="hero-date" id="heroDate">&mdash;</div>
@@ -723,6 +711,64 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       </div>
       <div class="note dim" id="bpEcho" style="margin-top:10px;"></div>
       <div id="bpHistory" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="sec">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="sec-h" style="margin:0;">Sleep</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <label class="toggle-sw" title="Sleep tracking on/off">
+            <input type="checkbox" id="sleepEnabledToggle" onchange="saveSleepEnabledPref(this.checked)">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <span style="font-size:10px;color:var(--faint);letter-spacing:.5px;">TRACK SLEEP</span>
+        </div>
+      </div>
+      <div class="note dim" style="margin-bottom:10px;">Feeds the Orb of Health and gives the adaptive engine a second, confirmatory read on recovery alongside Morning Readiness. A missed night is simply excluded from the average — nothing is penalized for skipping one day.</div>
+      <div id="sleepEntryArea">
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:90px;">
+            <label class="fld">Bedtime</label>
+            <input type="time" id="inSleepBed">
+          </div>
+          <div style="flex:1;min-width:90px;">
+            <label class="fld">Wake time</label>
+            <input type="time" id="inSleepWake">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;">
+          <div style="flex:1;min-width:90px;">
+            <label class="fld">Minutes to fall asleep</label>
+            <input type="number" id="inSleepOnset" inputmode="numeric" placeholder="e.g. 15">
+          </div>
+          <div style="flex:1;min-width:90px;">
+            <label class="fld"># Times woke up</label>
+            <input type="number" id="inSleepWakeups" inputmode="numeric" placeholder="e.g. 1">
+          </div>
+        </div>
+        <button class="btn sm ghost" style="margin-top:10px;" onclick="saveSleep()">Log Sleep</button>
+        <div class="note dim" id="sleepEcho" style="margin-top:10px;"></div>
+        <div id="sleepHistory" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="sec-h" style="margin:0;">Stress (Weekly)</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <label class="toggle-sw" title="Weekly stress check-in on/off">
+            <input type="checkbox" id="stressEnabledToggle" onchange="saveStressEnabledPref(this.checked)">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <span style="font-size:10px;color:var(--faint);letter-spacing:.5px;">PROMPT WEEKLY</span>
+        </div>
+      </div>
+      <div class="note dim" style="margin-bottom:6px;">A 4-question check-in (PSS-4), once a week. A pop-up will ask automatically if it's been 7+ days, but you can log or update it here any time. Feeds the Orb at a light weight and gives the training engine context — it never moves load on its own.</div>
+      <div id="stressEcho" class="note dim" style="margin-bottom:6px;"></div>
+      <div id="stressEntryArea">
+        <div id="stressQ0"></div><div id="stressQ1"></div><div id="stressQ2"></div><div id="stressQ3"></div>
+        <button class="btn sm ghost" style="margin-top:10px;" onclick="saveStressAnswers(false)">Log Check-In</button>
+      </div>
     </div>
 
     <div class="sec">
@@ -1627,7 +1673,7 @@ var SPLIT_HEAVY=[
 // (no copy-paste needed on their end) while still saving locally on their device from then on.
 var PLAYTESTER_SHEET_URL="https://script.google.com/macros/s/AKfycbyZY0ljj6wmeADNHVics-gKR4cV7i3614ngVl7ZVGxkCVOYLC1VJ_ZbDMklcQQsNOzw-Q/exec";
 var PLAYTESTER_FDC_KEY="cgYh3ZegjtLwvbhppgBYz6wKI0YcTKe99FKyrlcF";
-var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],oneRM:{},foodLog:[],myFoods:[],medasDaily:[],dietDaily:[],workoutTemplates:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null,digestEmail:""},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
+var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],sleep:[],stress:[],oneRM:{},foodLog:[],myFoods:[],medasDaily:[],dietDaily:[],workoutTemplates:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,sleepEnabled:true,stressPrompt:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null,digestEmail:""},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var _activeCardioZoneCap=null; // set by renderTrain from getLabLoadConstraints, read by updateCardioHRPreview
 var timerInt=null, timerLeft=0;
@@ -1888,7 +1934,7 @@ function nav(v){
   if(v==="log")renderLog();
   if(v==="prog")renderProg();
   if(v==="setup")renderSetup();
-  if(v==="log"){renderBPSection();renderStepsSection();renderRHRHistory();loadBPPromptPref();loadWeightReactionPref();renderLabs();}
+  if(v==="log"){renderBPSection();renderStepsSection();renderRHRHistory();loadBPPromptPref();loadWeightReactionPref();loadSleepEnabledPref();renderSleepHistory();loadStressEnabledPref();renderStressEcho();renderLabs();}
   if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();loadMaxHR();renderMedTags();}
   window.scrollTo(0,0);
   var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1927,8 +1973,220 @@ function applyStaggerIn(viewEl){
   }
 }
 
-/* ============ HOME ============ */
-/* ============ HEALTH ORB ============ */
+/* ============ SLEEP TRACKING ============ */
+function sleepEnabled(){return !(DB.settings&&DB.settings.sleepEnabled===false);}
+function _sleepToMinutes(hhmm){if(!hhmm)return null;var p=hhmm.split(":");return (+p[0])*60+(+p[1]);}
+function sleepDurationHours(entry){
+  if(!entry||!entry.bed||!entry.wake)return null;
+  var b=_sleepToMinutes(entry.bed),w=_sleepToMinutes(entry.wake);
+  if(b===null||w===null)return null;
+  var mins=w-b; if(mins<=0)mins+=24*60; // overnight wrap
+  return mins/60;
+}
+function sleepContinuityScore(entry){
+  // Estimated continuity (no wearable): penalize slow sleep onset and frequent night wakeups.
+  if(!entry)return null;
+  var onset=entry.onset!==undefined&&entry.onset!==null?entry.onset:0;
+  var wakeups=entry.wakeups!==undefined&&entry.wakeups!==null?entry.wakeups:0;
+  return clamp01(1-(onset/60)*0.5-wakeups*0.15);
+}
+function _circularMinuteStdev(mins){
+  // Treat clock minutes as circular (23:50 and 00:10 are 20 min apart, not ~1430).
+  if(mins.length<2)return 0;
+  var sinSum=0,cosSum=0;
+  mins.forEach(function(m){var rad=(m/1440)*2*Math.PI;sinSum+=Math.sin(rad);cosSum+=Math.cos(rad);});
+  var n=mins.length;
+  var R=Math.sqrt(sinSum*sinSum+cosSum*cosSum)/n;
+  var circVar=1-R; // 0 = perfectly consistent, up to 1
+  return circVar;
+}
+function sleepConsistencyScore(entries){
+  // Needs 3+ nights to mean anything — phased in, not penalized before then.
+  var withBoth=entries.filter(function(e){return e.bed&&e.wake;});
+  if(withBoth.length<3)return null;
+  var bedMins=withBoth.map(function(e){return _sleepToMinutes(e.bed);});
+  var wakeMins=withBoth.map(function(e){return _sleepToMinutes(e.wake);});
+  var bedVar=_circularMinuteStdev(bedMins), wakeVar=_circularMinuteStdev(wakeMins);
+  return clamp01(1-((bedVar+wakeVar)/2)*1.6);
+}
+function lastNDaysSleep(n){var cutoff=dateNDaysAgo(n-1);return (DB.sleep||[]).filter(function(x){return x.d>=cutoff;});}
+function orbSleepComponentScore(entries){
+  // Blend: duration + continuity always count once any data exists; consistency phases in at 3+ nights
+  // by reweighting internally, never by penalizing a new sleep-tracker's early days.
+  if(!entries||!entries.length)return null;
+  var durVals=entries.map(sleepDurationHours).filter(function(v){return v!==null;});
+  var contVals=entries.map(sleepContinuityScore).filter(function(v){return v!==null;});
+  if(!durVals.length&&!contVals.length)return null;
+  var avgDur=durVals.length?durVals.reduce(function(a,b){return a+b;},0)/durVals.length:null;
+  var durScore=avgDur===null?null:(avgDur>9?clamp01(1-(avgDur-9)*0.2):clamp01(avgDur/7.5));
+  var avgCont=contVals.length?contVals.reduce(function(a,b){return a+b;},0)/contVals.length:null;
+  var consistency=sleepConsistencyScore(entries);
+  var parts=[],wsum=0;
+  if(durScore!==null){parts.push(durScore*(consistency!==null?45:60));wsum+=(consistency!==null?45:60);}
+  if(avgCont!==null){parts.push(avgCont*(consistency!==null?30:40));wsum+=(consistency!==null?30:40);}
+  if(consistency!==null){parts.push(consistency*25);wsum+=25;}
+  if(!wsum)return null;
+  return clamp01(parts.reduce(function(a,b){return a+b;},0)/wsum);
+}
+function sleepTier(){
+  // Confirmatory signal only — used by currentFatigue() to nudge an ambiguous/unreported readiness
+  // day toward "low", never to override a confident "good" or to act as an independent lever.
+  if(!sleepEnabled())return null;
+  var last=(DB.sleep||[]).slice(-1)[0];
+  if(!last||last.d!==todayStr())return null; // only same-night-as-today data counts as "last night"
+  var dur=sleepDurationHours(last), cont=sleepContinuityScore(last);
+  if(dur===null&&cont===null)return null;
+  var score=clamp01(((dur===null?0.5:clamp01(dur/7.5))*0.6)+((cont===null?0.5:cont)*0.4));
+  if(score>=0.7)return "good";
+  if(score>=0.4)return "mod";
+  return "low";
+}
+function saveSleep(){
+  if(!sleepEnabled()){toast("Sleep tracking is off — flip it on above to log.");return;}
+  var bed=document.getElementById("inSleepBed").value;
+  var wake=document.getElementById("inSleepWake").value;
+  var onset=parseInt(document.getElementById("inSleepOnset").value);
+  var wakeups=parseInt(document.getElementById("inSleepWakeups").value);
+  if(!bed&&!wake){toast("Enter at least a bedtime and wake time");return;}
+  var entry={d:todayStr(),bed:bed||null,wake:wake||null,onset:isNaN(onset)?null:onset,wakeups:isNaN(wakeups)?null:wakeups};
+  DB.sleep=DB.sleep||[];
+  DB.sleep=DB.sleep.filter(function(x){return x.d!==todayStr();});
+  DB.sleep.push(entry);
+  DB.sleep.sort(function(a,b){return a.d<b.d?-1:1;});
+  save();
+  var dur=sleepDurationHours(entry);
+  document.getElementById("sleepEcho").textContent=dur?("Logged: "+dur.toFixed(1)+" hr"):"Logged.";
+  toast("Sleep logged");
+  renderSleepHistory();
+  renderHome();
+}
+function renderSleepHistory(){
+  var box=document.getElementById("sleepHistory");if(!box)return;
+  var rows=(DB.sleep||[]).slice(-7).reverse();
+  if(!rows.length){box.innerHTML="";return;}
+  box.innerHTML=rows.map(function(r){
+    var dur=sleepDurationHours(r);
+    return '<div class="note dim" style="display:flex;justify-content:space-between;padding:4px 0;">'+
+      '<span>'+r.d+'</span><span>'+(dur?dur.toFixed(1)+" hr":"—")+(r.bed&&r.wake?" ("+r.bed+"\u2192"+r.wake+")":"")+'</span></div>';
+  }).join("");
+}
+
+/* ============ STRESS (PSS-4, weekly) ============ */
+// Public-domain 4-item Perceived Stress Scale, worded in plain language. Items 2 and 3 are
+// reverse-scored (feeling capable/in-control counts AGAINST stress). Each item 0-4
+// (Never/Almost Never/Sometimes/Fairly Often/Very Often). Raw total range 0-16.
+var PSS4_ITEMS=[
+  "In the last week, how often have you felt unable to control the important things in your life?",
+  "In the last week, how often have you felt confident about your ability to handle personal problems?",
+  "In the last week, how often have you felt that things were going your way?",
+  "In the last week, how often have you felt difficulties were piling up so high you could not overcome them?"
+];
+var PSS4_REVERSE=[false,true,true,false];
+function pssRawScore(answers){
+  var sum=0;
+  for(var i=0;i<4;i++){
+    var v=answers[i]; if(v===undefined||v===null||isNaN(v))return null;
+    sum+=PSS4_REVERSE[i]?(4-v):v;
+  }
+  return sum; // 0 (low stress) .. 16 (high stress)
+}
+function stressTrackingOn(){return !(DB.settings&&DB.settings.stressPrompt===false);}
+function latestStressEntry(graceDays){
+  if(!stressTrackingOn())return null;
+  var cutoff=dateNDaysAgo((graceDays||9)-1);
+  var rows=(DB.stress||[]).filter(function(x){return x.d>=cutoff;});
+  return rows.length?rows[rows.length-1]:null;
+}
+function stressComponentScore(){
+  // Held constant across the week it covers, like a lab value — never blends toward "today" only.
+  var e=latestStressEntry(9);
+  if(!e||e.raw===null||e.raw===undefined)return null;
+  return clamp01(1-(e.raw/16)); // invert: low PSS = high orb contribution
+}
+function stressIsHighRecent(){
+  var e=latestStressEntry(7);
+  return !!(e&&e.raw!==null&&e.raw!==undefined&&e.raw>=8); // midpoint-of-scale cut, a judgment call
+}
+function stressAdvisoryHtml(){
+  if(!stressIsHighRecent())return "";
+  return '<div class="adapt-panel" style="margin-top:8px;opacity:.85;">&#9201; High stress logged this week &mdash; worth factoring in if a session feels harder than the numbers suggest.</div>';
+}
+function needsStressPrompt(){
+  if(!stressTrackingOn())return false;
+  var cutoff=dateNDaysAgo(6);
+  var hasRecent=(DB.stress||[]).some(function(x){return x.d>=cutoff;});
+  if(hasRecent)return false;
+  var skipped=DB.settings&&DB.settings.stressSkippedAt;
+  if(skipped&&skipped>=cutoff)return false;
+  return true;
+}
+function saveStressEnabledPref(on){
+  DB.settings=DB.settings||{};
+  DB.settings.stressPrompt=on;
+  save();
+  toast("Weekly stress check-in "+(on?"enabled":"disabled"));
+}
+function loadStressEnabledPref(){
+  var el=document.getElementById("stressEnabledToggle");
+  if(!el)return;
+  el.checked=stressTrackingOn();
+}
+function saveStressAnswers(fromModal){
+  var pfx=fromModal?"stressModal":"inStress";
+  var answers=[0,1,2,3].map(function(i){var el=document.getElementById(pfx+i);return el?parseInt(el.value):NaN;});
+  var raw=pssRawScore(answers);
+  if(raw===null){toast("Answer all 4 questions");return;}
+  DB.stress=DB.stress||[];
+  DB.stress=DB.stress.filter(function(x){return x.d!==todayStr();});
+  DB.stress.push({d:todayStr(),raw:raw,answers:answers});
+  save();
+  toast("Stress check-in logged");
+  if(fromModal){var m=document.getElementById("stressModal");if(m)m.remove();}
+  renderStressEcho();
+  renderHome();
+}
+function skipStressThisWeek(){
+  DB.settings=DB.settings||{};
+  DB.settings.stressSkippedAt=todayStr();
+  save();
+  var m=document.getElementById("stressModal");if(m)m.remove();
+  toast("Skipped \u2014 no penalty, we'll ask again next week");
+}
+function renderStressEcho(){
+  var box=document.getElementById("stressEcho");if(!box)return;
+  var e=(DB.stress||[]).slice(-1)[0];
+  box.textContent=e?("Last logged "+e.d+" \u2014 PSS-4 score "+e.raw+"/16"):"No check-in logged yet.";
+  [0,1,2,3].forEach(function(i){
+    var slot=document.getElementById("stressQ"+i);
+    if(slot)slot.innerHTML=_pssSelectHtml("inStress"+i,i);
+  });
+}
+function _pssSelectHtml(id,idx){
+  return '<label class="fld" style="margin-top:10px;">'+PSS4_ITEMS[idx]+'</label>'+
+    '<select id="'+id+'" style="width:100%;padding:9px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;font-size:15px;">'+
+    '<option value="">Choose...</option><option value="0">Never</option><option value="1">Almost never</option>'+
+    '<option value="2">Sometimes</option><option value="3">Fairly often</option><option value="4">Very often</option></select>';
+}
+function showStressModal(){
+  var modal=document.createElement("div");
+  modal.id="stressModal";
+  modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;";
+  modal.innerHTML='<div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:380px;width:100%;max-height:88vh;overflow-y:auto;">'+
+    '<div style="font-weight:700;font-size:16px;margin-bottom:6px;">Weekly Stress Check-In</div>'+
+    '<div style="font-size:13px;color:var(--dim);margin-bottom:4px;">Four quick questions, once a week. Feeds the Orb and gives the training engine context \u2014 it never overrides anything on its own.</div>'+
+    [0,1,2,3].map(function(i){return _pssSelectHtml("stressModal"+i,i);}).join("")+
+    '<div style="display:flex;gap:8px;margin-top:16px;">'+
+    '<button class="btn" style="flex:1;" onclick="saveStressAnswers(true)">Log Check-In</button>'+
+    '<button class="btn sm dark" onclick="skipStressThisWeek()">Skip this week</button>'+
+    '</div>'+
+    '</div>';
+  document.body.appendChild(modal);
+}
+function checkStressPrompt(){
+  if(!needsStressPrompt())return;
+  showStressModal();
+}
+
 function clamp01(v){return Math.max(0,Math.min(1,v));}
 function dateNDaysAgo(n){var d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-n);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
 function lastNDaysNutrition(n){var cutoff=dateNDaysAgo(n-1);return (DB.nutrition||[]).filter(function(x){return x.d>=cutoff;});}
@@ -1963,14 +2221,14 @@ function orbDaysSinceFirstLog(){
   return Math.max(1,days);
 }
 function computeHealthOrbScore(){
-  var hasAnyHistory=(DB.nutrition&&DB.nutrition.length)||(DB.workouts&&DB.workouts.length)||(DB.weights&&DB.weights.length);
+  var hasAnyHistory=(DB.nutrition&&DB.nutrition.length)||(DB.workouts&&DB.workouts.length)||(DB.weights&&DB.weights.length)||(DB.sleep&&DB.sleep.length)||(DB.stress&&DB.stress.length);
   if(!hasAnyHistory)return {score:null,weekScore:null,todayScore:null,components:{},energyMod:0};
   var todayD=todayStr();
   var weekRows=lastNDaysNutrition(7);
   var tgt=getNutTargets();
   var waterTarget=(DB.settings&&DB.settings.waterTarget)||64;
   var proTarget=tgt.proMin||PROTEIN_TARGET;
-  var weights={workout:16,protein:14,fiber:9,water:9,sugar:7,sodium:7,satFat:6,calorie:9,veg:8,potassium:4,calcium:3,weight:8};
+  var weights={workout:15,protein:13,sleep:11,fiber:8,water:8,sugar:6,sodium:6,satFat:5,calorie:8,veg:7,potassium:2,calcium:1,weight:7,stress:3};
 
   function orbEverLogged(field){
     return (DB.nutrition||[]).some(function(r){return (r[field]||0)>0;});
@@ -1985,7 +2243,9 @@ function computeHealthOrbScore(){
     veg:orbEverLogged("veg")?orbBandScore(weekRows,"veg",tgt.vegMin,"atLeast"):null,
     potassium:orbEverLogged("potassium")?orbBandScore(weekRows,"potassium",tgt.potassiumMin,"atLeast"):null,
     calcium:orbEverLogged("calcium")?orbBandScore(weekRows,"calcium",tgt.calciumMin,"atLeast"):null,
-    calorie:orbCalBandScore(weekRows,tgt.calLow,tgt.calHigh)
+    calorie:orbCalBandScore(weekRows,tgt.calLow,tgt.calHigh),
+    sleep:sleepEnabled()?orbSleepComponentScore(lastNDaysSleep(7)):null,
+    stress:stressComponentScore()
   };
   var weekStart=dateNDaysAgo(6);
   var hasEverWorkedOut=!!(DB.workouts&&DB.workouts.length);
@@ -2035,7 +2295,9 @@ function computeHealthOrbScore(){
     calcium:orbEverLogged("calcium")?orbBandScore(todayRows,"calcium",tgt.calciumMin,"atLeast"):null,
     calorie:orbCalBandScore(todayRows,tgt.calLow,tgt.calHigh),
     workout:hasEverWorkedOut?((DB.workouts||[]).some(function(w){return w.d===todayD;})?1:0):null,
-    weight:weightScore
+    weight:weightScore,
+    sleep:sleepEnabled()?orbSleepComponentScore(lastNDaysSleep(7).filter(function(x){return x.d===todayD;})):null,
+    stress:stressComponentScore()
   };
   var todayScore=weighted(todayComponents);
 
@@ -2051,17 +2313,21 @@ function computeHealthOrbScore(){
 
   return {score:blended,weekScore:weekScore,todayScore:todayScore,components:weekComponents,energyMod:energyMod};
 }
+// Production color ramp for the Orb of Health: black/brown/red (struggling) through
+// amber/gold transition to an electric yellow/white/blue "alive" state. Replaces the
+// previous orange-only ramp per direct on-device feedback.
 var ORB_STOPS=[
-  {pos:0,  core:"#2a2420",mid:"#1a1614",edge:"#0a0807",glow:"#000000"},
-  {pos:20, core:"#5c2a1e",mid:"#451f16",edge:"#2c130d",glow:"#3d1a10"},
-  {pos:40, core:"#7a5230",mid:"#5f3f22",edge:"#3f2814",glow:"#5c3a1a"},
-  {pos:60, core:"#e8b84a",mid:"#c98f2e",edge:"#9a6e28",glow:"#c98f2e"},
-  {pos:80, core:"#ffd968",mid:"#f5a623",edge:"#d97b0a",glow:"#f5a623"},
-  {pos:100,core:"#fff8e0",mid:"#ffd23f",edge:"#ff9d0a",glow:"#ffe066"}
+  {pos:0,  core:"#15110d",mid:"#0c0a08",edge:"#050404",glow:"#1a0908"},
+  {pos:20, core:"#3a1712",mid:"#2a0f0c",edge:"#170806",glow:"#4a120c"},
+  {pos:40, core:"#6b2414",mid:"#4f180f",edge:"#2f0d09",glow:"#7a2812"},
+  {pos:60, core:"#c97a1f",mid:"#a85f16",edge:"#704010",glow:"#c97a1f"},
+  {pos:80, core:"#ffe34d",mid:"#ffc233",edge:"#f2900a",glow:"#fff066"},
+  {pos:100,core:"#fffaf0",mid:"#ffe066",edge:"#7ec8ff",glow:"#a8e0ff"}
 ];
 function _orbHexToRgb(hex){hex=hex.replace("#","");return {r:parseInt(hex.substring(0,2),16),g:parseInt(hex.substring(2,4),16),b:parseInt(hex.substring(4,6),16)};}
 function _orbRgbToHex(r,g,b){function h(v){v=Math.max(0,Math.min(255,Math.round(v)));var s=v.toString(16);return s.length<2?"0"+s:s;}return "#"+h(r)+h(g)+h(b);}
 function _orbHexLerp(a,b,t){var ca=_orbHexToRgb(a),cb=_orbHexToRgb(b);return _orbRgbToHex(ca.r+(cb.r-ca.r)*t,ca.g+(cb.g-ca.g)*t,ca.b+(cb.b-ca.b)*t);}
+function _orbHexToRgba(hex,alpha){var c=_orbHexToRgb(hex);return "rgba("+c.r+","+c.g+","+c.b+","+alpha+")";}
 function orbColorsForScore(score){
   if(score===null||score===undefined)return {core:"#5a6472",mid:"#3f4750",edge:"#2a3038",glow:"#3f4750",dormant:true};
   score=Math.max(0,Math.min(100,score));
@@ -2075,40 +2341,173 @@ function orbColorsForScore(score){
   var last=ORB_STOPS[ORB_STOPS.length-1];
   return {core:last.core,mid:last.mid,edge:last.edge,glow:last.glow,dormant:false};
 }
-var _orbGlowRunning=false,_orbColors=null,_orbIntensity=0;
-function orbGlowTick(ts){
-  if(!_orbColors){_orbGlowRunning=false;return;}
-  var g1=document.getElementById("orbGlow1"),g2=document.getElementById("orbGlow2"),g3=document.getElementById("orbGlow3");
-  if(!g1||!g2||!g3){_orbGlowRunning=false;return;}
-  var phase=(ts/1800)%(2*Math.PI);
-  var wave=0.5+0.5*Math.sin(phase);
-  var baseAlpha=_orbColors.dormant?0.10:(0.16+_orbIntensity*0.22);
-  g1.setAttribute("fill",_orbColors.glow);g1.setAttribute("opacity",(baseAlpha*1.0*(0.7+0.3*wave)).toFixed(3));
-  g2.setAttribute("fill",_orbColors.glow);g2.setAttribute("opacity",(baseAlpha*0.65*(0.7+0.3*wave)).toFixed(3));
-  g3.setAttribute("fill",_orbColors.glow);g3.setAttribute("opacity",(baseAlpha*0.40*(0.7+0.3*wave)).toFixed(3));
-  requestAnimationFrame(orbGlowTick);
+
+/* ============ ORB CANVAS ENGINE (ported from standalone prototype) ============
+   Only TWO things encode mood: color tint (orbColorsForScore) and the outer emanation's
+   color/intensity. The glossy 3D material (highlight, streak, ambient occlusion, fresnel
+   rim) is a CONSTANT property of the artifact, unaffected by health data. Breathing pulse
+   is the only animation; nothing orbits or floats. */
+var orbAnim={phase:0};
+var orbLoopRunning=false, orbLastTs=null;
+var _orbGradCache={};
+function _orbCachedRadial(ctx,key,x,y,r,stops){
+  var k=key+"_"+r.toFixed(0);
+  var c=_orbGradCache[k];
+  if(c&&c.lastCtx===ctx)return c.grad;
+  var g=ctx.createRadialGradient(x,y,0,x,y,r);
+  stops.forEach(function(s){g.addColorStop(s.pos,s.color);});
+  _orbGradCache[k]={grad:g,lastCtx:ctx};
+  return g;
 }
+function getOrbCanvasCtx(){
+  var c=document.getElementById("orbCanvas");if(!c)return null;
+  var dpr=window.devicePixelRatio||1;
+  if(c._orbDpr!==dpr){
+    c.width=260*dpr;c.height=260*dpr;
+    var ctx=c.getContext("2d");
+    ctx.scale(dpr,dpr);
+    c._orbDpr=dpr;c._orbCtx=ctx;
+  }
+  return c._orbCtx||c.getContext("2d");
+}
+function computeOrbPulse(components, phase){
+  // Sleep -> breathing amplitude (well-rested = a fuller, calmer breath). Stress -> chance of
+  // an irregular extra beat. Both fall back to a neutral midpoint when that data is absent,
+  // so a user who hasn't enabled sleep/stress tracking still gets a normal, even pulse.
+  var sleep=(components&&components.sleep!==undefined&&components.sleep!==null)?components.sleep:0.5;
+  var stress=(components&&components.stress!==undefined&&components.stress!==null)?components.stress:0.5;
+  var amplitude=0.5+sleep*0.5;
+  var irregularity=clamp01(1-stress);
+  var irregular=irregularity<0.4?Math.sin(phase*5.3)*0.3:0;
+  var raw=Math.sin(phase*0.9)*amplitude+irregular;
+  return clamp01(0.5+raw*0.5);
+}
+function drawOrbRadiance(ctx,cx,cy,R,score,pulse){
+  // Radius is deliberately kept well inside the canvas's own half-width (74px for a 148px
+  // canvas) at every point in the breathing cycle, so the gradient always reaches true
+  // zero-opacity before it could ever reach a hard edge. The previous version let this swell
+  // past the canvas bounds at peak pulse, which clipped the still-visible glow into a literal
+  // square instead of letting it fade to nothing — that's what "surrounded by a square" was.
+  var colors=orbColorsForScore(score);
+  var blended=score===null?0.5:score/100;
+  var warmAmt=clamp01((blended-0.4)/0.25);
+  var radius=Math.min(R*(1.0+pulse*0.45), R*1.45);
+  var g;
+  if(warmAmt<1){
+    var shadowAlpha=(1-warmAmt)*(0.36+pulse*0.40);
+    g=ctx.createRadialGradient(cx,cy,R*0.15,cx,cy,radius);
+    g.addColorStop(0,_orbHexToRgba(colors.glow,warmAmt*0.18*(0.5+pulse*0.5)));
+    g.addColorStop(0.42,"rgba(28,9,34,"+(shadowAlpha*0.65)+")");
+    g.addColorStop(0.78,"rgba(2,1,2,"+shadowAlpha+")");
+    g.addColorStop(1,"rgba(0,0,0,0)");
+  } else {
+    var glowAlpha=0.28+pulse*0.42;
+    g=ctx.createRadialGradient(cx,cy,R*0.15,cx,cy,radius);
+    g.addColorStop(0,_orbHexToRgba(colors.glow,glowAlpha));
+    g.addColorStop(0.55,_orbHexToRgba(colors.glow,glowAlpha*0.40));
+    g.addColorStop(1,"rgba(0,0,0,0)");
+  }
+  ctx.fillStyle=g;
+  ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);ctx.fill();
+}
+function drawOrbSphereBase(ctx,cx,cy,R,score){
+  var colors=orbColorsForScore(score);
+  var g=ctx.createLinearGradient(cx-R*0.5,cy-R*0.75,cx+R*0.45,cy+R*0.8);
+  g.addColorStop(0,colors.core);g.addColorStop(0.5,colors.mid);g.addColorStop(1,colors.edge);
+  ctx.fillStyle=g;
+  ctx.beginPath();ctx.arc(cx,cy,R*0.995,0,Math.PI*2);ctx.fill();
+}
+function drawOrbGlossMaterial(ctx,cx,cy,R,pulse){
+  ctx.save();
+  var soft=_orbCachedRadial(ctx,"orbSoftHL",cx-R*0.22,cy-R*0.32,R*1.1,[
+    {pos:0,color:"rgba(255,255,255,0.22)"},{pos:0.5,color:"rgba(255,255,255,0.07)"},{pos:1,color:"rgba(255,255,255,0)"}
+  ]);
+  ctx.fillStyle=soft;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+
+  var hotAlpha=0.55*(0.92+pulse*0.08);
+  var hot=ctx.createRadialGradient(cx-R*0.30,cy-R*0.40,0,cx-R*0.30,cy-R*0.40,R*0.55);
+  hot.addColorStop(0,"rgba(255,255,255,"+hotAlpha+")");
+  hot.addColorStop(0.4,"rgba(255,255,255,"+(hotAlpha*0.32)+")");
+  hot.addColorStop(1,"rgba(255,255,255,0)");
+  ctx.fillStyle=hot;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+
+  ctx.save();
+  ctx.translate(cx-R*0.05,cy-R*0.55);ctx.rotate(-0.55);ctx.scale(1.9,0.4);
+  var streak=ctx.createRadialGradient(0,0,0,0,0,R*0.55);
+  streak.addColorStop(0,"rgba(255,255,255,0.14)");streak.addColorStop(1,"rgba(255,255,255,0)");
+  ctx.fillStyle=streak;ctx.beginPath();ctx.arc(0,0,R*0.55,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+
+  var ao=_orbCachedRadial(ctx,"orbAOFixed",cx+R*0.4,cy+R*0.5,R*1.05,[
+    {pos:0,color:"rgba(0,0,0,0)"},{pos:0.5,color:"rgba(0,0,0,0.10)"},{pos:1,color:"rgba(0,0,0,0.36)"}
+  ]);
+  ctx.fillStyle=ao;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+
+  ctx.strokeStyle="rgba(255,255,255,0.22)";ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(cx,cy,R-1,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+}
+function drawOrbShellRim(ctx,cx,cy,R,score){
+  var colors=orbColorsForScore(score);
+  ctx.save();
+  ctx.lineWidth=2.5;ctx.strokeStyle=_orbHexToRgba(colors.edge,0.95);
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+  ctx.lineWidth=3;ctx.strokeStyle="rgba(255,255,255,0.4)";
+  ctx.beginPath();ctx.arc(cx,cy,R-1.5,Math.PI*1.05,Math.PI*1.55);ctx.stroke();
+  ctx.lineWidth=3;ctx.strokeStyle="rgba(0,0,0,0.4)";
+  ctx.beginPath();ctx.arc(cx,cy,R-1.5,Math.PI*0.05,Math.PI*0.55);ctx.stroke();
+  ctx.restore();
+}
+function drawOrbRimPulse(ctx,cx,cy,R,pulse){
+  ctx.save();
+  ctx.globalAlpha=0.1+pulse*0.35;
+  ctx.strokeStyle="#fff3d0";ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.arc(cx,cy,R*(1+pulse*0.04),0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+}
+var ORB_CX=130, ORB_CY=130, ORB_R=84;
+function renderOrbCanvasFrame(){
+  var ctx=getOrbCanvasCtx();if(!ctx)return;
+  var result=window._lastOrbResult||computeHealthOrbScore();
+  var score=result.score;
+  var pulse=computeOrbPulse(result.components,orbAnim.phase);
+  ctx.clearRect(0,0,260,260);
+  drawOrbRadiance(ctx,ORB_CX,ORB_CY,ORB_R,score,pulse);
+  ctx.save();
+  ctx.beginPath();ctx.arc(ORB_CX,ORB_CY,ORB_R,0,Math.PI*2);ctx.clip();
+  drawOrbSphereBase(ctx,ORB_CX,ORB_CY,ORB_R,score);
+  drawOrbGlossMaterial(ctx,ORB_CX,ORB_CY,ORB_R,pulse);
+  ctx.restore();
+  drawOrbShellRim(ctx,ORB_CX,ORB_CY,ORB_R,score);
+  drawOrbRimPulse(ctx,ORB_CX,ORB_CY,ORB_R,pulse);
+}
+function orbTick(ts){
+  if(!orbLoopRunning)return;
+  if(orbLastTs===null)orbLastTs=ts;
+  var dt=Math.min(48,ts-orbLastTs);orbLastTs=ts;
+  orbAnim.phase+=dt*0.0016;
+  renderOrbCanvasFrame();
+  requestAnimationFrame(orbTick);
+}
+function startOrbLoop(){
+  if(orbLoopRunning)return;
+  if(ringReducedMotion()){renderOrbCanvasFrame();return;}
+  orbLoopRunning=true;orbLastTs=null;
+  requestAnimationFrame(orbTick);
+}
+function stopOrbLoop(){orbLoopRunning=false;}
+// First loop in the app to pause on backgrounding — visibilitychange alone is unreliable on
+// iOS Safari's home-button gesture specifically, so it's backed by pagehide/pageshow/blur/focus.
+document.addEventListener("visibilitychange",function(){if(document.hidden)stopOrbLoop();else startOrbLoop();});
+window.addEventListener("pagehide",stopOrbLoop);
+window.addEventListener("pageshow",startOrbLoop);
+window.addEventListener("blur",stopOrbLoop);
+window.addEventListener("focus",startOrbLoop);
+
 function renderHealthOrb(){
   var wrap=document.getElementById("orbWrap");if(!wrap)return;
-  var result=computeHealthOrbScore();
-  var score=result.score;
-  var colors=orbColorsForScore(score);
-  _orbColors=colors;
-  _orbIntensity = score===null?0:clamp01(score/100);
-  var stopCore=document.getElementById("orbStopCore"),stopMid=document.getElementById("orbStopMid"),stopEdge=document.getElementById("orbStopEdge");
-  if(stopCore)stopCore.setAttribute("stop-color",colors.core);
-  if(stopMid)stopMid.setAttribute("stop-color",colors.mid);
-  if(stopEdge)stopEdge.setAttribute("stop-color",colors.edge);
-  if(!ringReducedMotion()){
-    if(!_orbGlowRunning){_orbGlowRunning=true;requestAnimationFrame(orbGlowTick);}
-  } else {
-    var g1=document.getElementById("orbGlow1"),g2=document.getElementById("orbGlow2"),g3=document.getElementById("orbGlow3");
-    var staticAlpha=colors.dormant?0.10:(0.16+_orbIntensity*0.22);
-    if(g1){g1.setAttribute("fill",colors.glow);g1.setAttribute("opacity",staticAlpha.toFixed(3));}
-    if(g2){g2.setAttribute("fill",colors.glow);g2.setAttribute("opacity",(staticAlpha*0.65).toFixed(3));}
-    if(g3){g3.setAttribute("fill",colors.glow);g3.setAttribute("opacity",(staticAlpha*0.40).toFixed(3));}
-  }
-  window._lastOrbResult=result;
+  window._lastOrbResult=computeHealthOrbScore();
+  if(!orbLoopRunning)startOrbLoop();
 }
 function orbVerdict(v){
   if(v===null||v===undefined)return {txt:"No data logged",cls:"obr-none"};
@@ -2125,6 +2524,8 @@ function toggleOrbBreakdown(){
     var items=[
       {label:"Calorie adherence (week)",val:c.calorie},
       {label:"Protein (week)",val:c.protein},
+      {label:"Sleep (week)",val:c.sleep},
+      {label:"Stress (this week's check-in)",val:c.stress},
       {label:"Fiber (week)",val:c.fiber},
       {label:"Vegetable servings (week)",val:c.veg},
       {label:"Sugar (week, under budget)",val:c.sugar},
@@ -2442,8 +2843,33 @@ var ADAPT_UNLOCKS={
  "Upper Heavy B":[{n:"Cable Lateral Raise",s:3,lo:15,hi:20}]
 };
 function weeksIntoPhase(){var ph=currentPhase();var ps=new Date(ph.start+"T00:00:00");var t=new Date();t.setHours(0,0,0,0);return Math.max(0,Math.floor((t-ps)/(1000*60*60*24*7)));}
-function currentFatigue(){if(selFatigue)return selFatigue;var t=todayStr();for(var i=DB.readiness.length-1;i>=0;i--){if(DB.readiness[i].d===t){var e=DB.readiness[i].energy;return e==="high"?"good":e==="mod"?"mod":e==="low"?"low":null;}}var w=DB.workouts.slice(-1);if(w.length&&w[0].fatigue)return w[0].fatigue;return null;}
-function recentLowReadiness(){var c=0;DB.readiness.slice(-3).forEach(function(x){if(x.energy==="low")c++;});DB.workouts.slice(-3).forEach(function(x){if(x.fatigue==="low")c++;});return c;}
+function currentFatigue(){
+  if(selFatigue)return selFatigue;
+  var base=null;
+  var t=todayStr();
+  for(var i=DB.readiness.length-1;i>=0;i--){if(DB.readiness[i].d===t){var e=DB.readiness[i].energy;base=e==="high"?"good":e==="mod"?"mod":e==="low"?"low":null;break;}}
+  if(base===null){var w=DB.workouts.slice(-1);if(w.length&&w[0].fatigue)base=w[0].fatigue;}
+  // Sleep is confirmatory only: it can tip an ambiguous/unreported day toward "low" but never
+  // overrides a confident "good" readiness report, and never fires as an independent lever.
+  if((base===null||base==="mod")&&sleepTier()==="low")return "low";
+  return base;
+}
+function recentLowReadiness(){
+  var c=0;
+  DB.readiness.slice(-3).forEach(function(x){if(x.energy==="low")c++;});
+  DB.workouts.slice(-3).forEach(function(x){if(x.fatigue==="low")c++;});
+  if(sleepEnabled()){
+    (DB.sleep||[]).slice(-3).forEach(function(s){
+      var dur=sleepDurationHours(s),cont=sleepContinuityScore(s);
+      var score=clamp01(((dur===null?0.5:clamp01(dur/7.5))*0.6)+((cont===null?0.5:cont)*0.4));
+      if(score<0.4)c++;
+    });
+  }
+  // Stress contributes at most ONE point per week logged, not per day — a single Tuesday
+  // answer should carry the same weight as one bad day elsewhere, not recur for a week straight.
+  if(stressIsHighRecent())c++;
+  return c;
+}
 function daySessions(dayName){return DB.workouts.filter(function(w){return w.day===dayName&&w.ex&&Object.keys(w.ex).length;}).length;}
 function computeAdaptive(ex,holdToday,pauseVolume,wip,fatigueTier,labC){
   // fatigueTier: "good" | "mod" | "low" | null
@@ -2684,7 +3110,7 @@ function renderTrain(){
       '<div class="med-full" style="display:none;">'+infoAdj.map(function(a){return '<div style="margin-bottom:8px;"><b>'+a.label+':</b> '+a.msg+'</div>';}).join("")+'</div>'+
     '</div>';
   }
-  document.getElementById("dayNote").innerHTML='<div class="adapt-panel '+stateCls+'">'+stateTxt+'</div><div class="note dim">Log RIR (reps in reserve) on every set. E.g., RIR 2 = you had 2 reps left in the tank.</div>'+(flaggedAdj.length?'<div class="adapt-panel held" style="margin-top:8px;">&#9888; Active adjustments: '+flaggedAdj.map(function(a){return a.label;}).join(", ")+'</div>':'')+infoHtml;
+  document.getElementById("dayNote").innerHTML='<div class="adapt-panel '+stateCls+'">'+stateTxt+'</div><div class="note dim">Log RIR (reps in reserve) on every set. E.g., RIR 2 = you had 2 reps left in the tank.</div>'+(flaggedAdj.length?'<div class="adapt-panel held" style="margin-top:8px;">&#9888; Active adjustments: '+flaggedAdj.map(function(a){return a.label;}).join(", ")+'</div>':'')+infoHtml+stressAdvisoryHtml();
 
   var medR=getMedicationConstraints?getMedicationConstraints():null;
 
@@ -4624,6 +5050,20 @@ function loadWeightReactionPref(){
   var on=(DB.settings&&DB.settings.weightReaction!==undefined)?DB.settings.weightReaction:true;
   el.checked=on;
 }
+function saveSleepEnabledPref(on){
+  DB.settings=DB.settings||{};
+  DB.settings.sleepEnabled=on;
+  save();
+  toast("Sleep tracking "+(on?"enabled":"disabled"));
+}
+function loadSleepEnabledPref(){
+  var el=document.getElementById("sleepEnabledToggle");
+  if(!el)return;
+  var on=(DB.settings&&DB.settings.sleepEnabled!==undefined)?DB.settings.sleepEnabled:true;
+  el.checked=on;
+  var area=document.getElementById("sleepEntryArea");
+  if(area)area.style.opacity=on?"1":".45";
+}
 function loadBPPromptPref(){
   var el=document.getElementById("bpPromptToggle");
   if(!el)return;
@@ -5651,13 +6091,13 @@ function executeReset(){
   try{localStorage.removeItem("healthpad_db");}catch(e){}
   try{localStorage.removeItem("hp_dp");}catch(e){}
   // Reset DB to factory defaults
-  DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],
-      oneRM:{},foodLog:[],myFoods:[],medasDaily:[],dietDaily:[],workoutTemplates:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,knownMaxHR:null,digestEmail:""},
+  DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],sleep:[],stress:[],
+      oneRM:{},foodLog:[],myFoods:[],medasDaily:[],dietDaily:[],workoutTemplates:[],settings:{sheetUrl:"",medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,weightReaction:true,sleepEnabled:true,stressPrompt:true,medCategories:[],fdcKey:"",trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,knownMaxHR:null,digestEmail:""},
       goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},
       milestones:[],program:null};
   save();
   // Defensively clear in-memory animation state (no page reload happens on reset)
-  _orbColors=null;_orbGlowRunning=false;_orbIntensity=0;
+  stopOrbLoop(); window._lastOrbResult=null; orbAnim.phase=0;
   _glowingRings={};_glowLoopRunning=false;
   selFatigue=null;selDay=null;
   document.querySelectorAll('[id^="halo_"]').forEach(function(h){h.remove();});
@@ -6941,6 +7381,7 @@ function runPostIntroChecks(){
     if(!DB.settings.hasOnboarded){obShow();return;}
     setTimeout(function(){safeBoot(checkDietPopup,"checkDietPopup");},800);
     setTimeout(function(){safeBoot(checkBPPrompt,"checkBPPrompt");},2000);
+    setTimeout(function(){safeBoot(checkStressPrompt,"checkStressPrompt");},2400);
     setTimeout(function(){safeBoot(loadAndShowQuote,"loadAndShowQuote");},200);
     setTimeout(function(){safeBoot(maybeShowWeeklyRecapPopup,"maybeShowWeeklyRecapPopup");},2800);
   }catch(e){}
