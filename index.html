@@ -417,7 +417,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
           <div class="ring" id="orbWrap" onclick="toggleOrbBreakdown()" style="cursor:pointer;width:260px;height:260px;">
             <canvas id="orbCanvas" width="260" height="260" style="width:260px;height:260px;display:block;"></canvas>
           </div>
-          <div class="ring-lbl" style="margin-top:8px;cursor:pointer;font-family:'Luminari','Papyrus',fantasy;color:var(--ink);opacity:.85;font-size:15px;" onclick="toggleOrbBreakdown()">Orb of Health</div>
+          <div id="orbFloatShadow" style="width:128px;height:24px;border-radius:50%;margin-top:-8px;margin-bottom:10px;background:radial-gradient(ellipse at center, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0) 78%);filter:blur(4px);pointer-events:none;"></div>
+          <div class="ring-lbl" style="margin-top:0;cursor:pointer;font-family:'Luminari','Papyrus',fantasy;color:var(--ink);opacity:.85;font-size:15px;" onclick="toggleOrbBreakdown()">Orb of Health</div>
         </div>
         <div class="hero-col" style="margin-top:16px;">
           <div class="ring" id="goalRingWrap" onclick="openGoalQuickModal()" style="cursor:pointer;">
@@ -2348,6 +2349,15 @@ function orbColorsForScore(score){
    rim) is a CONSTANT property of the artifact, unaffected by health data. Breathing pulse
    is the only animation; nothing orbits or floats. */
 var orbAnim={phase:0};
+var orbArrivalT0=null; // set when the Home tab opens; decays to 0 over ~700ms
+function triggerOrbArrival(){ orbArrivalT0=(typeof performance!=="undefined"?performance.now():Date.now()); }
+function orbArrivalBoost(){
+  if(orbArrivalT0===null)return 0;
+  var now=(typeof performance!=="undefined"?performance.now():Date.now());
+  var t=(now-orbArrivalT0)/700;
+  if(t>=1){orbArrivalT0=null;return 0;}
+  return 1-t; // 1 -> 0 over 700ms, eased by the caller
+}
 var orbLoopRunning=false, orbLastTs=null;
 var _orbGradCache={};
 function _orbCachedRadial(ctx,key,x,y,r,stops){
@@ -2382,26 +2392,27 @@ function computeOrbPulse(components, phase){
   var raw=Math.sin(phase*0.9)*amplitude+irregular;
   return clamp01(0.5+raw*0.5);
 }
-function drawOrbRadiance(ctx,cx,cy,R,score,pulse){
-  // Radius is deliberately kept well inside the canvas's own half-width (74px for a 148px
-  // canvas) at every point in the breathing cycle, so the gradient always reaches true
-  // zero-opacity before it could ever reach a hard edge. The previous version let this swell
-  // past the canvas bounds at peak pulse, which clipped the still-visible glow into a literal
-  // square instead of letting it fade to nothing — that's what "surrounded by a square" was.
+function drawOrbRadiance(ctx,cx,cy,R,score,pulse,boost){
+  // Radius is deliberately kept well inside the canvas's own half-width at every point in the
+  // breathing cycle, so the gradient always reaches true zero-opacity before it could ever
+  // reach a hard edge. `boost` (the one-shot Home-tab-arrival emphasis) ONLY brightens alpha,
+  // it never touches radius — that's what keeps the no-clipping guarantee true regardless of
+  // how the arrival pulse is tuned later.
+  boost=boost||0;
   var colors=orbColorsForScore(score);
   var blended=score===null?0.5:score/100;
   var warmAmt=clamp01((blended-0.4)/0.25);
   var radius=Math.min(R*(1.0+pulse*0.45), R*1.45);
   var g;
   if(warmAmt<1){
-    var shadowAlpha=(1-warmAmt)*(0.36+pulse*0.40);
+    var shadowAlpha=(1-warmAmt)*(0.36+pulse*0.40+boost*0.20);
     g=ctx.createRadialGradient(cx,cy,R*0.15,cx,cy,radius);
-    g.addColorStop(0,_orbHexToRgba(colors.glow,warmAmt*0.18*(0.5+pulse*0.5)));
+    g.addColorStop(0,_orbHexToRgba(colors.glow,warmAmt*0.18*(0.5+pulse*0.5)+boost*0.10));
     g.addColorStop(0.42,"rgba(28,9,34,"+(shadowAlpha*0.65)+")");
     g.addColorStop(0.78,"rgba(2,1,2,"+shadowAlpha+")");
     g.addColorStop(1,"rgba(0,0,0,0)");
   } else {
-    var glowAlpha=0.28+pulse*0.42;
+    var glowAlpha=0.28+pulse*0.42+boost*0.22;
     g=ctx.createRadialGradient(cx,cy,R*0.15,cx,cy,radius);
     g.addColorStop(0,_orbHexToRgba(colors.glow,glowAlpha));
     g.addColorStop(0.55,_orbHexToRgba(colors.glow,glowAlpha*0.40));
@@ -2458,9 +2469,10 @@ function drawOrbShellRim(ctx,cx,cy,R,score){
   ctx.beginPath();ctx.arc(cx,cy,R-1.5,Math.PI*0.05,Math.PI*0.55);ctx.stroke();
   ctx.restore();
 }
-function drawOrbRimPulse(ctx,cx,cy,R,pulse){
+function drawOrbRimPulse(ctx,cx,cy,R,pulse,boost){
+  boost=boost||0;
   ctx.save();
-  ctx.globalAlpha=0.1+pulse*0.35;
+  ctx.globalAlpha=0.1+pulse*0.35+boost*0.25;
   ctx.strokeStyle="#fff3d0";ctx.lineWidth=1.4;
   ctx.beginPath();ctx.arc(cx,cy,R*(1+pulse*0.04),0,Math.PI*2);ctx.stroke();
   ctx.restore();
@@ -2471,15 +2483,16 @@ function renderOrbCanvasFrame(){
   var result=window._lastOrbResult||computeHealthOrbScore();
   var score=result.score;
   var pulse=computeOrbPulse(result.components,orbAnim.phase);
+  var boost=orbArrivalBoost();
   ctx.clearRect(0,0,260,260);
-  drawOrbRadiance(ctx,ORB_CX,ORB_CY,ORB_R,score,pulse);
+  drawOrbRadiance(ctx,ORB_CX,ORB_CY,ORB_R,score,pulse,boost);
   ctx.save();
   ctx.beginPath();ctx.arc(ORB_CX,ORB_CY,ORB_R,0,Math.PI*2);ctx.clip();
   drawOrbSphereBase(ctx,ORB_CX,ORB_CY,ORB_R,score);
   drawOrbGlossMaterial(ctx,ORB_CX,ORB_CY,ORB_R,pulse);
   ctx.restore();
   drawOrbShellRim(ctx,ORB_CX,ORB_CY,ORB_R,score);
-  drawOrbRimPulse(ctx,ORB_CX,ORB_CY,ORB_R,pulse);
+  drawOrbRimPulse(ctx,ORB_CX,ORB_CY,ORB_R,pulse,boost);
 }
 function orbTick(ts){
   if(!orbLoopRunning)return;
@@ -2507,6 +2520,8 @@ window.addEventListener("focus",startOrbLoop);
 function renderHealthOrb(){
   var wrap=document.getElementById("orbWrap");if(!wrap)return;
   window._lastOrbResult=computeHealthOrbScore();
+  if(!ringReducedMotion())triggerOrbArrival(); // brief emphasis pulse so the orb reads as the
+                                                // Home tab's focal centerpiece on every arrival
   if(!orbLoopRunning)startOrbLoop();
 }
 function orbVerdict(v){
