@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orb of Health v2 — Architecture Prototype</title>
+<style>
+  :root{ --bg:#0e0c0a; --panel:#1a1612; --ink:#f0e9dc; --dim:#9a8f7e; --border:#332c24; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,system-ui,sans-serif;
+       display:flex;flex-direction:column;align-items:center;padding:20px;min-height:100vh;}
+  h1{font-size:16px;font-weight:700;margin:0 0 4px;letter-spacing:.3px;}
+  .sub{font-size:12px;color:var(--dim);margin-bottom:18px;text-align:center;max-width:420px;}
+  canvas{background:transparent;touch-action:none;}
+  #stage{position:relative;width:280px;height:280px;}
+  .hud{position:absolute;top:6px;left:6px;font-size:10px;color:#7a9a6a;font-family:monospace;
+       background:rgba(0,0,0,.4);padding:3px 6px;border-radius:4px;pointer-events:none;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;
+         margin-top:18px;width:100%;max-width:420px;}
+  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:0 0 10px;}
+  .row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .row label{flex:0 0 92px;font-size:11px;color:var(--dim);}
+  .row input[type=range]{flex:1;}
+  .row .v{flex:0 0 32px;font-size:11px;text-align:right;color:var(--ink);}
+  .btnrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  button{background:#2a2420;border:1px solid var(--border);color:var(--ink);padding:8px 12px;
+         border-radius:6px;font-size:12px;cursor:pointer;}
+  button:active{transform:scale(.96);}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim);margin-top:10px;}
+  .note{font-size:11px;color:var(--dim);line-height:1.5;margin-top:10px;}
+</style>
+</head>
+<body>
+
+<h1>Orb of Health v2 — Stage 0 Architecture Prototype</h1>
+<div class="sub">Canvas2D only. Standalone file, not wired into the real app. Sliders stand in for the
+14 real <code>computeHealthOrbScore()</code> components — this proves the rendering pipeline,
+update loop split, and performance guards before anything touches index.html.</div>
+
+<div id="stage">
+  <canvas id="orbCanvas" width="280" height="280"></canvas>
+  <div class="hud" id="hud">fps: --</div>
+</div>
+
+<div class="panel">
+  <h2>Health Inputs (mock orb components, 0-1)</h2>
+  <div id="sliderArea"></div>
+  <div class="btnrow">
+    <button onclick="setAllSliders(0.85)">Great week</button>
+    <button onclick="setAllSliders(0.45)">Mediocre week</button>
+    <button onclick="setAllSliders(0.15)">Bad week</button>
+    <button onclick="triggerAchievement()">Trigger achievement</button>
+  </div>
+  <div class="toggle"><input type="checkbox" id="reducedMotionToggle" onchange="applyReducedMotionOverride(this.checked)"> Force reduced-motion fallback</div>
+  <div class="toggle"><input type="checkbox" id="backgroundToggle" onchange="simulateBackground(this.checked)"> Simulate tab backgrounded (loop should pause)</div>
+  <div class="toggle">
+    Particle tier:
+    <select id="tierSelect" onchange="setParticleTier(this.value)">
+      <option value="low">Low (older phone)</option>
+      <option value="med" selected>Medium</option>
+      <option value="high">High</option>
+    </select>
+  </div>
+  <div class="note">
+    Architecture notes: one canvas, one 2D context, five ordered draw passes per frame
+    (atmosphere → plasma+rivers → particles → satellites+field lines → pulse/foreground).
+    Health state (sliders) and visual state (what the renderer reads) are two separate objects —
+    the slow tick converts one into the other; the fast tick never touches health state directly.
+  </div>
+</div>
+
+<script>
+/* =====================================================================================
+   ORB OF HEALTH v2 — STAGE 0: PIPELINE / LAYERS / ANIMATION ENGINE / UPDATE LOOP /
+   PERF GUARDS / METRIC HOOKS / STATE MANAGEMENT
+   =====================================================================================
+   This file is a deliberately standalone prototype, per the project's standing convention
+   of proving ambitious visual work in a throwaway file before porting into the main
+   HealthPad index.html. Nothing here touches the real app or its DB.
+
+   KEY DECISIONS LOCKED FOR THIS STAGE:
+   - Canvas2D only. No WebGL, no SVG. One <canvas>, one 2D context, ordered draw passes.
+     (WebGL was explicitly deferred — too much undebuggable risk in a no-build-step,
+     pencil-edit-deployed iOS Safari PWA. SVG was rejected for particle-heavy layers —
+     DOM node count would kill performance at any meaningful particle count.)
+   - HEALTH STATE vs VISUAL STATE are two separate objects, connected by one pure function
+     (deriveVisualState). The animation loop only ever reads visualState; it is never
+     recomputed from raw health data on every frame.
+   - TWO UPDATE RATES: a 60fps animation tick (particle motion, plasma flow, pulse phase)
+     and a slow "health changed" tick that only runs when inputs actually change (here:
+     slider input; in the real app: after save()), not on a timer inside the render loop.
+   ===================================================================================== */
+
+// ---------- HEALTH STATE ----------
+// Mirrors the real computeHealthOrbScore() `components` object: 14 fields, each 0-1 or null.
+// In the real app this comes from window._lastOrbResult.components. Here, sliders fake it.
+var METRICS = [
+  {key:"protein",   label:"Protein",    color:"#e8743b"},
+  {key:"sleep",     label:"Sleep",      color:"#6fa8dc"},
+  {key:"fiber",     label:"Fiber",      color:"#93c47d"},
+  {key:"water",     label:"Water",      color:"#76d7ea"},
+  {key:"calorie",   label:"Calorie",    color:"#f5c344"},
+  {key:"veg",       label:"Veg",        color:"#6aa84f"},
+  {key:"sugar",     label:"Sugar (inv)",color:"#d5a6bd"},
+  {key:"sodium",    label:"Sodium (inv)",color:"#c27ba0"},
+  {key:"satFat",    label:"Sat Fat(inv)",color:"#b4a7d6"},
+  {key:"weight",    label:"Weight trend",color:"#a9c4eb"},
+  {key:"potassium", label:"Potassium",  color:"#8fce00"},
+  {key:"calcium",   label:"Calcium",    color:"#d9d9d9"},
+  {key:"stress",    label:"Stress (inv)",color:"#e69138"},
+  {key:"workout",   label:"Workout",    color:"#ff5252"}
+];
+var healthState = {}; // metric key -> 0..1, mutated only by slider input / mock buttons
+METRICS.forEach(function(m){ healthState[m.key] = 0.65; });
+
+// ---------- VISUAL STATE ----------
+// Everything the renderer reads. Produced ONLY by deriveVisualState(). Never mutated directly
+// by slider handlers, and never recomputed inside the animation loop itself.
+var visualState = null;
+
+// Pure function: health data -> visual parameters. No side effects, no DOM, no Date.now().
+// This is the "metric hooks" layer the brief asked for — each metric maps to a specific
+// visual characteristic rather than just nudging one generic score.
+function deriveVisualState(hs){
+  var vals = METRICS.map(function(m){ return hs[m.key]; }).filter(function(v){return v!==null&&v!==undefined;});
+  var blended = vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length : 0.5;
+
+  return {
+    blended: blended, // 0..1 overall — drives core color/brightness
+    plasma: {
+      turbulence: clamp01(1 - blended) * 0.8 + 0.05,      // poor health = choppier convection
+      brightness: 0.25 + blended * 0.75,
+      // satFat affects "density" per the brief — slower, heavier convection when high
+      density: 0.3 + (hs.satFat!==undefined ? (1-hs.satFat) : 0.5) * 0.5
+    },
+    rivers: {
+      speed: 0.4 + (hs.carb !== undefined ? hs.carb : blended) * 1.2,
+      branchiness: 0.3 + (hs.fiber!==undefined?hs.fiber:blended) * 0.9, // fiber = structural organization
+      brightness: 0.3 + (hs.protein!==undefined?hs.protein:blended) * 0.9
+    },
+    atmosphere: {
+      haze: clamp01(1 - (hs.sodium!==undefined?hs.sodium:blended)) * 0.7,   // sodium = haze/turbulence
+      glow: 0.2 + (hs.sleep!==undefined?hs.sleep:blended) * 0.8,             // sleep = atmospheric clarity
+      sparkle: hs.veg!==undefined ? hs.veg : blended                        // veg = particle vitality/diversity
+    },
+    pulse: {
+      rate: 0.7 + (1-(hs.stress!==undefined?hs.stress:0.5)) * 0.0, // base rate; irregularity below carries stress
+      amplitude: 0.5 + (hs.sleep!==undefined?hs.sleep:blended) * 0.5,
+      irregularity: clamp01(1-(hs.stress!==undefined?hs.stress:0.5)) // stress = irregular/uneven breathing
+    },
+    particles: {
+      countFactor: clamp01(hs.veg!==undefined?hs.veg:blended),
+      speedFactor: 0.5 + blended * 1.0,
+      brightnessFactor: 0.3 + blended * 0.7,
+      transparency: 0.3 + (hs.water!==undefined?hs.water:blended)*0.7 // water = transparency/refraction
+    },
+    field: {
+      distortion: clamp01(1-(hs.stress!==undefined?hs.stress:0.5)) * 0.9, // stress = broken/chaotic field
+      stormIntensity: (hs.stress!==undefined && hs.stress<0.3) ? (0.3-hs.stress)*2 : 0,
+      // weight trend reshapes long-term symmetry — held separate so it changes slowly in real app
+      symmetry: 0.4 + (hs.weight!==undefined?hs.weight:0.5) * 0.6
+    },
+    core: {
+      // calcium = crystalline structure strength, potassium = stable electrical flow
+      structure: hs.calcium!==undefined ? hs.calcium : 0.5,
+      stability: hs.potassium!==undefined ? hs.potassium : 0.5
+    },
+    satellites: METRICS.map(function(m, i){
+      var score = hs[m.key]!==undefined && hs[m.key]!==null ? hs[m.key] : 0.5;
+      return {
+        key:m.key, label:m.label, color:m.color, score:score,
+        orbitRadius: 70 + (i % 4) * 14,                 // tiered orbits, not all on one ring
+        orbitSpeed: 0.12 + (i * 0.017),                  // each satellite has a distinct speed
+        angleOffset: (i / METRICS.length) * Math.PI * 2, // spread starting positions evenly
+        brightness: 0.25 + score * 0.85,
+        size: 1.6 + score * 2.2
+      };
+    })
+  };
+}
+function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+
+// ---------- ORB COLOR RAMP ----------
+// Pulled verbatim from the real app's computeHealthOrbScore/orbColorsForScore so the
+// prototype's core color tracks the SAME six-stop ramp the production Orb already uses:
+// near-black/void -> brick-red/brown -> dull amber -> warm gold -> bright orange-gold ->
+// radiant yellow-white. Driven by the same 0-100 blended score, not a placeholder gradient.
+var ORB_STOPS=[
+  {pos:0,  core:"#2a2420",mid:"#1a1614",edge:"#0a0807",glow:"#000000"},
+  {pos:20, core:"#5c2a1e",mid:"#451f16",edge:"#2c130d",glow:"#3d1a10"},
+  {pos:40, core:"#7a5230",mid:"#5f3f22",edge:"#3f2814",glow:"#5c3a1a"},
+  {pos:60, core:"#e8b84a",mid:"#c98f2e",edge:"#9a6e28",glow:"#c98f2e"},
+  {pos:80, core:"#ffd968",mid:"#f5a623",edge:"#d97b0a",glow:"#f5a623"},
+  {pos:100,core:"#fff8e0",mid:"#ffd23f",edge:"#ff9d0a",glow:"#ffe066"}
+];
+function _orbHexToRgb(hex){hex=hex.replace("#","");return {r:parseInt(hex.substring(0,2),16),g:parseInt(hex.substring(2,4),16),b:parseInt(hex.substring(4,6),16)};}
+function _orbRgbToHex(r,g,b){function h(v){v=Math.max(0,Math.min(255,Math.round(v)));var s=v.toString(16);return s.length<2?"0"+s:s;}return "#"+h(r)+h(g)+h(b);}
+function _orbHexLerp(a,b,t){var ca=_orbHexToRgb(a),cb=_orbHexToRgb(b);return _orbRgbToHex(ca.r+(cb.r-ca.r)*t,ca.g+(cb.g-ca.g)*t,ca.b+(cb.b-ca.b)*t);}
+function orbColorsForScore(score){
+  if(score===null||score===undefined)return {core:"#5a6472",mid:"#3f4750",edge:"#2a3038",glow:"#3f4750",dormant:true};
+  score=Math.max(0,Math.min(100,score));
+  for(var i=0;i<ORB_STOPS.length-1;i++){
+    var a=ORB_STOPS[i],b=ORB_STOPS[i+1];
+    if(score>=a.pos&&score<=b.pos){
+      var t=(score-a.pos)/(b.pos-a.pos);
+      return {core:_orbHexLerp(a.core,b.core,t),mid:_orbHexLerp(a.mid,b.mid,t),edge:_orbHexLerp(a.edge,b.edge,t),glow:_orbHexLerp(a.glow,b.glow,t),dormant:false};
+    }
+  }
+  var last=ORB_STOPS[ORB_STOPS.length-1];
+  return {core:last.core,mid:last.mid,edge:last.edge,glow:last.glow,dormant:false};
+}
+
+// Slow tick: recompute visualState ONLY when health inputs actually change.
+// In the real app this is called from renderHealthOrb() after save(), not on a timer.
+function recomputeVisualState(){
+  visualState = deriveVisualState(healthState);
+}
+recomputeVisualState();
+
+// ---------- GRADIENT CACHE (GPU-friendly: never build a gradient inside the draw loop) ----------
+var _gradCache = {};
+function cachedRadialGradient(ctx, key, x, y, r, stops){
+  var k = key + "_" + r.toFixed(0);
+  var cached = _gradCache[k];
+  if(cached && cached.lastCtx === ctx) return cached.grad;
+  var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  stops.forEach(function(s){ g.addColorStop(s.pos, s.color); });
+  _gradCache[k] = { grad:g, lastCtx:ctx };
+  return g;
+}
+
+// ---------- PERFORMANCE TIER ----------
+var PARTICLE_TIER = { low:18, med:42, high:80 };
+var currentTier = "med";
+function setParticleTier(t){ currentTier = t; rebuildParticles(); }
+
+// ---------- ANIMATION-ONLY STATE ----------
+// Stuff that exists purely for the renderer's own continuity (particle positions, phase
+// accumulators). This is NOT health data and NOT visual-parameter data — it's the third
+// category: live animation state that persists frame to frame.
+var anim = {
+  phase: 0,
+  particles: [],
+  satelliteAngles: METRICS.map(function(m,i){ return (i/METRICS.length)*Math.PI*2; }),
+  achievementBursts: [] // transient, self-expiring — see triggerAchievement()
+};
+function rebuildParticles(){
+  var n = PARTICLE_TIER[currentTier];
+  anim.particles = [];
+  for(var i=0;i<n;i++){
+    anim.particles.push({
+      angle: Math.random()*Math.PI*2,
+      radius: 18 + Math.random()*40,
+      speed: 0.2 + Math.random()*0.6,
+      wobble: Math.random()*Math.PI*2,
+      size: 0.6 + Math.random()*1.4
+    });
+  }
+}
+rebuildParticles();
+
+// ---------- LAYER DRAW FUNCTIONS ----------
+// Each is a pure-ish function: (ctx, cx, cy, R, vs, anim, dt) -> draws one pass.
+// Ordered back-to-front. This is the "layer management" the brief asked for, implemented
+// as ordered function calls into ONE canvas rather than 15 stacked elements.
+
+function drawAtmosphere(ctx, cx, cy, R, vs){
+  var glowR = R * 1.9;
+  var colors = orbColorsForScore(vs.blended*100);
+  var g = cachedRadialGradient(ctx, "atmo_"+colors.glow, cx, cy, glowR, [
+    {pos:0, color: hexToRgba(colors.glow, 0.10+vs.atmosphere.glow*0.18)},
+    {pos:0.6, color: hexToRgba(colors.glow, vs.atmosphere.haze*0.12)},
+    {pos:1, color:"rgba(0,0,0,0)"}
+  ]);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, glowR, 0, Math.PI*2); ctx.fill();
+}
+
+function drawPlasmaAndRivers(ctx, cx, cy, R, vs, anim){
+  // Core plasma now tracks the SAME six-stop color ramp the production Orb uses, driven by
+  // the same 0-100 blended score — dormant/void at 0, brick-red/amber through mid-range,
+  // radiant gold-white as the trend approaches 100. Brightness/turbulence still modulate
+  // intensity and motion on top of that base color, they don't replace it.
+  var coreR = R * 0.78;
+  var colors = orbColorsForScore(vs.blended*100);
+  var g = cachedRadialGradient(ctx, "core_"+colors.core, cx, cy, coreR, [
+    {pos:0, color: colors.core},
+    {pos:0.55, color: colors.mid},
+    {pos:1, color: hexToRgba(colors.edge, 0)}
+  ]);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, Math.PI*2); ctx.fill();
+
+  // Internal energy rivers: a few animated bezier ribbons, count driven by branchiness.
+  var riverCount = 2 + Math.round(vs.rivers.branchiness * 3);
+  ctx.save();
+  ctx.globalAlpha = 0.35 + vs.rivers.brightness*0.4;
+  for(var i=0;i<riverCount;i++){
+    var t = anim.phase * vs.rivers.speed + i * 1.7;
+    var a1 = t, a2 = t + 2.1 + Math.sin(t*0.6)*0.4;
+    var r1 = coreR*0.35, r2 = coreR*0.7;
+    var x1 = cx + Math.cos(a1)*r1, y1 = cy + Math.sin(a1)*r1;
+    var x2 = cx + Math.cos(a2)*r2, y2 = cy + Math.sin(a2)*r2;
+    var midx = cx + Math.cos((a1+a2)/2)*(r1+r2)*0.5*(1+vs.plasma.turbulence*0.5*Math.sin(t));
+    var midy = cy + Math.sin((a1+a2)/2)*(r1+r2)*0.5*(1+vs.plasma.turbulence*0.5*Math.cos(t));
+    ctx.strokeStyle = "rgba(255,210,120,0.8)";
+    ctx.lineWidth = 1.1 + vs.rivers.brightness;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1); ctx.quadraticCurveTo(midx,midy,x2,y2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawParticles(ctx, cx, cy, R, vs, anim, dt){
+  var active = Math.round(anim.particles.length * (0.35 + vs.particles.countFactor*0.65));
+  ctx.save();
+  for(var i=0;i<active;i++){
+    var p = anim.particles[i];
+    p.angle += p.speed * vs.particles.speedFactor * dt * 0.001;
+    var wobbleR = p.radius + Math.sin(anim.phase*1.3 + p.wobble) * 3;
+    var x = cx + Math.cos(p.angle) * wobbleR;
+    var y = cy + Math.sin(p.angle) * wobbleR;
+    ctx.globalAlpha = (0.2 + vs.particles.brightnessFactor*0.6) * (0.4 + vs.particles.transparency*0.6);
+    ctx.fillStyle = "#ffe8b0";
+    ctx.beginPath(); ctx.arc(x, y, p.size, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawFieldLines(ctx, cx, cy, R, vs, anim){
+  var rings = 2;
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  for(var i=0;i<rings;i++){
+    var baseR = R * (1.15 + i*0.22);
+    var distort = vs.field.distortion * 6 * (i+1);
+    var storm = vs.field.stormIntensity>0 ? Math.sin(anim.phase*9+i)*vs.field.stormIntensity*5 : 0;
+    ctx.strokeStyle = vs.field.stormIntensity>0.15 ? "rgba(255,90,60,0.5)" : "rgba(180,200,255,0.4)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for(var a=0;a<=Math.PI*2+0.1;a+=0.12){
+      var rr = baseR + Math.sin(a*3 + anim.phase*0.7)*distort + storm;
+      var x = cx + Math.cos(a)*rr*vs.field.symmetry + Math.cos(a)*rr*(1-vs.field.symmetry)*0.6;
+      var y = cy + Math.sin(a)*rr;
+      if(a===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawSatellites(ctx, cx, cy, R, vs, anim, dt){
+  vs.satellites.forEach(function(sat, i){
+    anim.satelliteAngles[i] += sat.orbitSpeed * dt * 0.001;
+    var a = anim.satelliteAngles[i] + sat.angleOffset;
+    var x = cx + Math.cos(a) * sat.orbitRadius;
+    var y = cy + Math.sin(a) * sat.orbitRadius * 0.5; // slight ellipse for depth
+    ctx.save();
+    ctx.globalAlpha = sat.brightness;
+    ctx.fillStyle = sat.color;
+    ctx.shadowColor = sat.color;
+    ctx.shadowBlur = 4; // small, fixed — avoid heavy shadow recompute cost
+    ctx.beginPath(); ctx.arc(x, y, sat.size, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawPulseOverlay(ctx, cx, cy, R, vs, anim){
+  var irregular = vs.pulse.irregularity < 0.4 ? (Math.random()-0.5)*0.15 : 0;
+  var pulse = Math.sin(anim.phase * 1.1) * vs.pulse.amplitude * 0.06 + irregular;
+  ctx.save();
+  ctx.globalAlpha = 0.08 + Math.abs(pulse)*0.4;
+  ctx.strokeStyle = "#fff3d0";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(cx, cy, R*0.85*(1+pulse), 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+  return pulse; // returned for canvas-level scale transform if desired (not applied here)
+}
+
+function drawAchievementBursts(ctx, cx, cy, anim, dt){
+  anim.achievementBursts = anim.achievementBursts.filter(function(b){ return b.life > 0; });
+  anim.achievementBursts.forEach(function(b){
+    b.life -= dt;
+    var t = 1 - clamp01(b.life / b.maxLife);
+    ctx.save();
+    ctx.globalAlpha = (1-t) * 0.6;
+    ctx.strokeStyle = "#ffe066";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, 20 + t*70, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  });
+}
+function triggerAchievement(){
+  anim.achievementBursts.push({ life: 900, maxLife: 900 });
+}
+
+function lerpColor(a, b, t){
+  t = clamp01(t);
+  var ca = hexToRgb(a), cb = hexToRgb(b);
+  var r = Math.round(ca.r + (cb.r-ca.r)*t);
+  var g = Math.round(ca.g + (cb.g-ca.g)*t);
+  var bl = Math.round(ca.b + (cb.b-ca.b)*t);
+  return "rgb("+r+","+g+","+bl+")";
+}
+function hexToRgb(hex){
+  hex = hex.replace("#","");
+  return { r:parseInt(hex.substr(0,2),16), g:parseInt(hex.substr(2,2),16), b:parseInt(hex.substr(4,2),16) };
+}
+function hexToRgba(hex, alpha){
+  var c = hexToRgb(hex);
+  return "rgba("+c.r+","+c.g+","+c.b+","+alpha+")";
+}
+
+// ---------- MAIN RENDER (one frame, all layers, in order) ----------
+function renderOrbFrame(ctx, cx, cy, R, dt){
+  ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+  var vs = visualState;
+  drawAtmosphere(ctx, cx, cy, R, vs);
+  drawPlasmaAndRivers(ctx, cx, cy, R, vs, anim);
+  drawParticles(ctx, cx, cy, R, vs, anim, dt);
+  drawFieldLines(ctx, cx, cy, R, vs, anim);
+  drawSatellites(ctx, cx, cy, R, vs, anim, dt);
+  drawPulseOverlay(ctx, cx, cy, R, vs, anim);
+  drawAchievementBursts(ctx, cx, cy, anim, dt);
+}
+
+// ---------- STATIC (REDUCED-MOTION) RENDER ----------
+// Single paint, no loop at all — required for prefers-reduced-motion, same convention as
+// ringReducedMotion() elsewhere in the real app.
+function renderStaticFrame(ctx, cx, cy, R){
+  ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+  var vs = visualState;
+  drawAtmosphere(ctx, cx, cy, R, vs);
+  drawPlasmaAndRivers(ctx, cx, cy, R, vs, {phase:0});
+  drawFieldLines(ctx, cx, cy, R, vs, {phase:0});
+  // Satellites drawn at their starting angles only, no motion.
+  var staticAnim = { satelliteAngles: anim.satelliteAngles.slice() };
+  drawSatellites(ctx, cx, cy, R, vs, staticAnim, 0);
+}
+
+// ---------- UPDATE LOOP (fast tick) WITH PAUSE/RESUME ----------
+var canvas = document.getElementById("orbCanvas");
+var ctx = canvas.getContext("2d");
+var CX = canvas.width/2, CY = canvas.height/2, RADIUS = 70;
+
+var loopRunning = false;
+var lastTs = null;
+var fpsHud = document.getElementById("hud");
+var fpsAccum = 0, fpsFrames = 0, fpsLastReport = 0;
+
+function reducedMotionActive(){
+  var forced = document.getElementById("reducedMotionToggle").checked;
+  var system = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return forced || system;
+}
+
+function tick(ts){
+  if(!loopRunning) return; // pause guard — set false on backgrounding
+  if(lastTs===null) lastTs = ts;
+  var dt = Math.min(48, ts - lastTs); // clamp dt so a stalled tab doesn't jump particles wildly
+  lastTs = ts;
+  anim.phase += dt * 0.0016;
+
+  renderOrbFrame(ctx, CX, CY, RADIUS, dt);
+
+  fpsAccum += dt; fpsFrames++;
+  if(ts - fpsLastReport > 500){
+    var fps = Math.round(1000 / (fpsAccum / fpsFrames));
+    fpsHud.textContent = "fps: " + fps + " · particles: " + anim.particles.length + " · tier: " + currentTier;
+    fpsAccum = 0; fpsFrames = 0; fpsLastReport = ts;
+  }
+  requestAnimationFrame(tick);
+}
+
+function startLoop(){
+  if(loopRunning) return;
+  if(reducedMotionActive()){
+    renderStaticFrame(ctx, CX, CY, RADIUS);
+    fpsHud.textContent = "static (reduced motion)";
+    return;
+  }
+  loopRunning = true;
+  lastTs = null;
+  requestAnimationFrame(tick);
+}
+function stopLoop(){
+  loopRunning = false;
+  fpsHud.textContent = "paused";
+}
+
+// ---------- PERFORMANCE GUARD: PAGE VISIBILITY ----------
+document.addEventListener("visibilitychange", function(){
+  if(document.hidden) stopLoop(); else startLoop();
+});
+// Manual simulate-backgrounding toggle, since you can't easily background a tab to test this
+// from the same device you're testing on.
+function simulateBackground(on){
+  if(on) stopLoop(); else startLoop();
+}
+
+function applyReducedMotionOverride(){
+  stopLoop();
+  startLoop();
+}
+
+// ---------- SLIDER UI (mock metric hooks) ----------
+var sliderArea = document.getElementById("sliderArea");
+METRICS.forEach(function(m){
+  var row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML = '<label>'+m.label+'</label><input type="range" min="0" max="100" value="65" id="sl_'+m.key+'">'+
+                   '<span class="v" id="slv_'+m.key+'">65</span>';
+  sliderArea.appendChild(row);
+  row.querySelector("input").addEventListener("input", function(e){
+    var v = (+e.target.value)/100;
+    healthState[m.key] = v;
+    document.getElementById("slv_"+m.key).textContent = e.target.value;
+    recomputeVisualState(); // slow tick — only runs on actual input, not every frame
+  });
+});
+function setAllSliders(v){
+  METRICS.forEach(function(m){
+    healthState[m.key] = v;
+    var s = document.getElementById("sl_"+m.key);
+    if(s) s.value = Math.round(v*100);
+    var lab = document.getElementById("slv_"+m.key);
+    if(lab) lab.textContent = Math.round(v*100);
+  });
+  recomputeVisualState();
+}
+
+startLoop();
+</script>
+</body>
+</html>
