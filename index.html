@@ -415,8 +415,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="hero-row">
         <div class="hero-col">
           <div class="ring" id="orbWrap" onclick="toggleOrbBreakdown()" style="cursor:pointer;width:260px;height:260px;">
-            <canvas id="orbBlastCanvas" width="620" height="620" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:620px;height:620px;pointer-events:none;z-index:0;"></canvas>
-            <canvas id="orbCanvas" width="260" height="260" style="width:260px;height:260px;display:block;position:relative;z-index:1;"></canvas>
+            <canvas id="orbCanvas" width="260" height="260" style="width:260px;height:260px;display:block;"></canvas>
           </div>
           <div id="orbFloatShadow" style="width:128px;height:24px;border-radius:50%;margin-top:-8px;margin-bottom:10px;background:radial-gradient(ellipse at center, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0) 78%);filter:blur(4px);pointer-events:none;"></div>
           <div class="ring-lbl" style="margin-top:0;cursor:pointer;font-family:'Luminari','Papyrus',fantasy;color:var(--ink);opacity:.85;font-size:15px;" onclick="toggleOrbBreakdown()">Orb of Health</div>
@@ -2318,10 +2317,10 @@ function computeHealthOrbScore(){
 // state at the top. Bottom three stops intentionally read as bruised/damaged tissue rather
 // than warm brown, per explicit feedback that bad weeks weren't reading as bad enough.
 var ORB_STOPS=[
-  {pos:0,  core:"#0d0610",mid:"#070409",edge:"#020103",glow:"#220818"},
-  {pos:20, core:"#3a0f2e",mid:"#280a20",edge:"#150512",glow:"#5c1240"},
-  {pos:40, core:"#7a1530",mid:"#5c1026",edge:"#3a0a18",glow:"#9c1838"},
-  {pos:60, core:"#c97a1f",mid:"#a85f16",edge:"#704010",glow:"#c97a1f"},
+  {pos:0,  core:"#050303",mid:"#030202",edge:"#010101",glow:"#180a06"},
+  {pos:20, core:"#241008",mid:"#170a05",edge:"#0a0503",glow:"#3d150a"},
+  {pos:40, core:"#6e2210",mid:"#551a0a",edge:"#330f06",glow:"#8a2c12"},
+  {pos:60, core:"#c2701c",mid:"#a05814",edge:"#6b3a0e",glow:"#c2701c"},
   {pos:80, core:"#ffe34d",mid:"#ffc233",edge:"#f2900a",glow:"#fff066"},
   {pos:100,core:"#fffaf0",mid:"#ffe066",edge:"#7ec8ff",glow:"#a8e0ff"}
 ];
@@ -2370,23 +2369,50 @@ function orbArrivalBoost(){
   if(t>=1){orbArrivalT0=null;return 0;}
   return 1-t; // 1 -> 0 over 700ms, eased by the caller
 }
+var ORB_BLAST_SIZE=620; // canvas is square, this is both width and height
+function getOrbBlastCanvas(){
+  // A standalone canvas appended directly to document.body (same pattern this app already
+  // uses for modals, per the stacking-context rule in MASTER_CONTEXT) rather than nested
+  // inside #orbWrap. It was originally nested there, sized 620x620 to give the blast wave
+  // room to expand to 3.5x the orb's radius -- but #viewport has overflow-x:hidden, and a
+  // 620px-wide element is wider than almost any phone screen, so its left/right edges were
+  // being silently clipped by that ancestor before the ring ever got near full size. A
+  // position:fixed element appended to body escapes ALL ancestor overflow clipping (verified
+  // no ancestor of orbWrap uses `transform`, which is the one thing that would trap a fixed-
+  // position descendant back inside a containing block). Position is recalculated every frame
+  // against the orb's live on-screen location via getBoundingClientRect, so it stays correctly
+  // centered on the orb even if layout shifts.
+  var c=document.getElementById("orbBlastCanvas");
+  if(!c){
+    c=document.createElement("canvas");
+    c.id="orbBlastCanvas";
+    c.width=ORB_BLAST_SIZE;c.height=ORB_BLAST_SIZE;
+    c.style.cssText="position:fixed;width:"+ORB_BLAST_SIZE+"px;height:"+ORB_BLAST_SIZE+"px;pointer-events:none;z-index:0;top:0;left:0;";
+    document.body.appendChild(c);
+  }
+  return c;
+}
 function getOrbBlastCtx(){
-  // Separate, larger (620x620) canvas layered behind the orb's own 260x260 canvas. The orb's
-  // canvas has only 130px from center to its edge, which can't contain a ring that expands to
-  // 3.5x the orb's 84px radius (294px) -- that ring would get clipped out of existence at just
-  // ~11% into its animation. This canvas exists purely to give the blast wave room to actually
-  // expand to its full requested size without touching the orb's own rendering at all.
-  var c=document.getElementById("orbBlastCanvas");if(!c)return null;
+  var c=getOrbBlastCanvas();if(!c)return null;
   return c._blastCtx||(c._blastCtx=c.getContext("2d"));
 }
-var ORB_BLAST_CX=310, ORB_BLAST_CY=310; // center of the 620x620 blast canvas
+var ORB_BLAST_CX=ORB_BLAST_SIZE/2, ORB_BLAST_CY=ORB_BLAST_SIZE/2; // center within the canvas's own local coordinates
+function positionOrbBlastCanvas(canvasEl){
+  var wrap=document.getElementById("orbWrap");if(!wrap)return;
+  var rect=wrap.getBoundingClientRect();
+  var orbScreenCx=rect.left+rect.width/2, orbScreenCy=rect.top+rect.height/2;
+  canvasEl.style.left=(orbScreenCx-ORB_BLAST_SIZE/2)+"px";
+  canvasEl.style.top=(orbScreenCy-ORB_BLAST_SIZE/2)+"px";
+}
 function drawOrbBlastWave(){
-  // Expanding, fading ring(s) on Home-tab arrival, drawn on its own dedicated canvas (see
-  // getOrbBlastCtx above) so it has room to fully expand to the approved 3.5x radius without
-  // ever being clipped. Approved settings: 1500ms duration, 3.5x the orb's radius, single ring,
-  // starting at 0.45 opacity. Eases out (fast start, slows toward the end).
+  // Expanding, fading ring(s) on Home-tab arrival, drawn on its own dedicated body-level canvas
+  // (see getOrbBlastCanvas above) so it has room to fully expand to the approved 3.5x radius
+  // without ever being clipped. Approved settings: 1500ms duration, 3.5x the orb's radius,
+  // single ring, starting at 0.45 opacity. Eases out (fast start, slows toward the end).
+  var canvasEl=getOrbBlastCanvas();
   var ctx=getOrbBlastCtx();if(!ctx)return;
-  ctx.clearRect(0,0,620,620);
+  positionOrbBlastCanvas(canvasEl);
+  ctx.clearRect(0,0,ORB_BLAST_SIZE,ORB_BLAST_SIZE);
   if(orbBlastT0===null)return;
   var now=(typeof performance!=="undefined"?performance.now():Date.now());
   var t=(now-orbBlastT0)/ORB_BLAST_DURATION_MS;
@@ -2457,7 +2483,7 @@ function drawOrbRadiance(ctx,cx,cy,R,score,pulse,boost){
     var shadowAlpha=(1-warmAmt)*(0.36+pulse*0.40+boost*0.20);
     g=ctx.createRadialGradient(cx,cy,R*0.15,cx,cy,radius);
     g.addColorStop(0,_orbHexToRgba(colors.glow,warmAmt*0.18*(0.5+pulse*0.5)+boost*0.10));
-    g.addColorStop(0.42,"rgba(42,8,26,"+(shadowAlpha*0.65)+")");
+    g.addColorStop(0.42,"rgba(36,12,7,"+(shadowAlpha*0.65)+")");
     g.addColorStop(0.78,"rgba(2,1,2,"+shadowAlpha+")");
     g.addColorStop(1,"rgba(0,0,0,0)");
   } else {
@@ -2585,7 +2611,7 @@ function drawOrbShellRim(ctx,cx,cy,R,score,angleOffset){
   ctx.beginPath();ctx.arc(cx,cy,R-1.5,Math.PI*0.05+angleOffset,Math.PI*0.55+angleOffset);ctx.stroke();
   ctx.restore();
 }
-function drawSpinningHighlight(ctx,pivotX,pivotY,angle,R){
+function drawSpinningHighlight(ctx,pivotX,pivotY,angle,R,brightnessMult){
   // A single small, isolated highlight that orbits an off-center pivot point, giving the
   // glass sphere a "spinning on a different axis" look. Deliberately NOT touching the
   // AO/streak/soft-highlight material in drawOrbGlossMaterial above — those are large,
@@ -2593,12 +2619,15 @@ function drawSpinningHighlight(ctx,pivotX,pivotY,angle,R){
   // too much of the sphere in prototyping (produced an ugly dark wedge). This stays isolated:
   // one small round bright dot circling the pivot at a fixed orbit radius, layered on top,
   // inside the same clip as the rest of the gloss material so it never escapes the disc.
+  // brightnessMult (added for score-linked spin) dims the highlight on a bad score; defaults
+  // to full brightness if omitted, so any other call site keeps its old behavior.
+  brightnessMult=brightnessMult===undefined?1:brightnessMult;
   var orbitRadius=R*0.5;
   var hx=pivotX+Math.cos(angle)*orbitRadius;
   var hy=pivotY+Math.sin(angle)*orbitRadius;
   var g=ctx.createRadialGradient(hx,hy,0,hx,hy,R*0.32);
-  g.addColorStop(0,"rgba(255,255,255,0.42)");
-  g.addColorStop(0.5,"rgba(255,255,255,0.14)");
+  g.addColorStop(0,"rgba(255,255,255,"+(0.42*brightnessMult)+")");
+  g.addColorStop(0.5,"rgba(255,255,255,"+(0.14*brightnessMult)+")");
   g.addColorStop(1,"rgba(255,255,255,0)");
   ctx.fillStyle=g;
   ctx.beginPath();ctx.arc(hx,hy,R*0.32,0,Math.PI*2);ctx.fill();
@@ -2613,8 +2642,23 @@ function drawOrbRimPulse(ctx,cx,cy,R,pulse,boost){
 }
 var ORB_CX=130, ORB_CY=130, ORB_R=84;
 var ORB_SPIN_PIVOT_X=1, ORB_SPIN_PIVOT_Y=-75; // approved offset from the orb's own center: 1px right, 75px up
-var ORB_SPIN_RPM=400; // approved spin speed
-var ORB_SPIN_RAD_PER_MS=ORB_SPIN_RPM*Math.PI*2/60000;
+var ORB_SPIN_MIN_RPM=0, ORB_SPIN_MAX_RPM=600; // approved: zero spin at score 0, 600 RPM at score 100
+function orbScoreForSpin(score){
+  // No-data (dormant, score===null) is treated the same as the worst score for spin purposes
+  // -- zero spin -- since that's the closest existing pattern in the app for "nothing logged
+  // yet" (the dormant gray orb state already reads as a non-state rather than a good one).
+  if(score===null||score===undefined)return 0;
+  return Math.max(0,Math.min(100,score));
+}
+function orbSpinRPMForScore(score){
+  var s=orbScoreForSpin(score);
+  return ORB_SPIN_MIN_RPM+(ORB_SPIN_MAX_RPM-ORB_SPIN_MIN_RPM)*(s/100);
+}
+function orbSpinBrightnessForScore(score){
+  var s=orbScoreForSpin(score);
+  // 60%-130% range so a bad score still has a visible (if duller) highlight, never fully dark
+  return 0.6+0.7*(s/100);
+}
 function renderOrbCanvasFrame(){
   var ctx=getOrbCanvasCtx();if(!ctx)return;
   var result=window._lastOrbResult||computeHealthOrbScore();
@@ -2623,6 +2667,7 @@ function renderOrbCanvasFrame(){
   var shimmer=computeOrbShimmer(orbAnim.shimmerPhase);
   var boost=orbArrivalBoost();
   var pivotX=ORB_CX+ORB_SPIN_PIVOT_X, pivotY=ORB_CY+ORB_SPIN_PIVOT_Y;
+  var spinBrightness=orbSpinBrightnessForScore(score);
   ctx.clearRect(0,0,260,260);
   drawOrbBlastWave();
   drawOrbRadiance(ctx,ORB_CX,ORB_CY,ORB_R,score,pulse,boost);
@@ -2630,7 +2675,7 @@ function renderOrbCanvasFrame(){
   ctx.beginPath();ctx.arc(ORB_CX,ORB_CY,ORB_R,0,Math.PI*2);ctx.clip();
   drawOrbSphereBase(ctx,ORB_CX,ORB_CY,ORB_R,score);
   drawOrbGlossMaterial(ctx,ORB_CX,ORB_CY,ORB_R,pulse,shimmer);
-  drawSpinningHighlight(ctx,pivotX,pivotY,orbAnim.spinAngle,ORB_R);
+  drawSpinningHighlight(ctx,pivotX,pivotY,orbAnim.spinAngle,ORB_R,spinBrightness);
   ctx.restore();
   drawOrbShellRim(ctx,ORB_CX,ORB_CY,ORB_R,score,orbAnim.spinAngle);
   drawOrbFresnelRim(ctx,ORB_CX,ORB_CY,ORB_R);
@@ -2642,7 +2687,9 @@ function orbTick(ts){
   var dt=Math.min(48,ts-orbLastTs);orbLastTs=ts;
   orbAnim.phase+=dt*0.0016;
   orbAnim.shimmerPhase+=dt*0.00042; // independent, much slower (~15s period) sweep
-  orbAnim.spinAngle+=dt*ORB_SPIN_RAD_PER_MS; // approved spin speed: 400 RPM
+  var currentScore=(window._lastOrbResult&&window._lastOrbResult.score!==undefined)?window._lastOrbResult.score:null;
+  var rpm=orbSpinRPMForScore(currentScore);
+  orbAnim.spinAngle+=dt*(rpm*Math.PI*2/60000); // score-linked: 0 RPM at score 0, 600 RPM at score 100
   renderOrbCanvasFrame();
   requestAnimationFrame(orbTick);
 }
