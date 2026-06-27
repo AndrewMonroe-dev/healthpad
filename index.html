@@ -2347,7 +2347,7 @@ function orbColorsForScore(score){
    color/intensity. The glossy 3D material (highlight, streak, ambient occlusion, fresnel
    rim) is a CONSTANT property of the artifact, unaffected by health data. Breathing pulse
    is the only animation; nothing orbits or floats. */
-var orbAnim={phase:0,shimmerPhase:0};
+var orbAnim={phase:0,shimmerPhase:0,spinAngle:0};
 // Pure, DOM-free: a slow (~15s period) independent sweep value, 0..1, used to drift the glass
 // streak/secondary highlight across the surface — separate from and much slower than the
 // breathing pulse, per spec ("optional second, much slower 10-20s independent sweep").
@@ -2355,13 +2355,42 @@ function computeOrbShimmer(shimmerPhase){
   return (Math.sin(shimmerPhase)+1)/2;
 }
 var orbArrivalT0=null; // set when the Home tab opens; decays to 0 over ~700ms
-function triggerOrbArrival(){ orbArrivalT0=(typeof performance!=="undefined"?performance.now():Date.now()); }
+var orbBlastT0=null; // same trigger moment as the arrival boost above; decays over ORB_BLAST_DURATION_MS
+var ORB_BLAST_DURATION_MS=1500, ORB_BLAST_MAX_RADIUS_MULT=3.5, ORB_BLAST_RING_COUNT=1, ORB_BLAST_START_OPACITY=0.45;
+function triggerOrbArrival(){
+  var now=(typeof performance!=="undefined"?performance.now():Date.now());
+  orbArrivalT0=now;
+  orbBlastT0=now;
+}
 function orbArrivalBoost(){
   if(orbArrivalT0===null)return 0;
   var now=(typeof performance!=="undefined"?performance.now():Date.now());
   var t=(now-orbArrivalT0)/700;
   if(t>=1){orbArrivalT0=null;return 0;}
   return 1-t; // 1 -> 0 over 700ms, eased by the caller
+}
+function drawOrbBlastWave(ctx,cx,cy,R){
+  // Expanding, fading ring(s) drawn BEHIND the orb (caller draws this before the sphere
+  // itself), simulating a blast-wave/shockwave on Home-tab arrival. Approved settings from
+  // prototyping: 1500ms duration, expands out to 3.5x the orb's radius, single ring, starting
+  // at 0.45 opacity. Eases out (fast start, slows toward the end) rather than constant speed.
+  if(orbBlastT0===null)return;
+  var now=(typeof performance!=="undefined"?performance.now():Date.now());
+  var t=(now-orbBlastT0)/ORB_BLAST_DURATION_MS;
+  if(t>=1){orbBlastT0=null;return;}
+  for(var i=0;i<ORB_BLAST_RING_COUNT;i++){
+    var stagger=i*0.12;
+    var rt=t-stagger;
+    if(rt<0||rt>1)continue;
+    var eased=1-Math.pow(1-rt,2);
+    var radius=R+(R*ORB_BLAST_MAX_RADIUS_MULT-R)*eased;
+    var alpha=ORB_BLAST_START_OPACITY*(1-rt);
+    ctx.save();
+    ctx.strokeStyle="rgba(255,243,208,"+alpha+")";
+    ctx.lineWidth=Math.max(1,3*(1-rt));
+    ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+  }
 }
 var orbLoopRunning=false, orbLastTs=null;
 var _orbGradCache={};
@@ -2525,18 +2554,41 @@ function drawOrbFresnelRim(ctx,cx,cy,R){
   }
   ctx.restore();
 }
-function drawOrbShellRim(ctx,cx,cy,R,score){
+function drawOrbShellRim(ctx,cx,cy,R,score,angleOffset){
   // Shell depth — colored edge stroke + glassy highlight/shadow crescents. Distinct from
   // drawOrbFresnelRim above, which adds the separate hue-shifted prism-edge cue on top.
+  // angleOffset (added per the spin feature) only shifts the crescents' angular position —
+  // the ring itself is always drawn at the true static cx/cy/R, never transformed, since an
+  // earlier prototype attempt that rotated the whole ring via a canvas transform caused it to
+  // visibly detach and orbit away from the sphere instead of staying put.
+  angleOffset=angleOffset||0;
   var colors=orbColorsForScore(score);
   ctx.save();
   ctx.lineWidth=2.5;ctx.strokeStyle=_orbHexToRgba(colors.edge,0.95);
   ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
   ctx.lineWidth=3;ctx.strokeStyle="rgba(255,255,255,0.4)";
-  ctx.beginPath();ctx.arc(cx,cy,R-1.5,Math.PI*1.05,Math.PI*1.55);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,R-1.5,Math.PI*1.05+angleOffset,Math.PI*1.55+angleOffset);ctx.stroke();
   ctx.lineWidth=3;ctx.strokeStyle="rgba(0,0,0,0.4)";
-  ctx.beginPath();ctx.arc(cx,cy,R-1.5,Math.PI*0.05,Math.PI*0.55);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,R-1.5,Math.PI*0.05+angleOffset,Math.PI*0.55+angleOffset);ctx.stroke();
   ctx.restore();
+}
+function drawSpinningHighlight(ctx,pivotX,pivotY,angle,R){
+  // A single small, isolated highlight that orbits an off-center pivot point, giving the
+  // glass sphere a "spinning on a different axis" look. Deliberately NOT touching the
+  // AO/streak/soft-highlight material in drawOrbGlossMaterial above — those are large,
+  // asymmetric gradients, and rotating them around an external pivot dragged them across far
+  // too much of the sphere in prototyping (produced an ugly dark wedge). This stays isolated:
+  // one small round bright dot circling the pivot at a fixed orbit radius, layered on top,
+  // inside the same clip as the rest of the gloss material so it never escapes the disc.
+  var orbitRadius=R*0.5;
+  var hx=pivotX+Math.cos(angle)*orbitRadius;
+  var hy=pivotY+Math.sin(angle)*orbitRadius;
+  var g=ctx.createRadialGradient(hx,hy,0,hx,hy,R*0.32);
+  g.addColorStop(0,"rgba(255,255,255,0.42)");
+  g.addColorStop(0.5,"rgba(255,255,255,0.14)");
+  g.addColorStop(1,"rgba(255,255,255,0)");
+  ctx.fillStyle=g;
+  ctx.beginPath();ctx.arc(hx,hy,R*0.32,0,Math.PI*2);ctx.fill();
 }
 function drawOrbRimPulse(ctx,cx,cy,R,pulse,boost){
   boost=boost||0;
@@ -2547,6 +2599,9 @@ function drawOrbRimPulse(ctx,cx,cy,R,pulse,boost){
   ctx.restore();
 }
 var ORB_CX=130, ORB_CY=130, ORB_R=84;
+var ORB_SPIN_PIVOT_X=1, ORB_SPIN_PIVOT_Y=-75; // approved offset from the orb's own center: 1px right, 75px up
+var ORB_SPIN_RPM=400; // approved spin speed
+var ORB_SPIN_RAD_PER_MS=ORB_SPIN_RPM*Math.PI*2/60000;
 function renderOrbCanvasFrame(){
   var ctx=getOrbCanvasCtx();if(!ctx)return;
   var result=window._lastOrbResult||computeHealthOrbScore();
@@ -2554,14 +2609,17 @@ function renderOrbCanvasFrame(){
   var pulse=computeOrbPulse(result.components,orbAnim.phase);
   var shimmer=computeOrbShimmer(orbAnim.shimmerPhase);
   var boost=orbArrivalBoost();
+  var pivotX=ORB_CX+ORB_SPIN_PIVOT_X, pivotY=ORB_CY+ORB_SPIN_PIVOT_Y;
   ctx.clearRect(0,0,260,260);
+  drawOrbBlastWave(ctx,ORB_CX,ORB_CY,ORB_R);
   drawOrbRadiance(ctx,ORB_CX,ORB_CY,ORB_R,score,pulse,boost);
   ctx.save();
   ctx.beginPath();ctx.arc(ORB_CX,ORB_CY,ORB_R,0,Math.PI*2);ctx.clip();
   drawOrbSphereBase(ctx,ORB_CX,ORB_CY,ORB_R,score);
   drawOrbGlossMaterial(ctx,ORB_CX,ORB_CY,ORB_R,pulse,shimmer);
+  drawSpinningHighlight(ctx,pivotX,pivotY,orbAnim.spinAngle,ORB_R);
   ctx.restore();
-  drawOrbShellRim(ctx,ORB_CX,ORB_CY,ORB_R,score);
+  drawOrbShellRim(ctx,ORB_CX,ORB_CY,ORB_R,score,orbAnim.spinAngle);
   drawOrbFresnelRim(ctx,ORB_CX,ORB_CY,ORB_R);
   drawOrbRimPulse(ctx,ORB_CX,ORB_CY,ORB_R,pulse,boost);
 }
@@ -2571,6 +2629,7 @@ function orbTick(ts){
   var dt=Math.min(48,ts-orbLastTs);orbLastTs=ts;
   orbAnim.phase+=dt*0.0016;
   orbAnim.shimmerPhase+=dt*0.00042; // independent, much slower (~15s period) sweep
+  orbAnim.spinAngle+=dt*ORB_SPIN_RAD_PER_MS; // approved spin speed: 400 RPM
   renderOrbCanvasFrame();
   requestAnimationFrame(orbTick);
 }
