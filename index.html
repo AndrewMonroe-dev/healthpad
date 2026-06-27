@@ -2356,7 +2356,7 @@ function computeOrbShimmer(shimmerPhase){
 }
 var orbArrivalT0=null; // set when the Home tab opens; decays to 0 over ~700ms
 var orbBlastT0=null; // same trigger moment as the arrival boost above; decays over ORB_BLAST_DURATION_MS
-var ORB_BLAST_DURATION_MS=1500, ORB_BLAST_MAX_RADIUS_MULT=3.5, ORB_BLAST_RING_COUNT=1, ORB_BLAST_START_OPACITY=0.45;
+var ORB_BLAST_DURATION_MS=3000, ORB_BLAST_MAX_RADIUS_MULT=1.75, ORB_BLAST_RING_COUNT=1, ORB_BLAST_START_OPACITY=0.45;
 function triggerOrbArrival(){
   var now=(typeof performance!=="undefined"?performance.now():Date.now());
   orbArrivalT0=now;
