@@ -6771,7 +6771,7 @@ function renderFoodLogList(){
 function removeFoodEntry(id){
   DB.foodLog=DB.foodLog.filter(function(e){return e.id!==id;});
   syncNutritionAggregate();
-  renderFoodLogList();renderFoodsTab();trySheetSync();
+  renderFoodLogList();renderFoodsTab();renderHome();trySheetSync();
 }
 function editFoodEntry(id){
   var e=DB.foodLog.find(function(x){return x.id===id;});
@@ -7100,7 +7100,7 @@ function saveNewFood(){
     syncNutritionAggregate();
     var m2=document.getElementById("newFoodModal");if(m2)m2.remove();
     _nfEditId=null;
-    renderFoodLogList();renderFoodsTab();toast(name+" updated.");trySheetSync();
+    renderFoodLogList();renderFoodsTab();renderHome();toast(name+" updated.");trySheetSync();
     return;
   }
   var f=Object.assign({id:Date.now()},fields,{lastUsed:Date.now()});
@@ -7112,7 +7112,7 @@ function saveNewFood(){
   DB.foodLog.push(entry);
   syncNutritionAggregate();
   var m=document.getElementById("newFoodModal");if(m)m.remove();
-  renderFoodLogList();renderFoodsTab();toast(name+" logged and saved to My Foods.");trySheetSync();
+  renderFoodLogList();renderFoodsTab();renderHome();toast(name+" logged and saved to My Foods.");trySheetSync();
 }
 
 /* ============ PROGRAM EXERCISE EDITOR (permanent) ============ */
