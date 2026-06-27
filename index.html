@@ -2356,7 +2356,7 @@ function computeOrbShimmer(shimmerPhase){
 }
 var orbArrivalT0=null; // set when the Home tab opens; decays to 0 over ~700ms
 var orbBlastT0=null; // same trigger moment as the arrival boost above; decays over ORB_BLAST_DURATION_MS
-var ORB_BLAST_DURATION_MS=3000, ORB_BLAST_MAX_RADIUS_MULT=1.75, ORB_BLAST_RING_COUNT=1, ORB_BLAST_START_OPACITY=0.45;
+var ORB_BLAST_DURATION_MS=3000, ORB_BLAST_MAX_RADIUS_MULT=1.75, ORB_BLAST_RING_COUNT=1, ORB_BLAST_START_OPACITY=0.85;
 function triggerOrbArrival(){
   var now=(typeof performance!=="undefined"?performance.now():Date.now());
   orbArrivalT0=now;
@@ -2405,22 +2405,20 @@ function positionOrbBlastCanvas(canvasEl){
   canvasEl.style.top=(orbScreenCy-ORB_BLAST_SIZE/2)+"px";
 }
 function drawOrbBlastWave(){
-  // TEMPORARY DIAGNOSTIC -- not the real effect. Solid, fully opaque, always-on fill,
-  // ignoring orbBlastT0/timing entirely. If this isn't visible on the Home tab, the bug is
-  // that the canvas itself isn't painting/positioned/stacked correctly -- not that the real
-  // ring effect is too subtle. Revert to the real ring logic once this is confirmed visible.
+  // Expanding, fading ring(s) on Home-tab arrival, drawn on its own dedicated body-level canvas
+  // (see getOrbBlastCanvas above). Architecture confirmed working via solid-fill diagnostic.
+  // Ring color now matches the orb's own current score-based color (its "glow" tone) rather
+  // than a fixed white, since a fixed white was blending into a white/cream background.
   var canvasEl=getOrbBlastCanvas();
   var ctx=getOrbBlastCtx();if(!ctx)return;
   positionOrbBlastCanvas(canvasEl);
   ctx.clearRect(0,0,ORB_BLAST_SIZE,ORB_BLAST_SIZE);
-  ctx.fillStyle="rgba(0,255,0,1)";
-  ctx.fillRect(0,0,ORB_BLAST_SIZE,ORB_BLAST_SIZE);
-  return;
-  // eslint-disable-next-line no-unreachable
   if(orbBlastT0===null)return;
   var now=(typeof performance!=="undefined"?performance.now():Date.now());
   var t=(now-orbBlastT0)/ORB_BLAST_DURATION_MS;
   if(t>=1){orbBlastT0=null;return;}
+  var blastScore=(window._lastOrbResult&&window._lastOrbResult.score!==undefined)?window._lastOrbResult.score:null;
+  var blastColors=orbColorsForScore(blastScore);
   for(var i=0;i<ORB_BLAST_RING_COUNT;i++){
     var stagger=i*0.12;
     var rt=t-stagger;
@@ -2429,8 +2427,8 @@ function drawOrbBlastWave(){
     var radius=ORB_R+(ORB_R*ORB_BLAST_MAX_RADIUS_MULT-ORB_R)*eased;
     var alpha=ORB_BLAST_START_OPACITY*(1-rt);
     ctx.save();
-    ctx.strokeStyle="rgba(255,243,208,"+alpha+")";
-    ctx.lineWidth=Math.max(1,3*(1-rt));
+    ctx.strokeStyle=_orbHexToRgba(blastColors.glow,alpha);
+    ctx.lineWidth=Math.max(0.5,1.5*(1-rt));
     ctx.beginPath();ctx.arc(ORB_BLAST_CX,ORB_BLAST_CY,radius,0,Math.PI*2);ctx.stroke();
     ctx.restore();
   }
