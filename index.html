@@ -2229,7 +2229,7 @@ function computeHealthOrbScore(){
   var tgt=getNutTargets();
   var waterTarget=(DB.settings&&DB.settings.waterTarget)||64;
   var proTarget=tgt.proMin||PROTEIN_TARGET;
-  var weights={workout:15,protein:13,sleep:11,fiber:8,water:8,sugar:6,sodium:6,satFat:5,calorie:8,veg:7,potassium:2,calcium:1,weight:7,stress:3};
+  var weights={workout:15,protein:13,sleep:11,fiber:8,water:8,sugar:6,sodium:6,satFat:5,calorie:8,potassium:2,calcium:1,weight:7,stress:3};
 
   function orbEverLogged(field){
     return (DB.nutrition||[]).some(function(r){return (r[field]||0)>0;});
@@ -2241,7 +2241,6 @@ function computeHealthOrbScore(){
     sodium:orbBandScore(weekRows,"sodium",tgt.sodiumMax,"atMost"),
     water:orbEverLogged("water")?orbBandScore(weekRows,"water",waterTarget,"atLeast"):null,
     satFat:orbBandScore(weekRows,"satFat",tgt.satFatMax,"atMost"),
-    veg:orbEverLogged("veg")?orbBandScore(weekRows,"veg",tgt.vegMin,"atLeast"):null,
     potassium:orbEverLogged("potassium")?orbBandScore(weekRows,"potassium",tgt.potassiumMin,"atLeast"):null,
     calcium:orbEverLogged("calcium")?orbBandScore(weekRows,"calcium",tgt.calciumMin,"atLeast"):null,
     calorie:orbCalBandScore(weekRows,tgt.calLow,tgt.calHigh),
@@ -2291,7 +2290,6 @@ function computeHealthOrbScore(){
     sodium:orbBandScore(todayRows,"sodium",tgt.sodiumMax,"atMost"),
     water:orbEverLogged("water")?orbBandScore(todayRows,"water",waterTarget,"atLeast"):null,
     satFat:orbBandScore(todayRows,"satFat",tgt.satFatMax,"atMost"),
-    veg:orbEverLogged("veg")?orbBandScore(todayRows,"veg",tgt.vegMin,"atLeast"):null,
     potassium:orbEverLogged("potassium")?orbBandScore(todayRows,"potassium",tgt.potassiumMin,"atLeast"):null,
     calcium:orbEverLogged("calcium")?orbBandScore(todayRows,"calcium",tgt.calciumMin,"atLeast"):null,
     calorie:orbCalBandScore(todayRows,tgt.calLow,tgt.calHigh),
@@ -2616,7 +2614,6 @@ function toggleOrbBreakdown(){
       {label:"Sleep (week)",val:c.sleep},
       {label:"Stress (this week's check-in)",val:c.stress},
       {label:"Fiber (week)",val:c.fiber},
-      {label:"Vegetable servings (week)",val:c.veg},
       {label:"Sugar (week, under budget)",val:c.sugar},
       {label:"Sodium (week, under budget)",val:c.sodium},
       {label:"Saturated fat (week, under budget)",val:c.satFat},
