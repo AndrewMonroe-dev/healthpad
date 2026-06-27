@@ -415,7 +415,9 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="hero-row">
         <div class="hero-col">
           <div class="ring" id="orbWrap" onclick="toggleOrbBreakdown()" style="cursor:pointer;width:260px;height:260px;">
+            <canvas id="orbSatBack" width="260" height="260" style="width:260px;height:260px;display:block;position:absolute;top:0;left:0;pointer-events:none;"></canvas>
             <canvas id="orbCanvas" width="260" height="260" style="width:260px;height:260px;display:block;"></canvas>
+            <canvas id="orbSatFront" width="260" height="260" style="width:260px;height:260px;display:block;position:absolute;top:0;left:0;pointer-events:none;"></canvas>
           </div>
           <div id="orbFloatShadow" style="width:128px;height:24px;border-radius:50%;margin-top:-8px;margin-bottom:10px;background:radial-gradient(ellipse at center, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0) 78%);filter:blur(4px);pointer-events:none;"></div>
           <div class="ring-lbl" style="margin-top:0;cursor:pointer;font-family:'Luminari','Papyrus',fantasy;color:var(--ink);opacity:.85;font-size:15px;" onclick="toggleOrbBreakdown()">Orb of Health</div>
@@ -2645,6 +2647,139 @@ function drawOrbRimPulse(ctx,cx,cy,R,pulse,boost){
 var ORB_CX=130, ORB_CY=130, ORB_R=84;
 var ORB_SPIN_PIVOT_X=1, ORB_SPIN_PIVOT_Y=-75; // approved offset from the orb's own center: 1px right, 75px up
 var ORB_SPIN_MIN_RPM=0, ORB_SPIN_MAX_RPM=600; // approved: zero spin at score 0, 600 RPM at score 100
+
+/* ============ ORB MICROSATELLITES (ported from approved standalone prototype) ============
+   Small dots orbiting the orb on their own tilted ellipse, each leaving a fading contrail.
+   Everything here is its own visual layer (two dedicated canvases, see HTML: #orbSatBack
+   painted BEFORE orbCanvas, #orbSatFront painted AFTER it) so this can't interfere with the
+   existing orb spin, blast-wave, or radiance/emanation drawing -- those all still own the
+   single orbCanvas exactly as before. Satellite physics (angle advance) is updated once per
+   frame from orbTick using its existing dt, same pattern as orbAnim.spinAngle; drawing happens
+   from renderOrbCanvasFrame using that frame's score, same pattern as everything else there.
+   "Everything relevant feeds the Orb": satellite speed AND direction are themselves a health
+   signifier now, not a fixed constant -- see SAT_RPM_LO/SAT_RPM_HI below. */
+var SAT_COUNT=8, SAT_RADIUS_PX=0.2, SAT_ORBIT_RX=92, SAT_TILT_PCT=0.07, SAT_PLANE_SPREAD_PX=23;
+var SAT_RPM_LO=-20, SAT_RPM_HI=70; // RPM at score 0 (slow, opposite the orb's spin) vs score 100 (fast, same direction)
+var SAT_TRAIL_LEN=22, SAT_TRAIL_WIDTH_PX=0.9, SAT_OPACITY=0.5;
+var satState=[];
+function initSatellites(){
+  satState=[];
+  for(var i=0;i<SAT_COUNT;i++)satState.push({idx:i,angle:Math.random()*Math.PI*2,trailPts:[]});
+}
+initSatellites();
+function satRpmForScore(score){
+  var s=(score===null||score===undefined)?0:Math.max(0,Math.min(100,score));
+  return SAT_RPM_LO+(SAT_RPM_HI-SAT_RPM_LO)*(s/100);
+}
+function updateSatellites(dt,score){
+  var radPerMs=satRpmForScore(score)*Math.PI*2/60000;
+  satState.forEach(function(s){s.angle+=dt*radPerMs;});
+}
+function _satHexToHsl(hex){
+  var c=_orbHexToRgb(hex),r=c.r/255,g=c.g/255,b=c.b/255;
+  var max=Math.max(r,g,b),min=Math.min(r,g,b),h,s,l=(max+min)/2;
+  if(max===min){h=s=0;}else{
+    var d=max-min;
+    s=l>0.5?d/(2-max-min):d/(max+min);
+    if(max===r)h=(g-b)/d+(g<b?6:0);
+    else if(max===g)h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h/=6;
+  }
+  return {h:h,s:s,l:l};
+}
+function _satHslToHex(h,s,l){
+  function hue2rgb(p,q,t){if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;}
+  var r,g,b;
+  if(s===0){r=g=b=l;}else{
+    var q=l<0.5?l*(1+s):l+s-l*s, p=2*l-q;
+    r=hue2rgb(p,q,h+1/3);g=hue2rgb(p,q,h);b=hue2rgb(p,q,h-1/3);
+  }
+  return _orbRgbToHex(r*255,g*255,b*255);
+}
+function satContrastColorsForScore(score){
+  var c=orbColorsForScore(score);
+  var hsl=_satHexToHsl(c.glow);
+  var satHue=(hsl.h+0.5)%1;
+  var satLight=Math.max(0.45,Math.min(0.78,1-hsl.l));
+  var satColor=_satHslToHex(satHue,Math.max(0.55,hsl.s),satLight);
+  var trailLight=Math.min(0.95,satLight+0.18);
+  var trailColor=_satHslToHex(satHue,Math.max(0.35,hsl.s-0.15),trailLight);
+  return {sat:satColor,trail:trailColor};
+}
+function getSatCtx(id){
+  var c=document.getElementById(id);if(!c)return null;
+  var dpr=window.devicePixelRatio||1;
+  if(c._satDpr!==dpr){
+    c.width=260*dpr;c.height=260*dpr;
+    var ctx=c.getContext("2d");
+    ctx.scale(dpr,dpr);
+    c._satDpr=dpr;c._satCtx=ctx;
+  }
+  return c._satCtx||c.getContext("2d");
+}
+function renderSatellites(score){
+  var backCtx=getSatCtx("orbSatBack"), frontCtx=getSatCtx("orbSatFront");
+  if(!backCtx||!frontCtx)return;
+  backCtx.clearRect(0,0,260,260);
+  frontCtx.clearRect(0,0,260,260);
+  var orbitRY=SAT_ORBIT_RX*SAT_TILT_PCT;
+  var colors=satContrastColorsForScore(score);
+  var n=satState.length;
+  // The orbit's wide axis (SAT_ORBIT_RX=92) is bigger than the orb's own radius (ORB_R=84), so
+  // a satellite tagged "back" by depth (z<0) can still sit at a screen position OUTSIDE the
+  // orb's silhouette -- there's nothing opaque there to hide it, so it showed through even
+  // though it was logically "behind." Fix: explicitly clip everything drawn on the back canvas
+  // to exclude the orb's true circle (evenodd rule: full canvas rect minus the orb's circle).
+  // This guarantees a back-tagged satellite is hidden whenever it's actually within the orb's
+  // drawn silhouette, and only visible outside it -- which is the correct behavior either way
+  // (nothing should be erased outside the sphere, since there's no sphere there to hide behind).
+  backCtx.save();
+  backCtx.beginPath();
+  backCtx.rect(0,0,260,260);
+  backCtx.moveTo(ORB_CX+ORB_R,ORB_CY);
+  backCtx.arc(ORB_CX,ORB_CY,ORB_R,0,Math.PI*2,true);
+  backCtx.clip("evenodd");
+  satState.forEach(function(s){
+    var x=ORB_CX+Math.cos(s.angle)*SAT_ORBIT_RX;
+    var planeOffset=(n>1)?(s.idx-(n-1)/2)*SAT_PLANE_SPREAD_PX:0;
+    var y=ORB_CY+planeOffset+Math.sin(s.angle)*orbitRY;
+    // Depth tracks sin(angle), same trig function as y, NOT cos(angle) (which matches x) --
+    // a tilted orbit swaps front/back at the top and bottom of its loop, not left/right.
+    var z=Math.sin(s.angle);
+    s.trailPts.unshift({x:x,y:y,z:z});
+    if(s.trailPts.length>SAT_TRAIL_LEN+1)s.trailPts.length=SAT_TRAIL_LEN+1;
+    function ctxFor(zVal){return zVal>=0?frontCtx:backCtx;}
+    if(SAT_TRAIL_LEN>0){
+      for(var i=1;i<s.trailPts.length;i++){
+        var t=i/s.trailPts.length;
+        var a=SAT_OPACITY*(1-t);
+        var w=Math.max(0.1,SAT_TRAIL_WIDTH_PX*(1-t));
+        var seg=s.trailPts[i-1],segPrev=s.trailPts[i];
+        var c=ctxFor(seg.z);
+        c.save();
+        c.strokeStyle=_orbHexToRgba(colors.trail,a);
+        c.lineWidth=w;
+        c.lineCap="round";
+        c.beginPath();
+        c.moveTo(segPrev.x,segPrev.y);
+        c.lineTo(seg.x,seg.y);
+        c.stroke();
+        c.restore();
+      }
+    }
+    var dotCtx=ctxFor(z);
+    var depthFade=z>=0?1:0.55;
+    dotCtx.save();
+    dotCtx.beginPath();
+    dotCtx.arc(x,y,SAT_RADIUS_PX,0,Math.PI*2);
+    dotCtx.fillStyle=_orbHexToRgba(colors.sat,SAT_OPACITY*depthFade);
+    dotCtx.fill();
+    dotCtx.restore();
+  });
+  backCtx.restore();
+}
+
 function orbScoreForSpin(score){
   // No-data (dormant, score===null) is treated the same as the worst score for spin purposes
   // -- zero spin -- since that's the closest existing pattern in the app for "nothing logged
@@ -2682,6 +2817,7 @@ function renderOrbCanvasFrame(){
   drawOrbShellRim(ctx,ORB_CX,ORB_CY,ORB_R,score,orbAnim.spinAngle);
   drawOrbFresnelRim(ctx,ORB_CX,ORB_CY,ORB_R);
   drawOrbRimPulse(ctx,ORB_CX,ORB_CY,ORB_R,pulse,boost);
+  renderSatellites(score); // own canvases (#orbSatBack/#orbSatFront), doesn't touch ctx above
 }
 function orbTick(ts){
   if(!orbLoopRunning)return;
@@ -2692,6 +2828,7 @@ function orbTick(ts){
   var currentScore=(window._lastOrbResult&&window._lastOrbResult.score!==undefined)?window._lastOrbResult.score:null;
   var rpm=orbSpinRPMForScore(currentScore);
   orbAnim.spinAngle+=dt*(rpm*Math.PI*2/60000); // score-linked: 0 RPM at score 0, 600 RPM at score 100
+  updateSatellites(dt,currentScore); // independent angle advance, own score-linked RPM (see satRpmForScore)
   renderOrbCanvasFrame();
   requestAnimationFrame(orbTick);
 }
