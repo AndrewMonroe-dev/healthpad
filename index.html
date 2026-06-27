@@ -4419,26 +4419,22 @@ function searchOFFByName(query){
   if(!offRateLimitOK()){toast("Searching too fast \u2014 wait a moment and try again");return;}
   var area=document.getElementById("offSearchArea");
   if(area)area.innerHTML='<div class="note dim">Searching\u2026</div>';
-  var offUrl="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(query)+
-    "&search_simple=1&action=process&json=1&page_size=8&fields=product_name,nutriments,code,serving_size";
-  var offPromise=fetch(offUrl)
-    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
-    .then(function(data){return ((data&&data.products)||[]).filter(function(p){return p.product_name;});})
-    .catch(function(){return [];});
-  var fdcPromise=searchFDCByName(query);
+  // Generation counter: if the person keeps typing and a newer search starts, any
+  // late-arriving response from this older search must not overwrite newer results.
+  var gen=++_offSearchGen;
+  var state={fdc:null,off:null}; // null = still in flight, array = settled
 
-  Promise.all([offPromise,fdcPromise]).then(function(results){
-    var offResults=results[0],fdcResults=results[1].filter(function(f){return f.description;});
-    _offLastResults=offResults;
-    _fdcLastResults=fdcResults;
-    if(!area)return;
-    if(!offResults.length&&!fdcResults.length){
+  function renderProgress(){
+    if(!area||gen!==_offSearchGen)return;
+    var fdcResults=state.fdc,offResults=state.off;
+    var fdcDone=fdcResults!==null,offDone=offResults!==null;
+    if(fdcDone&&offDone&&!fdcResults.length&&!offResults.length){
       var hint=(DB.settings&&DB.settings.fdcKey)?"":" Add a USDA FoodData Central key in Setup to also search generic whole foods.";
       area.innerHTML='<div class="note dim">No results for "'+query.replace(/</g,"&lt;")+'".'+hint+'</div>';
       return;
     }
     var html='<div class="note dim" style="margin-bottom:8px;">Results (per 100g \u2014 review before logging):</div>';
-    if(fdcResults.length){
+    if(fdcDone&&fdcResults.length){
       html+=fdcResults.map(function(f,i){
         var cal=f.foodNutrients&&f.foodNutrients.find(function(n){return (n.nutrientName||"").toLowerCase().indexOf("energy")>-1;});
         return '<div class="add-ex-row" onclick="useFDCResult('+i+')" style="padding:12px 4px;border-bottom:1px solid var(--border);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;">'+
@@ -4446,20 +4442,44 @@ function searchOFFByName(query){
           '<div style="font-size:12px;color:var(--faint);font-weight:400;">'+
           (cal?Math.round(cal.value)+" kcal/100g":"no calorie data")+'</div></div>';
       }).join("");
+    }else if(!fdcDone){
+      html+='<div class="note dim" style="padding:8px 4px;">Searching USDA database\u2026</div>';
     }
-    if(offResults.length){
+    if(offDone&&offResults.length){
       html+=offResults.map(function(p,i){
         return '<div class="add-ex-row" onclick="useOFFResult('+i+')" style="padding:12px 4px;border-bottom:1px solid var(--border);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;">'+
           titleCaseFoodName(p.product_name)+' <span class="tag" style="font-size:10px;">OFF</span>'+
           '<div style="font-size:12px;color:var(--faint);font-weight:400;">'+
           (p.nutriments&&p.nutriments["energy-kcal_100g"]!==undefined?Math.round(p.nutriments["energy-kcal_100g"])+" kcal/100g":"no calorie data")+'</div></div>';
       }).join("");
+    }else if(!offDone){
+      html+='<div class="note dim" style="padding:8px 4px;">Searching Open Food Facts\u2026</div>';
     }
     area.innerHTML=html;
-  }).catch(function(){
-    if(area)area.innerHTML='<div class="note dim">Search failed \u2014 check connection and try again.</div>';
+  }
+
+  var offUrl="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(query)+
+    "&search_simple=1&action=process&json=1&page_size=8&fields=product_name,nutriments,code,serving_size";
+  fetch(offUrl)
+    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+    .then(function(data){return ((data&&data.products)||[]).filter(function(p){return p.product_name;});})
+    .catch(function(){return [];})
+    .then(function(offResults){
+      if(gen!==_offSearchGen)return; // a newer search superseded this one, drop it
+      state.off=offResults;
+      _offLastResults=offResults;
+      renderProgress();
+    });
+
+  searchFDCByName(query).then(function(fdcResultsRaw){
+    if(gen!==_offSearchGen)return; // a newer search superseded this one, drop it
+    var fdcResults=fdcResultsRaw.filter(function(f){return f.description;});
+    state.fdc=fdcResults;
+    _fdcLastResults=fdcResults;
+    renderProgress();
   });
 }
+var _offSearchGen=0;
 var _offLastResults=[];
 function useOFFResult(i){
   var p=_offLastResults[i];if(!p)return;
@@ -6761,13 +6781,32 @@ function editFoodEntry(id){
   // current values. editId tells saveNewFood to update this entry in place instead of logging new.
   showNewFoodForm(e,null,id);
 }
+// ---------- KEYBOARD-AWARE VIEWPORT HEIGHT ----------
+// iOS Safari does NOT shrink the layout viewport when the keyboard opens — only the visual
+// viewport shrinks. Anything sized/positioned with plain vh (or even dvh, inconsistently)
+// keeps computing against the full, un-shrunk screen, so a bottom sheet anchored via
+// position:fixed ends up rendered BEHIND the keyboard instead of shrinking to sit above it —
+// that's the "Add Food disappears behind the keyboard" bug. Fix: track the real visible
+// height via the VisualViewport API and expose it as --vvh, which any fixed sheet can size
+// itself against instead of vh/dvh.
+function _updateVvh(){
+  var h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
+  document.documentElement.style.setProperty("--vvh",h+"px");
+}
+_updateVvh();
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize",_updateVvh);
+  window.visualViewport.addEventListener("scroll",_updateVvh);
+}
+window.addEventListener("resize",_updateVvh);
+
 function showAddFoodModal(){
   var recent=DB.myFoods.slice().sort(function(a,b){return (b.lastUsed||0)-(a.lastUsed||0);});
   var modal=document.createElement("div");
   modal.id="addFoodModal";
-  modal.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);";
+  modal.style.cssText="position:fixed;top:0;left:0;width:100%;height:var(--vvh,100vh);background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);";
   modal.innerHTML=
-    '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:75vh;max-height:75dvh;display:flex;flex-direction:column;color:var(--ink);box-sizing:border-box;">'+
+    '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:calc(var(--vvh,100vh) * 0.75);display:flex;flex-direction:column;color:var(--ink);box-sizing:border-box;">'+
     '<div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'+
       '<div style="font-weight:700;font-size:16px;">Add Food</div>'+
       '<button data-close="addFoodModal" onclick="closeExModal(this.dataset.close)" style="background:none;border:none;font-size:22px;color:var(--faint);cursor:pointer;padding:4px;">&#x2715;</button>'+
@@ -8241,7 +8280,16 @@ function openDietPopup(){
     h+='<div style="font-size:14px;color:var(--ink2);line-height:1.6;">'+f.tip+'</div></div>';
   });
   document.getElementById("dietPopupContent").innerHTML=h;
-  document.getElementById("dietPopup").style.display="flex";
+  var pop=document.getElementById("dietPopup");
+  // dietPopup is static markup that originally lived inside .app, which has its own
+  // position:relative+z-index:1 stacking context. That trapped the popup's z-index:150 so it
+  // could never out-rank the bottom nav bar's z-index:50, since the nav sits OUTSIDE .app as a
+  // body-level sibling — from the root context's point of view, the entire .app (and everything
+  // 150-deep inside it) is just "z-index 1", which loses to nav's "z-index 50" every time. Every
+  // other modal in this app is already appended straight to body for exactly this reason; this
+  // moves dietPopup there too, once, so its real z-index finally applies.
+  if(pop&&pop.parentNode!==document.body)document.body.appendChild(pop);
+  pop.style.display="flex";
 }
 function closeDietPopup(){document.getElementById("dietPopup").style.display="none";}
 
