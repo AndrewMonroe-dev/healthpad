@@ -2405,14 +2405,18 @@ function positionOrbBlastCanvas(canvasEl){
   canvasEl.style.top=(orbScreenCy-ORB_BLAST_SIZE/2)+"px";
 }
 function drawOrbBlastWave(){
-  // Expanding, fading ring(s) on Home-tab arrival, drawn on its own dedicated body-level canvas
-  // (see getOrbBlastCanvas above) so it has room to fully expand to the approved 3.5x radius
-  // without ever being clipped. Approved settings: 1500ms duration, 3.5x the orb's radius,
-  // single ring, starting at 0.45 opacity. Eases out (fast start, slows toward the end).
+  // TEMPORARY DIAGNOSTIC -- not the real effect. Solid, fully opaque, always-on fill,
+  // ignoring orbBlastT0/timing entirely. If this isn't visible on the Home tab, the bug is
+  // that the canvas itself isn't painting/positioned/stacked correctly -- not that the real
+  // ring effect is too subtle. Revert to the real ring logic once this is confirmed visible.
   var canvasEl=getOrbBlastCanvas();
   var ctx=getOrbBlastCtx();if(!ctx)return;
   positionOrbBlastCanvas(canvasEl);
   ctx.clearRect(0,0,ORB_BLAST_SIZE,ORB_BLAST_SIZE);
+  ctx.fillStyle="rgba(0,255,0,1)";
+  ctx.fillRect(0,0,ORB_BLAST_SIZE,ORB_BLAST_SIZE);
+  return;
+  // eslint-disable-next-line no-unreachable
   if(orbBlastT0===null)return;
   var now=(typeof performance!=="undefined"?performance.now():Date.now());
   var t=(now-orbBlastT0)/ORB_BLAST_DURATION_MS;
