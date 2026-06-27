@@ -2658,9 +2658,14 @@ var ORB_SPIN_MIN_RPM=0, ORB_SPIN_MAX_RPM=600; // approved: zero spin at score 0,
    from renderOrbCanvasFrame using that frame's score, same pattern as everything else there.
    "Everything relevant feeds the Orb": satellite speed AND direction are themselves a health
    signifier now, not a fixed constant -- see SAT_RPM_LO/SAT_RPM_HI below. */
-var SAT_COUNT=8, SAT_RADIUS_PX=0.2, SAT_ORBIT_RX=92, SAT_TILT_PCT=0.07, SAT_PLANE_SPREAD_PX=23;
+var SAT_COUNT=8, SAT_RADIUS_PX=1, SAT_ORBIT_RX=92, SAT_TILT_PCT=0.07, SAT_PLANE_SPREAD_PX=23;
 var SAT_RPM_LO=-20, SAT_RPM_HI=70; // RPM at score 0 (slow, opposite the orb's spin) vs score 100 (fast, same direction)
-var SAT_TRAIL_LEN=22, SAT_TRAIL_WIDTH_PX=0.9, SAT_OPACITY=0.5;
+var SAT_TRAIL_LEN_LO=6, SAT_TRAIL_LEN_HI=30; // contrail length is itself a health signifier now: short and stubby at score 0, long at score 100
+var SAT_TRAIL_WIDTH_PX=0.9, SAT_OPACITY=0.5;
+function satTrailLenForScore(score){
+  var s=(score===null||score===undefined)?0:Math.max(0,Math.min(100,score));
+  return Math.round(SAT_TRAIL_LEN_LO+(SAT_TRAIL_LEN_HI-SAT_TRAIL_LEN_LO)*(s/100));
+}
 var satState=[];
 function initSatellites(){
   satState=[];
@@ -2701,9 +2706,9 @@ function satContrastColorsForScore(score){
   var c=orbColorsForScore(score);
   var hsl=_satHexToHsl(c.glow);
   var satHue=(hsl.h+0.5)%1;
-  var satLight=Math.max(0.45,Math.min(0.78,1-hsl.l));
+  var satLight=Math.max(0.45,Math.min(0.72,1-hsl.l));
   var satColor=_satHslToHex(satHue,Math.max(0.55,hsl.s),satLight);
-  var trailLight=Math.min(0.95,satLight+0.18);
+  var trailLight=Math.min(0.85,satLight+0.18);
   var trailColor=_satHslToHex(satHue,Math.max(0.35,hsl.s-0.15),trailLight);
   return {sat:satColor,trail:trailColor};
 }
@@ -2725,6 +2730,7 @@ function renderSatellites(score){
   frontCtx.clearRect(0,0,260,260);
   var orbitRY=SAT_ORBIT_RX*SAT_TILT_PCT;
   var colors=satContrastColorsForScore(score);
+  var trailLen=satTrailLenForScore(score);
   var n=satState.length;
   // The orbit's wide axis (SAT_ORBIT_RX=92) is bigger than the orb's own radius (ORB_R=84), so
   // a satellite tagged "back" by depth (z<0) can still sit at a screen position OUTSIDE the
@@ -2748,9 +2754,15 @@ function renderSatellites(score){
     // a tilted orbit swaps front/back at the top and bottom of its loop, not left/right.
     var z=Math.sin(s.angle);
     s.trailPts.unshift({x:x,y:y,z:z});
-    if(s.trailPts.length>SAT_TRAIL_LEN+1)s.trailPts.length=SAT_TRAIL_LEN+1;
+    if(s.trailPts.length>trailLen+1)s.trailPts.length=trailLen+1;
     function ctxFor(zVal){return zVal>=0?frontCtx:backCtx;}
-    if(SAT_TRAIL_LEN>0){
+    // Dark halo behind every trail/dot draw, same lesson as the blast-wave fix from the earlier
+    // session: a light-colored effect can vanish against a light-colored background even at high
+    // opacity. Rather than keep tuning the satellite/trail colors to dodge whatever background
+    // they land on (the app's cream/white surfaces, AND the orb's own bright high-score state),
+    // a thin dark outline drawn first guarantees contrast no matter what's underneath -- same
+    // principle as subtitle text always getting a dark outline regardless of the video frame.
+    if(trailLen>0){
       for(var i=1;i<s.trailPts.length;i++){
         var t=i/s.trailPts.length;
         var a=SAT_OPACITY*(1-t);
@@ -2758,9 +2770,15 @@ function renderSatellites(score){
         var seg=s.trailPts[i-1],segPrev=s.trailPts[i];
         var c=ctxFor(seg.z);
         c.save();
+        c.strokeStyle=_orbHexToRgba("#140d08",a*0.55);
+        c.lineWidth=w+0.6;
+        c.lineCap="round";
+        c.beginPath();
+        c.moveTo(segPrev.x,segPrev.y);
+        c.lineTo(seg.x,seg.y);
+        c.stroke();
         c.strokeStyle=_orbHexToRgba(colors.trail,a);
         c.lineWidth=w;
-        c.lineCap="round";
         c.beginPath();
         c.moveTo(segPrev.x,segPrev.y);
         c.lineTo(seg.x,seg.y);
@@ -2771,6 +2789,10 @@ function renderSatellites(score){
     var dotCtx=ctxFor(z);
     var depthFade=z>=0?1:0.55;
     dotCtx.save();
+    dotCtx.beginPath();
+    dotCtx.arc(x,y,SAT_RADIUS_PX+0.6,0,Math.PI*2);
+    dotCtx.fillStyle=_orbHexToRgba("#140d08",SAT_OPACITY*depthFade*0.55);
+    dotCtx.fill();
     dotCtx.beginPath();
     dotCtx.arc(x,y,SAT_RADIUS_PX,0,Math.PI*2);
     dotCtx.fillStyle=_orbHexToRgba(colors.sat,SAT_OPACITY*depthFade);
