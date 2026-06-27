@@ -415,7 +415,8 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <div class="hero-row">
         <div class="hero-col">
           <div class="ring" id="orbWrap" onclick="toggleOrbBreakdown()" style="cursor:pointer;width:260px;height:260px;">
-            <canvas id="orbCanvas" width="260" height="260" style="width:260px;height:260px;display:block;"></canvas>
+            <canvas id="orbBlastCanvas" width="620" height="620" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:620px;height:620px;pointer-events:none;z-index:0;"></canvas>
+            <canvas id="orbCanvas" width="260" height="260" style="width:260px;height:260px;display:block;position:relative;z-index:1;"></canvas>
           </div>
           <div id="orbFloatShadow" style="width:128px;height:24px;border-radius:50%;margin-top:-8px;margin-bottom:10px;background:radial-gradient(ellipse at center, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0) 78%);filter:blur(4px);pointer-events:none;"></div>
           <div class="ring-lbl" style="margin-top:0;cursor:pointer;font-family:'Luminari','Papyrus',fantasy;color:var(--ink);opacity:.85;font-size:15px;" onclick="toggleOrbBreakdown()">Orb of Health</div>
@@ -2369,11 +2370,23 @@ function orbArrivalBoost(){
   if(t>=1){orbArrivalT0=null;return 0;}
   return 1-t; // 1 -> 0 over 700ms, eased by the caller
 }
-function drawOrbBlastWave(ctx,cx,cy,R){
-  // Expanding, fading ring(s) drawn BEHIND the orb (caller draws this before the sphere
-  // itself), simulating a blast-wave/shockwave on Home-tab arrival. Approved settings from
-  // prototyping: 1500ms duration, expands out to 3.5x the orb's radius, single ring, starting
-  // at 0.45 opacity. Eases out (fast start, slows toward the end) rather than constant speed.
+function getOrbBlastCtx(){
+  // Separate, larger (620x620) canvas layered behind the orb's own 260x260 canvas. The orb's
+  // canvas has only 130px from center to its edge, which can't contain a ring that expands to
+  // 3.5x the orb's 84px radius (294px) -- that ring would get clipped out of existence at just
+  // ~11% into its animation. This canvas exists purely to give the blast wave room to actually
+  // expand to its full requested size without touching the orb's own rendering at all.
+  var c=document.getElementById("orbBlastCanvas");if(!c)return null;
+  return c._blastCtx||(c._blastCtx=c.getContext("2d"));
+}
+var ORB_BLAST_CX=310, ORB_BLAST_CY=310; // center of the 620x620 blast canvas
+function drawOrbBlastWave(){
+  // Expanding, fading ring(s) on Home-tab arrival, drawn on its own dedicated canvas (see
+  // getOrbBlastCtx above) so it has room to fully expand to the approved 3.5x radius without
+  // ever being clipped. Approved settings: 1500ms duration, 3.5x the orb's radius, single ring,
+  // starting at 0.45 opacity. Eases out (fast start, slows toward the end).
+  var ctx=getOrbBlastCtx();if(!ctx)return;
+  ctx.clearRect(0,0,620,620);
   if(orbBlastT0===null)return;
   var now=(typeof performance!=="undefined"?performance.now():Date.now());
   var t=(now-orbBlastT0)/ORB_BLAST_DURATION_MS;
@@ -2383,12 +2396,12 @@ function drawOrbBlastWave(ctx,cx,cy,R){
     var rt=t-stagger;
     if(rt<0||rt>1)continue;
     var eased=1-Math.pow(1-rt,2);
-    var radius=R+(R*ORB_BLAST_MAX_RADIUS_MULT-R)*eased;
+    var radius=ORB_R+(ORB_R*ORB_BLAST_MAX_RADIUS_MULT-ORB_R)*eased;
     var alpha=ORB_BLAST_START_OPACITY*(1-rt);
     ctx.save();
     ctx.strokeStyle="rgba(255,243,208,"+alpha+")";
     ctx.lineWidth=Math.max(1,3*(1-rt));
-    ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(ORB_BLAST_CX,ORB_BLAST_CY,radius,0,Math.PI*2);ctx.stroke();
     ctx.restore();
   }
 }
@@ -2611,7 +2624,7 @@ function renderOrbCanvasFrame(){
   var boost=orbArrivalBoost();
   var pivotX=ORB_CX+ORB_SPIN_PIVOT_X, pivotY=ORB_CY+ORB_SPIN_PIVOT_Y;
   ctx.clearRect(0,0,260,260);
-  drawOrbBlastWave(ctx,ORB_CX,ORB_CY,ORB_R);
+  drawOrbBlastWave();
   drawOrbRadiance(ctx,ORB_CX,ORB_CY,ORB_R,score,pulse,boost);
   ctx.save();
   ctx.beginPath();ctx.arc(ORB_CX,ORB_CY,ORB_R,0,Math.PI*2);ctx.clip();
