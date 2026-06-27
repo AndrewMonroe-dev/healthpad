@@ -59,6 +59,11 @@ input,select,textarea{-webkit-user-select:text;user-select:text;}
 /* VIEWPORT + VIEWS */
 #viewport{overflow-x:hidden;position:relative;}
 .view{display:none;padding:calc(env(safe-area-inset-top) + 62px) 16px calc(env(safe-area-inset-bottom) + 96px);}
+/* Home tab only: a subtle gradient, a bit darker near the top of the page, fading to nothing by
+   ~320px down. Layered with the existing flat --bg color rather than replacing it, so this still
+   composites correctly if a background photo is ever added to #v-home later -- that would just
+   become a third layer underneath this gradient, not a conflict with it. */
+#v-home{background:linear-gradient(to bottom, rgba(20,13,8,0.07), rgba(20,13,8,0) 320px), var(--bg);}
 .view.active{display:block;}
 @keyframes slideInR{from{opacity:.5;transform:translateX(100%);}to{opacity:1;transform:translateX(0);}}
 @keyframes slideInL{from{opacity:.5;transform:translateX(-100%);}to{opacity:1;transform:translateX(0);}}
@@ -1920,6 +1925,9 @@ function nav(v){
   var order=["home","foods","train","log","prog","setup"];
   var ni=order.indexOf(v),ci=order.indexOf(currentTab);
   var dir=ni>=ci?1:-1;
+  var leavingTab=currentTab;
+  currentTab=v; // set before any render*() calls below, so they see the correct/new tab
+  if(leavingTab==="home"&&v!=="home")clearHomeGradientFromAppbar();
   document.querySelectorAll(".view").forEach(function(x){x.classList.remove("active");});
   var el=document.getElementById("v-"+v);
   el.classList.add("active");
@@ -1956,7 +1964,6 @@ function nav(v){
     // Staggered rise-in for top-level cards on the destination view
     applyStaggerIn(el);
   }
-  currentTab=v;
   try{navigator.vibrate&&navigator.vibrate(8);}catch(e){}
 }
 function applyStaggerIn(viewEl){
@@ -2344,6 +2351,56 @@ function orbColorsForScore(score){
   return {core:last.core,mid:last.mid,edge:last.edge,glow:last.glow,dormant:false};
 }
 
+/* ============ HOME TAB BACKGROUND GRADIENT (approved values from standalone prototype) ============
+   Same keyframe-and-lerp pattern as ORB_STOPS above, but a separate ramp -- this is deliberately
+   NOT the orb's own colors, since the gradient needs to contrast against the orb, not match it.
+   Architecture note on the seam fix: the real appbar is position:fixed with its own solid-ish
+   blurred background (rgba(...,0.88)), sitting ABOVE the Home tab's content in z-order. A
+   gradient living only inside #v-home can never show through that, which is why there was a
+   hard line at the appbar's bottom border. Fix: while on the Home tab, the appbar's background
+   is swapped to match the TOP color of this same gradient (still blurred), so the two elements
+   read as one continuous gradient instead of two different flat colors meeting at a seam. Other
+   tabs are unaffected -- nav() restores the appbar's normal background when leaving Home. */
+var GRAD_STOPS=[
+  {pos:0,  top:"#000000", mid:"#000000"},
+  {pos:20, top:"#862009", mid:"#352b27"},
+  {pos:40, top:"#351103", mid:"#eb0505"},
+  {pos:60, top:"#5e4108", mid:"#f15704"},
+  {pos:80, top:"#fec339", mid:"#3f6aa0"},
+  {pos:100,top:"#05ffcd", mid:"#ffea00"}
+];
+var GRAD_FADE_HEIGHT_PX=600, GRAD_MAX_OPACITY=0.60;
+function gradColorsForScore(score){
+  if(score===null||score===undefined)score=0; // no-data state reads as the worst case, same convention as orb spin
+  score=Math.max(0,Math.min(100,score));
+  for(var i=0;i<GRAD_STOPS.length-1;i++){
+    var a=GRAD_STOPS[i],b=GRAD_STOPS[i+1];
+    if(score>=a.pos&&score<=b.pos){
+      var t=(score-a.pos)/(b.pos-a.pos);
+      return {top:_orbHexLerp(a.top,b.top,t),mid:_orbHexLerp(a.mid,b.mid,t)};
+    }
+  }
+  var last=GRAD_STOPS[GRAD_STOPS.length-1];
+  return {top:last.top,mid:last.mid};
+}
+function applyHomeGradient(score){
+  var vhome=document.getElementById("v-home");
+  if(!vhome)return;
+  var colors=gradColorsForScore(score);
+  vhome.style.background="linear-gradient(to bottom, "+
+    _orbHexToRgba(colors.top,GRAD_MAX_OPACITY)+" 0%, "+
+    _orbHexToRgba(colors.mid,GRAD_MAX_OPACITY*0.6)+" 55%, "+
+    _orbHexToRgba(colors.mid,0)+" "+GRAD_FADE_HEIGHT_PX+"px), var(--bg)";
+  var appbar=document.querySelector(".appbar");
+  if(appbar&&currentTab==="home"){
+    appbar.style.background=_orbHexToRgba(colors.top,GRAD_MAX_OPACITY);
+  }
+}
+function clearHomeGradientFromAppbar(){
+  var appbar=document.querySelector(".appbar");
+  if(appbar)appbar.style.background=""; // revert to the default CSS rule for non-Home tabs
+}
+
 /* ============ ORB CANVAS ENGINE (ported from standalone prototype) ============
    Only TWO things encode mood: color tint (orbColorsForScore) and the outer emanation's
    color/intensity. The glossy 3D material (highlight, streak, ambient occlusion, fresnel
@@ -2658,7 +2715,7 @@ var ORB_SPIN_MIN_RPM=0, ORB_SPIN_MAX_RPM=600; // approved: zero spin at score 0,
    from renderOrbCanvasFrame using that frame's score, same pattern as everything else there.
    "Everything relevant feeds the Orb": satellite speed AND direction are themselves a health
    signifier now, not a fixed constant -- see SAT_RPM_LO/SAT_RPM_HI below. */
-var SAT_COUNT=8, SAT_RADIUS_PX=1, SAT_ORBIT_RX=92, SAT_TILT_PCT=0.07, SAT_PLANE_SPREAD_PX=23;
+var SAT_COUNT=8, SAT_RADIUS_PX=1.5, SAT_ORBIT_RX=92, SAT_TILT_PCT=0.07, SAT_PLANE_SPREAD_PX=23;
 var SAT_RPM_LO=-20, SAT_RPM_HI=70; // RPM at score 0 (slow, opposite the orb's spin) vs score 100 (fast, same direction)
 var SAT_TRAIL_LEN_LO=6, SAT_TRAIL_LEN_HI=30; // contrail length is itself a health signifier now: short and stubby at score 0, long at score 100
 var SAT_TRAIL_WIDTH_PX=0.9, SAT_OPACITY=0.5;
@@ -2702,15 +2759,23 @@ function _satHslToHex(h,s,l){
   }
   return _orbRgbToHex(r*255,g*255,b*255);
 }
+// Satellites now read as a fixed bright yellow-white "ember" or mote of light, rather than a
+// color derived from the orb's own health-state hue. The color itself stays constant; only its
+// INTENSITY responds to score, and only at the bad end -- per spec, "only dim when score is
+// pretty bad," not a smooth fade across the whole range. SAT_EMBER_DIM_THRESHOLD is the score
+// below which dimming kicks in; above it, full brightness regardless of how good the score gets.
+var SAT_EMBER_CORE="#fff4d2";   // bright warm white-yellow, the satellite dot itself
+var SAT_EMBER_TRAIL="#ffd966";  // slightly more saturated gold, the fading contrail behind it
+var SAT_EMBER_DIM_THRESHOLD=35; // below this score, intensity ramps down
+var SAT_EMBER_MIN_INTENSITY=0.45; // floor at score 0 -- dim, never fully invisible
+function satEmberIntensityForScore(score){
+  var s=(score===null||score===undefined)?0:Math.max(0,Math.min(100,score));
+  if(s>=SAT_EMBER_DIM_THRESHOLD)return 1;
+  var t=s/SAT_EMBER_DIM_THRESHOLD;
+  return SAT_EMBER_MIN_INTENSITY+(1-SAT_EMBER_MIN_INTENSITY)*t;
+}
 function satContrastColorsForScore(score){
-  var c=orbColorsForScore(score);
-  var hsl=_satHexToHsl(c.glow);
-  var satHue=(hsl.h+0.5)%1;
-  var satLight=Math.max(0.45,Math.min(0.72,1-hsl.l));
-  var satColor=_satHslToHex(satHue,Math.max(0.55,hsl.s),satLight);
-  var trailLight=Math.min(0.85,satLight+0.18);
-  var trailColor=_satHslToHex(satHue,Math.max(0.35,hsl.s-0.15),trailLight);
-  return {sat:satColor,trail:trailColor};
+  return {sat:SAT_EMBER_CORE, trail:SAT_EMBER_TRAIL, intensity:satEmberIntensityForScore(score)};
 }
 function getSatCtx(id){
   var c=document.getElementById(id);if(!c)return null;
@@ -2777,7 +2842,7 @@ function renderSatellites(score){
         c.moveTo(segPrev.x,segPrev.y);
         c.lineTo(seg.x,seg.y);
         c.stroke();
-        c.strokeStyle=_orbHexToRgba(colors.trail,a);
+        c.strokeStyle=_orbHexToRgba(colors.trail,a*colors.intensity);
         c.lineWidth=w;
         c.beginPath();
         c.moveTo(segPrev.x,segPrev.y);
@@ -2795,7 +2860,7 @@ function renderSatellites(score){
     dotCtx.fill();
     dotCtx.beginPath();
     dotCtx.arc(x,y,SAT_RADIUS_PX,0,Math.PI*2);
-    dotCtx.fillStyle=_orbHexToRgba(colors.sat,SAT_OPACITY*depthFade);
+    dotCtx.fillStyle=_orbHexToRgba(colors.sat,SAT_OPACITY*depthFade*colors.intensity);
     dotCtx.fill();
     dotCtx.restore();
   });
@@ -2872,6 +2937,7 @@ window.addEventListener("focus",startOrbLoop);
 function renderHealthOrb(){
   var wrap=document.getElementById("orbWrap");if(!wrap)return;
   window._lastOrbResult=computeHealthOrbScore();
+  applyHomeGradient(window._lastOrbResult.score);
   if(!ringReducedMotion())triggerOrbArrival(); // brief emphasis pulse so the orb reads as the
                                                 // Home tab's focal centerpiece on every arrival
   if(!orbLoopRunning)startOrbLoop();
@@ -4707,7 +4773,8 @@ function searchOFFByName(query){
     var fdcDone=fdcResults!==null,offDone=offResults!==null;
     if(fdcDone&&offDone&&!fdcResults.length&&!offResults.length){
       var hint=(DB.settings&&DB.settings.fdcKey)?"":" Add a USDA FoodData Central key in Setup to also search generic whole foods.";
-      area.innerHTML='<div class="note dim">No results for "'+query.replace(/</g,"&lt;")+'".'+hint+'</div>';
+      var offHint=state.offTimedOut?" Open Food Facts also didn\u2019t respond in time \u2014 their search service may be down.":"";
+      area.innerHTML='<div class="note dim">No results for "'+query.replace(/</g,"&lt;")+'".'+hint+offHint+'</div>';
       return;
     }
     var html='<div class="note dim" style="margin-bottom:8px;">Results (per 100g \u2014 review before logging):</div>';
@@ -4731,19 +4798,35 @@ function searchOFFByName(query){
       }).join("");
     }else if(!offDone){
       html+='<div class="note dim" style="padding:8px 4px;">Searching Open Food Facts\u2026</div>';
+    }else if(state.offTimedOut){
+      html+='<div class="note dim" style="padding:8px 4px;">Open Food Facts didn\u2019t respond in time \u2014 their search service may be down. USDA results above are unaffected.</div>';
     }
     area.innerHTML=html;
   }
 
   var offUrl="https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(query)+
     "&search_simple=1&action=process&json=1&page_size=8&fields=product_name,nutriments,code,serving_size";
-  fetch(offUrl)
-    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+  // OFF's legacy search backend has been reported failing/slow at the infrastructure level
+  // (intermittent global 503s on cgi/search.pl, confirmed independently, not specific to this
+  // app). Without a timeout, a degraded OFF server can leave the UI stuck on "Searching..."
+  // indefinitely. A hard 4-second abort means USDA results (which come back fast and reliably)
+  // are never held hostage by OFF being slow, and the person gets a clear answer either way
+  // instead of an open-ended spinner.
+  var offTimedOut=false;
+  var offController=(typeof AbortController!=="undefined")?new AbortController():null;
+  var offTimeoutId=offController?setTimeout(function(){offController.abort();},4000):null;
+  fetch(offUrl, offController?{signal:offController.signal}:{})
+    .then(function(r){if(offTimeoutId)clearTimeout(offTimeoutId);if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
     .then(function(data){return ((data&&data.products)||[]).filter(function(p){return p.product_name;});})
-    .catch(function(){return [];})
+    .catch(function(err){
+      if(offTimeoutId)clearTimeout(offTimeoutId);
+      if(err&&err.name==="AbortError")offTimedOut=true;
+      return [];
+    })
     .then(function(offResults){
       if(gen!==_offSearchGen)return; // a newer search superseded this one, drop it
       state.off=offResults;
+      state.offTimedOut=offTimedOut;
       _offLastResults=offResults;
       renderProgress();
     });
