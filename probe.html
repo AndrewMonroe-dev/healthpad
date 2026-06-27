@@ -1,0 +1,136 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OFF Search API Probe</title>
+<style>
+  body{background:#111;color:#eee;font-family:-apple-system,Helvetica,Arial,sans-serif;margin:0;padding:16px;max-width:680px;margin:0 auto;}
+  h2{font-size:16px;margin:22px 0 8px;border-bottom:1px solid #333;padding-bottom:6px;}
+  h3{font-size:13px;color:#aaa;margin:14px 0 6px;}
+  input{background:#1b1b1b;border:1px solid #333;color:#eee;padding:8px 10px;border-radius:6px;font-size:14px;width:160px;}
+  button{background:#2a4d7a;color:#fff;border:none;padding:9px 14px;border-radius:6px;font-size:13px;cursor:pointer;margin:4px 4px 4px 0;}
+  button:hover{background:#3a619a;}
+  button.go{background:#3a7a4d;}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+  .result{background:#1b1b1b;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12.5px;}
+  .result .url{color:#7ab8ff;word-break:break-all;font-family:monospace;font-size:11px;margin-bottom:6px;}
+  .result .status{font-weight:700;margin-bottom:4px;}
+  .status.ok{color:#6fd17a;}
+  .status.err{color:#e6645a;}
+  .status.cors{color:#e6b25a;}
+  pre{background:#0c0c0c;border-radius:6px;padding:8px;font-size:11px;overflow-x:auto;max-height:280px;margin:6px 0 0;white-space:pre-wrap;word-break:break-word;}
+  .note{color:#888;font-size:12px;margin:4px 0 14px;}
+  .timing{color:#bbb;font-size:11.5px;}
+</style>
+</head>
+<body>
+
+<h2>OFF Search API Probe</h2>
+<p class="note">
+  Tests several guessed request shapes for the new search.openfoodfacts.org service, since I
+  couldn't verify the exact format from documentation alone (their docs site blocks automated
+  fetches). Also runs the current legacy endpoint and USDA FDC side by side so you can compare
+  actual response times on your own connection. Nothing here touches the real app.
+</p>
+
+<div class="row">
+  <input id="query" value="apple" placeholder="search term">
+  <input id="pageSize" value="5" placeholder="page size" style="width:80px;">
+  <button class="go" onclick="runAll()">Run all tests</button>
+</div>
+
+<div id="results"></div>
+
+<script>
+function fmtMs(ms){return ms.toFixed(0)+"ms";}
+
+function makeResultBlock(label, url){
+  var div=document.createElement("div");
+  div.className="result";
+  div.innerHTML='<div class="status">'+label+' \u2014 <span class="timing">running\u2026</span></div>'+
+    '<div class="url">'+url+'</div><pre>(waiting)</pre>';
+  document.getElementById("results").appendChild(div);
+  return div;
+}
+
+function renderOutcome(div, outcome){
+  var statusEl=div.querySelector(".status");
+  var pre=div.querySelector("pre");
+  var cls=outcome.kind==="ok"?"ok":(outcome.kind==="cors"?"cors":"err");
+  statusEl.innerHTML=statusEl.innerHTML.split(" \u2014 ")[0]+' \u2014 <span class="status '+cls+'">'+outcome.label+'</span> <span class="timing">('+fmtMs(outcome.ms)+')</span>';
+  pre.textContent=outcome.body;
+}
+
+function timedFetch(url, opts){
+  var t0=performance.now();
+  return fetch(url, opts).then(function(r){
+    var ms=performance.now()-t0;
+    return r.text().then(function(text){
+      var parsed=null, parseError=null;
+      try{parsed=JSON.parse(text);}catch(e){parseError=e.message;}
+      return {httpStatus:r.status, ok:r.ok, ms:ms, text:text, parsed:parsed, parseError:parseError};
+    });
+  }).catch(function(err){
+    var ms=performance.now()-t0;
+    // A TypeError with no HTTP status reaching .then almost always means CORS rejection or a
+    // network-level failure (DNS, offline, blocked) -- the browser deliberately hides the real
+    // reason for security, so we can only report "request never completed," not why.
+    return {networkError:true, ms:ms, message:err.message};
+  });
+}
+
+function describeResult(r){
+  if(r.networkError){
+    return {kind:"cors", label:"NO RESPONSE (likely CORS block or network failure)", ms:r.ms,
+      body:"Browser error: "+r.message+"\n\nThis usually means either:\n(a) the server didn't send CORS headers allowing a browser to read the response (common for APIs not designed for direct browser calls), or\n(b) a network-level failure (DNS, offline, blocked domain).\nThe browser hides the real reason for security, so this message is as specific as it gets from JS alone."};
+  }
+  if(!r.ok){
+    return {kind:"err", label:"HTTP "+r.httpStatus, ms:r.ms,
+      body:(r.text||"(empty body)").slice(0,1500)};
+  }
+  if(r.parseError){
+    return {kind:"err", label:"HTTP 200 but NOT valid JSON", ms:r.ms,
+      body:"Parse error: "+r.parseError+"\n\nRaw response:\n"+r.text.slice(0,1500)};
+  }
+  return {kind:"ok", label:"HTTP 200, valid JSON", ms:r.ms,
+    body:JSON.stringify(r.parsed,null,2).slice(0,2500)};
+}
+
+function runTest(label, url, opts){
+  var div=makeResultBlock(label, url);
+  timedFetch(url, opts).then(function(r){
+    renderOutcome(div, describeResult(r));
+  });
+}
+
+function runAll(){
+  document.getElementById("results").innerHTML="";
+  var q=document.getElementById("query").value||"apple";
+  var pageSize=document.getElementById("pageSize").value||"5";
+
+  // ---- Candidate Search-a-licious request shapes ----
+  // I could not confirm the exact param names from documentation (the docs site at
+  // search.openfoodfacts.org/docs blocks automated access), so this tries the shapes that are
+  // most consistent with (a) how other Elasticsearch-backed search APIs are typically exposed,
+  // and (b) the param names OFF uses elsewhere in their own API (q, page_size, fields).
+  runTest("Search-a-licious: GET /search?q=", 
+    "https://search.openfoodfacts.org/search?q="+encodeURIComponent(q)+"&page_size="+encodeURIComponent(pageSize));
+  runTest("Search-a-licious: GET /search?q=&fields=",
+    "https://search.openfoodfacts.org/search?q="+encodeURIComponent(q)+"&page_size="+encodeURIComponent(pageSize)+"&fields=product_name,nutriments,code");
+  runTest("Search-a-licious: GET /search?q= with langs=en index",
+    "https://search.openfoodfacts.org/search?q="+encodeURIComponent(q)+"&page_size="+encodeURIComponent(pageSize)+"&langs=en");
+
+  // ---- Current legacy endpoint, for direct timing comparison ----
+  runTest("Legacy: GET /cgi/search.pl (current production)",
+    "https://world.openfoodfacts.org/cgi/search.pl?search_terms="+encodeURIComponent(q)+"&search_simple=1&action=process&json=1&page_size="+encodeURIComponent(pageSize)+"&fields=product_name,nutriments,code,serving_size");
+
+  // ---- USDA FDC, for reference (no key needed to test that it responds, will likely 403 without a key) ----
+  runTest("USDA FDC (will show 403 without your key \u2014 expected, just timing the round trip)",
+    "https://api.nal.usda.gov/fdc/v1/foods/search?api_key=DEMO_KEY&query="+encodeURIComponent(q)+"&pageSize="+encodeURIComponent(pageSize));
+}
+
+runAll();
+</script>
+</body>
+</html>
