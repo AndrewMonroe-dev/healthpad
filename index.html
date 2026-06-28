@@ -444,6 +444,7 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       </div>
       <div class="hero-date" id="heroDate">&mdash;</div>
       <div id="orbBreakdown" class="orb-breakdown" style="display:none;"></div>
+      <button id="orbTuneBtn" onclick="openOrbTuningPanel()" style="display:none;margin:6px auto 0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#e0c279;font-size:11px;letter-spacing:.04em;padding:5px 12px;border-radius:999px;cursor:pointer;touch-action:manipulation;">&#9881; Tune Orb</button>
     </div>
 
     <div class="ringrow">
@@ -1037,6 +1038,14 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
           </div>
         </div>
       </div>
+    </div>
+    <div class="sec">
+      <div class="sec-h">Orb Tuning Mode (Advanced)</div>
+      <div class="note dim" style="margin-bottom:10px;">Adds a "Tune Orb" button on the Home tab that opens live sliders for the orb's color ramp, spin, microsatellites, blast wave, and home gradient. For visual experimentation only &mdash; values reset to the app's normal defaults on reload unless you note them down. Safe to leave on, it changes nothing unless you open the panel.</div>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="inTuningMode" onchange="saveTuningModeSetting()" style="width:18px;height:18px;">
+        <span style="font-size:13px;">Enable Tune Orb button</span>
+      </label>
     </div>
     <div class="sec">
       <div class="sec-h">The Plan At A Glance</div>
@@ -2717,6 +2726,7 @@ var ORB_SPIN_MIN_RPM=0, ORB_SPIN_MAX_RPM=600; // approved: zero spin at score 0,
    "Everything relevant feeds the Orb": satellite speed AND direction are themselves a health
    signifier now, not a fixed constant -- see SAT_RPM_LO/SAT_RPM_HI below. */
 var SAT_COUNT=8, SAT_RADIUS_PX=1.5, SAT_ORBIT_RX=92, SAT_TILT_PCT=0.07, SAT_PLANE_SPREAD_PX=23;
+var SAT_DEPTH_USE_SIN=true; // tuning-panel toggle only, demonstrates the lesson-#6 axis bug vs the fix; leave true
 var SAT_RPM_LO=-20, SAT_RPM_HI=70; // RPM at score 0 (slow, opposite the orb's spin) vs score 100 (fast, same direction)
 var SAT_TRAIL_LEN_LO=6, SAT_TRAIL_LEN_HI=30; // contrail length is itself a health signifier now: short and stubby at score 0, long at score 100
 var SAT_TRAIL_WIDTH_PX=0.9, SAT_OPACITY=0.5;
@@ -2818,7 +2828,7 @@ function renderSatellites(score){
     var y=ORB_CY+planeOffset+Math.sin(s.angle)*orbitRY;
     // Depth tracks sin(angle), same trig function as y, NOT cos(angle) (which matches x) --
     // a tilted orbit swaps front/back at the top and bottom of its loop, not left/right.
-    var z=Math.sin(s.angle);
+    var z=SAT_DEPTH_USE_SIN?Math.sin(s.angle):Math.cos(s.angle);
     s.trailPts.unshift({x:x,y:y,z:z});
     if(s.trailPts.length>trailLen+1)s.trailPts.length=trailLen+1;
     function ctxFor(zVal){return zVal>=0?frontCtx:backCtx;}
@@ -4536,6 +4546,8 @@ function renderSetup(){
   document.getElementById("inSheetUrl").value=DB.settings.sheetUrl||"";
   document.getElementById("inDigestEmail").value=DB.settings.digestEmail||"";
   var fdcInput=document.getElementById("inFdcKey");if(fdcInput)fdcInput.value=DB.settings.fdcKey||"";
+  var tuneInput=document.getElementById("inTuningMode");
+  if(tuneInput){try{tuneInput.checked=localStorage.getItem("hp_tuning_mode")==="1";}catch(e){}}
   loadTrackingStyle();
   // phase overview — goal-aware
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
@@ -8654,6 +8666,201 @@ function openDietPopup(){
 }
 function closeDietPopup(){document.getElementById("dietPopup").style.display="none";}
 
+/* ============ ORB TUNING PANEL (Setup > Orb Tuning Mode) ============
+   Live-editing UI over the orb's existing globals (ORB_STOPS, GRAD_STOPS, SAT_*, ORB_*).
+   Hidden by default. Does not persist across reload by design -- session-only experimentation,
+   no separate storage path to keep in sync with the real DB. Use the export box to copy
+   approved values out, then hand them to Claude to bake in as new defaults. */
+function saveTuningModeSetting(){
+  var on=document.getElementById("inTuningMode").checked;
+  try{localStorage.setItem("hp_tuning_mode",on?"1":"0");}catch(e){}
+  applyTuningModeVisibility();
+}
+function applyTuningModeVisibility(){
+  var on=false;
+  try{on=localStorage.getItem("hp_tuning_mode")==="1";}catch(e){}
+  var btn=document.getElementById("orbTuneBtn");
+  if(btn)btn.style.display=on?"inline-block":"none";
+}
+function _otpColorRow(label,id,value){
+  return '<div style="display:flex;align-items:center;gap:10px;margin:7px 0;font-size:12.5px;color:#ccc;"><span style="flex:0 0 150px;">'+label+'</span><input type="color" id="'+id+'" value="'+value+'" style="width:34px;height:24px;border:none;background:none;padding:0;cursor:pointer;"></div>';
+}
+function _otpRangeRow(label,id,min,max,step,value){
+  return '<div style="display:flex;align-items:center;gap:10px;margin:7px 0;font-size:12.5px;color:#ccc;"><span style="flex:0 0 150px;">'+label+'</span><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+value+'" style="flex:1;"><span id="'+id+'_v" style="width:42px;text-align:right;color:#fff;font-variant-numeric:tabular-nums;font-size:11.5px;">'+value+'</span></div>';
+}
+function _otpCheckRow(label,id,checked){
+  return '<label style="display:flex;align-items:center;gap:10px;margin:9px 0;font-size:12.5px;color:#ccc;cursor:pointer;"><input type="checkbox" id="'+id+'" '+(checked?"checked":"")+' style="width:16px;height:16px;"><span>'+label+'</span></label>';
+}
+function _otpSection(title,bodyHtml){
+  return '<div style="background:#221c17;border:1px solid #3a3024;border-radius:12px;padding:14px 16px;margin-bottom:14px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#e0c279;border-bottom:1px solid #3a3024;padding-bottom:7px;margin-bottom:6px;">'+title+'</div>'+bodyHtml+'</div>';
+}
+function buildOrbTuningPanel(){
+  var html="";
+  html+=_otpSection("Orb Spin",
+    _otpRangeRow("Pivot X offset (px)","otp_pivotX",-40,40,1,ORB_SPIN_PIVOT_X)+
+    _otpRangeRow("Pivot Y offset (px)","otp_pivotY",-100,20,1,ORB_SPIN_PIVOT_Y)+
+    _otpRangeRow("Min RPM (score 0)","otp_spinMin",-100,100,5,ORB_SPIN_MIN_RPM)+
+    _otpRangeRow("Max RPM (score 100)","otp_spinMax",0,1200,10,ORB_SPIN_MAX_RPM)
+  );
+  var orbStopRows="";
+  ORB_STOPS.forEach(function(s,i){
+    orbStopRows+='<div style="font-size:10.5px;color:#998;margin:8px 0 2px;">score '+s.pos+'</div><div style="display:flex;gap:14px;flex-wrap:wrap;">'+
+      ["core","mid","edge","glow"].map(function(k){return '<span style="text-align:center;font-size:9.5px;color:#998;">'+k+'<br><input type="color" data-otp-orb-i="'+i+'" data-otp-orb-k="'+k+'" value="'+s[k]+'" style="width:30px;height:22px;border:none;background:none;cursor:pointer;"></span>';}).join("")+
+      '</div>';
+  });
+  html+=_otpSection("Orb Color Ramp",orbStopRows);
+  var gradStopRows="";
+  GRAD_STOPS.forEach(function(s,i){
+    gradStopRows+='<div style="font-size:10.5px;color:#998;margin:8px 0 2px;">score '+s.pos+'</div><div style="display:flex;gap:14px;">'+
+      ["top","mid"].map(function(k){return '<span style="text-align:center;font-size:9.5px;color:#998;">'+k+'<br><input type="color" data-otp-grad-i="'+i+'" data-otp-grad-k="'+k+'" value="'+s[k]+'" style="width:30px;height:22px;border:none;background:none;cursor:pointer;"></span>';}).join("")+
+      '</div>';
+  });
+  html+=_otpSection("Home Tab Background Gradient",
+    gradStopRows+
+    _otpRangeRow("Fade height (px)","otp_gradFade",100,900,10,GRAD_FADE_HEIGHT_PX)+
+    _otpRangeRow("Max opacity","otp_gradOpacity",0,1,0.02,GRAD_MAX_OPACITY)
+  );
+  html+=_otpSection("Microsatellites — Orbit / Axis",
+    _otpRangeRow("Count","otp_satCount",0,24,1,SAT_COUNT)+
+    _otpRangeRow("Dot radius (px)","otp_satRadius",0.2,5,0.1,SAT_RADIUS_PX)+
+    _otpRangeRow("Orbit width — X (px)","otp_satOrbitRx",20,180,1,SAT_ORBIT_RX)+
+    _otpRangeRow("Tilt % (squashed Y)","otp_satTilt",0,1,0.01,SAT_TILT_PCT)+
+    _otpRangeRow("Plane spread (px)","otp_satPlane",0,60,1,SAT_PLANE_SPREAD_PX)+
+    _otpCheckRow("Depth axis = sin(angle) [correct]","otp_depthSin",SAT_DEPTH_USE_SIN)
+  );
+  html+=_otpSection("Microsatellites — Speed &amp; Trail",
+    _otpRangeRow("RPM at score 0","otp_satRpmLo",-120,40,1,SAT_RPM_LO)+
+    _otpRangeRow("RPM at score 100","otp_satRpmHi",0,200,1,SAT_RPM_HI)+
+    _otpRangeRow("Trail length @0","otp_satTrailLo",0,40,1,SAT_TRAIL_LEN_LO)+
+    _otpRangeRow("Trail length @100","otp_satTrailHi",0,60,1,SAT_TRAIL_LEN_HI)+
+    _otpRangeRow("Trail width (px)","otp_satTrailW",0.2,4,0.1,SAT_TRAIL_WIDTH_PX)+
+    _otpRangeRow("Opacity","otp_satOpacity",0,1,0.02,SAT_OPACITY)
+  );
+  html+=_otpSection("Microsatellites — Ember Color",
+    _otpColorRow("Core dot color","otp_satCore",SAT_EMBER_CORE)+
+    _otpColorRow("Trail color","otp_satTrail",SAT_EMBER_TRAIL)+
+    _otpRangeRow("Dim threshold (score)","otp_satDimThresh",0,100,1,SAT_EMBER_DIM_THRESHOLD)+
+    _otpRangeRow("Min intensity floor","otp_satMinIntensity",0,1,0.05,SAT_EMBER_MIN_INTENSITY)
+  );
+  html+=_otpSection("Blast Wave",
+    _otpRangeRow("Duration (ms)","otp_blastDur",500,6000,50,ORB_BLAST_DURATION_MS)+
+    _otpRangeRow("Max radius mult","otp_blastMaxR",1,3,0.05,ORB_BLAST_MAX_RADIUS_MULT)+
+    _otpRangeRow("Ring count","otp_blastRings",1,6,1,ORB_BLAST_RING_COUNT)+
+    _otpRangeRow("Start opacity","otp_blastOpacity",0,1,0.02,ORB_BLAST_START_OPACITY)+
+    '<button class="btn sm ghost" style="margin-top:6px;" onclick="triggerOrbArrival()">Trigger arrival + blast wave</button>'
+  );
+  html+=_otpSection("Export",
+    '<button class="btn sm" onclick="exportOrbTuningValues()">Generate paste-ready code block</button>'+
+    '<pre id="otpExportBox" style="margin-top:10px;background:#0d0a07;color:#9fe7a0;font-family:Menlo,Consolas,monospace;font-size:11px;border:1px solid #3a3024;border-radius:8px;padding:10px;white-space:pre;overflow:auto;max-height:260px;">Tap above to generate.</pre>'
+  );
+  document.getElementById("otp-sections").innerHTML=html;
+  _wireOrbTuningInputs();
+}
+function _otpRerender(){
+  if(window._lastOrbResult)applyHomeGradient(window._lastOrbResult.score);
+  renderOrbCanvasFrame();
+}
+function _wireOrbTuningInputs(){
+  function range(id,setter,decimals){
+    var el=document.getElementById(id),out=document.getElementById(id+"_v");
+    el.addEventListener("input",function(){
+      var v=parseFloat(el.value);
+      setter(v);
+      if(out)out.textContent=decimals!==undefined?v.toFixed(decimals):v;
+      _otpRerender();
+    });
+  }
+  function check(id,setter){
+    var el=document.getElementById(id);
+    el.addEventListener("change",function(){setter(el.checked);_otpRerender();});
+  }
+  function color(id,setter){
+    var el=document.getElementById(id);
+    el.addEventListener("input",function(){setter(el.value);_otpRerender();});
+  }
+  range("otp_pivotX",function(v){ORB_SPIN_PIVOT_X=v;});
+  range("otp_pivotY",function(v){ORB_SPIN_PIVOT_Y=v;});
+  range("otp_spinMin",function(v){ORB_SPIN_MIN_RPM=v;});
+  range("otp_spinMax",function(v){ORB_SPIN_MAX_RPM=v;});
+  range("otp_gradFade",function(v){GRAD_FADE_HEIGHT_PX=v;});
+  range("otp_gradOpacity",function(v){GRAD_MAX_OPACITY=v;},2);
+  range("otp_satCount",function(v){SAT_COUNT=Math.round(v);initSatellites();});
+  range("otp_satRadius",function(v){SAT_RADIUS_PX=v;});
+  range("otp_satOrbitRx",function(v){SAT_ORBIT_RX=v;});
+  range("otp_satTilt",function(v){SAT_TILT_PCT=v;},2);
+  range("otp_satPlane",function(v){SAT_PLANE_SPREAD_PX=v;});
+  check("otp_depthSin",function(v){SAT_DEPTH_USE_SIN=v;});
+  range("otp_satRpmLo",function(v){SAT_RPM_LO=v;});
+  range("otp_satRpmHi",function(v){SAT_RPM_HI=v;});
+  range("otp_satTrailLo",function(v){SAT_TRAIL_LEN_LO=Math.round(v);});
+  range("otp_satTrailHi",function(v){SAT_TRAIL_LEN_HI=Math.round(v);});
+  range("otp_satTrailW",function(v){SAT_TRAIL_WIDTH_PX=v;});
+  range("otp_satOpacity",function(v){SAT_OPACITY=v;},2);
+  color("otp_satCore",function(v){SAT_EMBER_CORE=v;});
+  color("otp_satTrail",function(v){SAT_EMBER_TRAIL=v;});
+  range("otp_satDimThresh",function(v){SAT_EMBER_DIM_THRESHOLD=v;});
+  range("otp_satMinIntensity",function(v){SAT_EMBER_MIN_INTENSITY=v;},2);
+  range("otp_blastDur",function(v){ORB_BLAST_DURATION_MS=v;});
+  range("otp_blastMaxR",function(v){ORB_BLAST_MAX_RADIUS_MULT=v;},2);
+  range("otp_blastRings",function(v){ORB_BLAST_RING_COUNT=Math.round(v);});
+  range("otp_blastOpacity",function(v){ORB_BLAST_START_OPACITY=v;},2);
+  document.querySelectorAll("[data-otp-orb-i]").forEach(function(inp){
+    inp.addEventListener("input",function(){
+      ORB_STOPS[+inp.dataset.otpOrbI][inp.dataset.otpOrbK]=inp.value;
+      _otpRerender();
+    });
+  });
+  document.querySelectorAll("[data-otp-grad-i]").forEach(function(inp){
+    inp.addEventListener("input",function(){
+      GRAD_STOPS[+inp.dataset.otpGradI][inp.dataset.otpGradK]=inp.value;
+      _otpRerender();
+    });
+  });
+}
+function exportOrbTuningValues(){
+  var lines=[];
+  lines.push("var ORB_STOPS=[");
+  ORB_STOPS.forEach(function(s,i){lines.push('  {pos:'+s.pos+',  core:"'+s.core+'",mid:"'+s.mid+'",edge:"'+s.edge+'",glow:"'+s.glow+'"}'+(i<ORB_STOPS.length-1?",":""));});
+  lines.push("];");
+  lines.push("var GRAD_STOPS=[");
+  GRAD_STOPS.forEach(function(s,i){lines.push('  {pos:'+s.pos+',  top:"'+s.top+'", mid:"'+s.mid+'"}'+(i<GRAD_STOPS.length-1?",":""));});
+  lines.push("];");
+  lines.push("var GRAD_FADE_HEIGHT_PX="+GRAD_FADE_HEIGHT_PX+", GRAD_MAX_OPACITY="+GRAD_MAX_OPACITY.toFixed(2)+";");
+  lines.push("var ORB_SPIN_PIVOT_X="+ORB_SPIN_PIVOT_X+", ORB_SPIN_PIVOT_Y="+ORB_SPIN_PIVOT_Y+";");
+  lines.push("var ORB_SPIN_MIN_RPM="+ORB_SPIN_MIN_RPM+", ORB_SPIN_MAX_RPM="+ORB_SPIN_MAX_RPM+";");
+  lines.push("var SAT_COUNT="+SAT_COUNT+", SAT_RADIUS_PX="+SAT_RADIUS_PX+", SAT_ORBIT_RX="+SAT_ORBIT_RX+", SAT_TILT_PCT="+SAT_TILT_PCT.toFixed(2)+", SAT_PLANE_SPREAD_PX="+SAT_PLANE_SPREAD_PX+";");
+  lines.push("var SAT_DEPTH_USE_SIN="+SAT_DEPTH_USE_SIN+"; // must stay true to ship, false is the broken comparison view");
+  lines.push("var SAT_RPM_LO="+SAT_RPM_LO+", SAT_RPM_HI="+SAT_RPM_HI+";");
+  lines.push("var SAT_TRAIL_LEN_LO="+SAT_TRAIL_LEN_LO+", SAT_TRAIL_LEN_HI="+SAT_TRAIL_LEN_HI+";");
+  lines.push("var SAT_TRAIL_WIDTH_PX="+SAT_TRAIL_WIDTH_PX+", SAT_OPACITY="+SAT_OPACITY.toFixed(2)+";");
+  lines.push('var SAT_EMBER_CORE="'+SAT_EMBER_CORE+'";');
+  lines.push('var SAT_EMBER_TRAIL="'+SAT_EMBER_TRAIL+'";');
+  lines.push("var SAT_EMBER_DIM_THRESHOLD="+SAT_EMBER_DIM_THRESHOLD+";");
+  lines.push("var SAT_EMBER_MIN_INTENSITY="+SAT_EMBER_MIN_INTENSITY.toFixed(2)+";");
+  lines.push("var ORB_BLAST_DURATION_MS="+ORB_BLAST_DURATION_MS+", ORB_BLAST_MAX_RADIUS_MULT="+ORB_BLAST_MAX_RADIUS_MULT.toFixed(2)+", ORB_BLAST_RING_COUNT="+ORB_BLAST_RING_COUNT+", ORB_BLAST_START_OPACITY="+ORB_BLAST_START_OPACITY.toFixed(2)+";");
+  document.getElementById("otpExportBox").textContent=lines.join("\n");
+}
+function openOrbTuningPanel(){
+  buildOrbTuningPanel();
+  document.getElementById("orbTuningPanel").style.display="block";
+}
+function closeOrbTuningPanel(){
+  document.getElementById("orbTuningPanel").style.display="none";
+}
+applyTuningModeVisibility();
+
 </script>
+
+  <!-- ORB TUNING PANEL (hidden unless Setup > Orb Tuning Mode is enabled) -->
+  <div id="orbTuningPanel" style="display:none;position:fixed;inset:0;background:rgba(8,6,4,.92);z-index:6000;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 14px 60px;">
+    <div style="max-width:480px;margin:0 auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:16px;font-weight:700;color:#ffe600;">Tune Orb</div>
+        <button onclick="closeOrbTuningPanel()" style="background:none;border:none;color:#fff;font-size:24px;line-height:1;cursor:pointer;touch-action:manipulation;">&times;</button>
+      </div>
+      <div class="note dim" style="margin-bottom:14px;">Live edits to the orb already running on this page. Closing this panel keeps your changes for the rest of this session; reloading the app resets everything to normal defaults.</div>
+      <div id="otp-sections"></div>
+    </div>
+  </div>
 </body>
 </html>
