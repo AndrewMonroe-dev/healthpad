@@ -8749,10 +8749,6 @@ function buildOrbTuningPanel(){
     _otpRangeRow("Start opacity","otp_blastOpacity",0,1,0.02,ORB_BLAST_START_OPACITY)+
     '<button class="btn sm ghost" style="margin-top:6px;" onclick="triggerOrbArrival()">Trigger arrival + blast wave</button>'
   );
-  html+=_otpSection("Export",
-    '<button class="btn sm" onclick="exportOrbTuningValues()">Generate paste-ready code block</button>'+
-    '<pre id="otpExportBox" style="margin-top:10px;background:#0d0a07;color:#9fe7a0;font-family:Menlo,Consolas,monospace;font-size:11px;border:1px solid #3a3024;border-radius:8px;padding:10px;white-space:pre;overflow:auto;max-height:260px;">Tap above to generate.</pre>'
-  );
   document.getElementById("otp-sections").innerHTML=html;
   _wireOrbTuningInputs();
 }
@@ -8817,29 +8813,6 @@ function _wireOrbTuningInputs(){
     });
   });
 }
-function exportOrbTuningValues(){
-  var lines=[];
-  lines.push("var ORB_STOPS=[");
-  ORB_STOPS.forEach(function(s,i){lines.push('  {pos:'+s.pos+',  core:"'+s.core+'",mid:"'+s.mid+'",edge:"'+s.edge+'",glow:"'+s.glow+'"}'+(i<ORB_STOPS.length-1?",":""));});
-  lines.push("];");
-  lines.push("var GRAD_STOPS=[");
-  GRAD_STOPS.forEach(function(s,i){lines.push('  {pos:'+s.pos+',  top:"'+s.top+'", mid:"'+s.mid+'"}'+(i<GRAD_STOPS.length-1?",":""));});
-  lines.push("];");
-  lines.push("var GRAD_FADE_HEIGHT_PX="+GRAD_FADE_HEIGHT_PX+", GRAD_MAX_OPACITY="+GRAD_MAX_OPACITY.toFixed(2)+";");
-  lines.push("var ORB_SPIN_PIVOT_X="+ORB_SPIN_PIVOT_X+", ORB_SPIN_PIVOT_Y="+ORB_SPIN_PIVOT_Y+";");
-  lines.push("var ORB_SPIN_MIN_RPM="+ORB_SPIN_MIN_RPM+", ORB_SPIN_MAX_RPM="+ORB_SPIN_MAX_RPM+";");
-  lines.push("var SAT_COUNT="+SAT_COUNT+", SAT_RADIUS_PX="+SAT_RADIUS_PX+", SAT_ORBIT_RX="+SAT_ORBIT_RX+", SAT_TILT_PCT="+SAT_TILT_PCT.toFixed(2)+", SAT_PLANE_SPREAD_PX="+SAT_PLANE_SPREAD_PX+";");
-  lines.push("var SAT_DEPTH_USE_SIN="+SAT_DEPTH_USE_SIN+"; // must stay true to ship, false is the broken comparison view");
-  lines.push("var SAT_RPM_LO="+SAT_RPM_LO+", SAT_RPM_HI="+SAT_RPM_HI+";");
-  lines.push("var SAT_TRAIL_LEN_LO="+SAT_TRAIL_LEN_LO+", SAT_TRAIL_LEN_HI="+SAT_TRAIL_LEN_HI+";");
-  lines.push("var SAT_TRAIL_WIDTH_PX="+SAT_TRAIL_WIDTH_PX+", SAT_OPACITY="+SAT_OPACITY.toFixed(2)+";");
-  lines.push('var SAT_EMBER_CORE="'+SAT_EMBER_CORE+'";');
-  lines.push('var SAT_EMBER_TRAIL="'+SAT_EMBER_TRAIL+'";');
-  lines.push("var SAT_EMBER_DIM_THRESHOLD="+SAT_EMBER_DIM_THRESHOLD+";");
-  lines.push("var SAT_EMBER_MIN_INTENSITY="+SAT_EMBER_MIN_INTENSITY.toFixed(2)+";");
-  lines.push("var ORB_BLAST_DURATION_MS="+ORB_BLAST_DURATION_MS+", ORB_BLAST_MAX_RADIUS_MULT="+ORB_BLAST_MAX_RADIUS_MULT.toFixed(2)+", ORB_BLAST_RING_COUNT="+ORB_BLAST_RING_COUNT+", ORB_BLAST_START_OPACITY="+ORB_BLAST_START_OPACITY.toFixed(2)+";");
-  document.getElementById("otpExportBox").textContent=lines.join("\n");
-}
 function openOrbTuningPanel(){
   buildOrbTuningPanel();
   document.getElementById("orbTuningPanel").style.display="block";
@@ -8852,14 +8825,15 @@ applyTuningModeVisibility();
 </script>
 
   <!-- ORB TUNING PANEL (hidden unless Setup > Orb Tuning Mode is enabled) -->
-  <div id="orbTuningPanel" style="display:none;position:fixed;inset:0;background:rgba(8,6,4,.92);z-index:6000;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 14px 60px;">
+  <div id="orbTuningPanel" style="display:none;position:fixed;inset:0;background:rgba(8,6,4,.92);z-index:6000;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top,0px) + 18px) 14px 60px;">
     <div style="max-width:480px;margin:0 auto;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:8px 0;background:rgba(8,6,4,.96);z-index:1;">
         <div style="font-size:16px;font-weight:700;color:#ffe600;">Tune Orb</div>
-        <button onclick="closeOrbTuningPanel()" style="background:none;border:none;color:#fff;font-size:24px;line-height:1;cursor:pointer;touch-action:manipulation;">&times;</button>
+        <button onclick="closeOrbTuningPanel()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:22px;line-height:1;width:44px;height:44px;border-radius:50%;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;">&times;</button>
       </div>
       <div class="note dim" style="margin-bottom:14px;">Live edits to the orb already running on this page. Closing this panel keeps your changes for the rest of this session; reloading the app resets everything to normal defaults.</div>
       <div id="otp-sections"></div>
+      <button onclick="closeOrbTuningPanel()" class="btn sm dark" style="width:100%;margin-top:10px;">Close</button>
     </div>
   </div>
 </body>
