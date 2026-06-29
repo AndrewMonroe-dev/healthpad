@@ -5,567 +5,856 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Star Scene Prototype</title>
+<meta name="theme-color" content="#0b0f1c">
+<title>Star Health</title>
 <style>
   :root{
-    --panel-bg:rgba(12,14,22,.82);
-    --panel-line:rgba(255,255,255,.10);
-    --txt:#e9edf6;
-    --txt-dim:rgba(233,237,246,.55);
-    --accent:#ffd479;
+    --bg:#0b0f1c;
+    --card:rgba(255,255,255,.06);
+    --line:rgba(255,255,255,.12);
+    --txt:#eef2fb;
+    --dim:rgba(238,242,251,.6);
+    --accent:#ffe7a0;
+    --ink:#16120a;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#05070d;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--txt);}
-  #scene{position:fixed;inset:0;display:block;width:100%;height:100%;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden;}
+  button{font-family:inherit;cursor:pointer;}
+  .hidden{display:none !important;}
 
-  #buildtag{
-    position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 14px);
-    z-index:6;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
-    color:rgba(255,255,255,.5);pointer-events:none;text-shadow:0 1px 4px rgba(0,0,0,.6);
-  }
+  /* app shell */
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;}
+  #appbar{flex:0 0 auto;padding:calc(env(safe-area-inset-top,0px) + 12px) 18px 12px;
+    display:flex;align-items:center;justify-content:space-between;}
+  #appbar .title{font-size:17px;font-weight:800;letter-spacing:.3px;}
+  #appbar .who{font-size:13px;color:var(--dim);font-weight:600;}
+  #views{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .view{display:none;padding:0 16px 26px;}
+  .view.active{display:block;}
 
-  #caption{
-    position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 18px);
-    text-align:center;font-size:15px;font-weight:600;letter-spacing:.2px;
-    color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.6),0 0 22px rgba(0,0,0,.35);
-    padding:0 28px;pointer-events:none;transition:opacity .4s;z-index:5;
-  }
-  #scoreReadout{display:block;font-size:12px;font-weight:600;color:var(--txt-dim);margin-top:4px;letter-spacing:.4px;}
+  /* bottom nav */
+  #nav{flex:0 0 auto;display:flex;background:rgba(8,11,20,.92);border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom,0px);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #nav button{flex:1;background:none;border:none;color:var(--dim);font-size:11px;font-weight:700;
+    padding:10px 0 12px;display:flex;flex-direction:column;align-items:center;gap:4px;letter-spacing:.4px;}
+  #nav button .ic{font-size:20px;line-height:1;}
+  #nav button.active{color:var(--accent);}
 
-  #panel{
-    position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
-    background:var(--panel-bg);border:1px solid var(--panel-line);border-radius:18px;
-    padding:14px 14px 16px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-    z-index:10;box-shadow:0 12px 40px rgba(0,0,0,.45);transition:transform .3s ease,opacity .3s ease;
-    max-height:78vh;overflow-y:auto;
-  }
-  #panel.hidden{transform:translateY(140%);opacity:0;pointer-events:none;}
+  /* home / star */
+  #starWrap{position:relative;width:100%;height:58vh;min-height:340px;border-radius:22px;overflow:hidden;
+    margin-top:6px;background:#05070d;}
+  #starCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  #starCaption{position:absolute;left:0;right:0;bottom:14px;text-align:center;padding:0 22px;
+    font-size:15px;font-weight:700;color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.7);pointer-events:none;}
+  #scoreBadge{position:absolute;top:12px;right:14px;font-size:11px;font-weight:800;letter-spacing:1px;
+    color:rgba(255,255,255,.6);text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+  .homeBtns{display:flex;gap:10px;margin-top:14px;}
+  .bigBtn{flex:1;background:var(--accent);color:var(--ink);border:none;border-radius:14px;
+    padding:15px;font-size:15px;font-weight:800;}
+  .bigBtn.ghost{background:var(--card);color:var(--txt);border:1px solid var(--line);}
 
-  .themes{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;-webkit-overflow-scrolling:touch;}
-  .themes::-webkit-scrollbar{display:none;}
-  .tbtn{
-    flex:0 0 auto;padding:8px 14px;border-radius:11px;border:1px solid var(--panel-line);
-    background:rgba(255,255,255,.05);color:var(--txt);font-size:13px;font-weight:600;
-    white-space:nowrap;cursor:pointer;transition:all .18s;
-  }
-  .tbtn.active{background:var(--accent);color:#1a1206;border-color:var(--accent);}
+  /* cards / generic */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:14px;}
+  .card h3{margin:0 0 4px;font-size:15px;font-weight:800;}
+  .card .sub{font-size:13px;color:var(--dim);margin-bottom:6px;}
+  .sectionTitle{font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+    color:var(--dim);margin:22px 2px 2px;}
 
-  .row{display:flex;align-items:center;gap:10px;margin:9px 0;}
-  .row label{flex:0 0 96px;font-size:12px;color:var(--txt-dim);font-weight:600;}
-  .row .val{flex:0 0 42px;text-align:right;font-size:12px;color:var(--accent);font-variant-numeric:tabular-nums;}
-  input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:30px;background:transparent;}
-  input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:rgba(255,255,255,.16);}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;margin-top:-9.5px;box-shadow:0 2px 8px rgba(0,0,0,.5);}
-  #scoreRow input[type=range]::-webkit-slider-runnable-track{height:7px;background:linear-gradient(90deg,#3a3530,#ffd479);}
-  #scoreRow input[type=range]::-webkit-slider-thumb{width:28px;height:28px;margin-top:-10.5px;background:var(--accent);}
-  #scoreRow label{color:var(--txt);font-weight:700;}
+  /* metric stepper */
+  .metric{display:flex;align-items:center;gap:12px;margin-top:14px;}
+  .metric .mi{font-size:24px;width:34px;text-align:center;}
+  .metric .ml{flex:1;}
+  .metric .ml .name{font-size:15px;font-weight:700;}
+  .metric .ml .goal{font-size:12px;color:var(--dim);}
+  .stepper{display:flex;align-items:center;gap:0;background:rgba(0,0,0,.25);border-radius:12px;border:1px solid var(--line);}
+  .stepper button{width:44px;height:44px;background:none;border:none;color:var(--txt);font-size:22px;font-weight:700;}
+  .stepper .v{min-width:48px;text-align:center;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;}
 
-  .colorRow{align-items:flex-start;}
-  .swatches{flex:1;display:flex;gap:14px;}
-  .sw{display:flex;flex-direction:column;align-items:center;gap:5px;}
-  .sw b{font-size:11px;font-weight:600;color:var(--txt-dim);}
-  .sw input[type=color]{
-    -webkit-appearance:none;appearance:none;width:46px;height:34px;border:none;border-radius:10px;
-    background:none;cursor:pointer;padding:0;
-  }
+  /* feelings */
+  .feel{display:flex;gap:8px;margin-top:10px;}
+  .feel button{flex:1;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:14px;
+    padding:10px 0;font-size:24px;}
+  .feel button.sel{border-color:var(--accent);background:rgba(255,255,255,.08);transform:scale(1.04);}
+
+  /* theme picker cards */
+  .symbols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;}
+  .symbol{background:rgba(0,0,0,.25);border:2px solid var(--line);border-radius:16px;
+    padding:14px 6px;text-align:center;}
+  .symbol.sel{border-color:var(--accent);}
+  .symbol canvas{width:64px;height:64px;display:block;margin:0 auto 6px;}
+  .symbol .nm{font-size:12px;font-weight:700;}
+
+  /* color chips */
+  .swatches{display:flex;gap:16px;margin-top:12px;}
+  .sw{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .sw b{font-size:11px;font-weight:700;color:var(--dim);}
+  .sw input[type=color]{-webkit-appearance:none;appearance:none;width:54px;height:40px;border:none;border-radius:12px;background:none;padding:0;}
   .sw input[type=color]::-webkit-color-swatch-wrapper{padding:0;}
-  .sw input[type=color]::-webkit-color-swatch{border:1px solid rgba(255,255,255,.25);border-radius:10px;}
+  .sw input[type=color]::-webkit-color-swatch{border:1px solid rgba(255,255,255,.3);border-radius:12px;}
 
-  #fab{
-    position:fixed;right:14px;top:calc(env(safe-area-inset-top,0px) + 14px);z-index:11;
-    width:42px;height:42px;border-radius:50%;border:1px solid var(--panel-line);
-    background:var(--panel-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-    color:var(--txt);font-size:18px;cursor:pointer;display:none;align-items:center;justify-content:center;
-  }
-  #panel.hidden ~ #fab{display:flex;}
-  .hideRow{display:flex;justify-content:flex-end;margin-top:4px;}
-  .hideBtn{background:none;border:none;color:var(--txt-dim);font-size:12px;font-weight:600;cursor:pointer;padding:6px 2px;}
+  .linkBtn{background:none;border:none;color:#ff8a8a;font-size:13px;font-weight:700;padding:8px 0;}
+
+  /* onboarding */
+  #onb{position:fixed;inset:0;z-index:500;background:#070b16;display:none;flex-direction:column;
+    padding:calc(env(safe-area-inset-top,0px) + 20px) 22px calc(env(safe-area-inset-bottom,0px) + 20px);}
+  #onb.show{display:flex;}
+  #onb .step{flex:1;display:none;flex-direction:column;justify-content:center;}
+  #onb .step.active{display:flex;}
+  #onb .q{font-size:24px;font-weight:800;line-height:1.25;margin-bottom:6px;}
+  #onb .hint{font-size:14px;color:var(--dim);margin-bottom:18px;}
+  #onb input[type=text]{width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:16px;font-size:18px;color:var(--txt);}
+  .opts{display:flex;flex-direction:column;gap:10px;}
+  .opt{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:15px 16px;font-size:16px;font-weight:600;}
+  .opt.sel{border-color:var(--accent);background:rgba(255,255,255,.08);}
+  .ageRow{display:flex;align-items:center;gap:14px;margin-top:6px;}
+  .ageVal{font-size:40px;font-weight:800;min-width:64px;text-align:center;color:var(--accent);}
+  input[type=range].age{flex:1;-webkit-appearance:none;appearance:none;height:34px;background:transparent;}
+  input[type=range].age::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:rgba(255,255,255,.18);}
+  input[type=range].age::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:30px;height:30px;border-radius:50%;background:var(--accent);margin-top:-12px;}
+  #onb .nav{display:flex;gap:10px;margin-top:18px;}
+  #onb .nav button{flex:1;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;}
+  #obBack{background:var(--card);color:var(--txt);border:1px solid var(--line) !important;}
+  #obNext{background:var(--accent);color:var(--ink);}
+  #obDots{display:flex;gap:6px;justify-content:center;margin-top:14px;}
+  #obDots span{width:7px;height:7px;border-radius:50%;background:var(--line);}
+  #obDots span.on{background:var(--accent);}
+
+  /* training */
+  .exItem{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px;}
+  .exHead{display:flex;align-items:center;gap:10px;}
+  .exHead .nm{flex:1;font-size:16px;font-weight:800;}
+  .chip{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;padding:4px 8px;border-radius:8px;background:rgba(255,255,255,.08);color:var(--dim);white-space:nowrap;}
+  .exDose{font-size:13px;color:var(--accent);font-weight:700;margin-top:6px;}
+  .exCue{font-size:14px;margin-top:8px;line-height:1.45;}
+  .exToggle{background:none;border:1px solid var(--line);border-radius:10px;color:var(--txt);font-size:12px;font-weight:700;padding:7px 11px;margin-top:10px;}
+  .exDetail{margin-top:10px;font-size:13.5px;line-height:1.5;border-top:1px solid var(--line);padding-top:10px;}
+  .exDetail .pt{margin:5px 0;padding-left:16px;position:relative;}
+  .exDetail .pt:before{content:"";position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .exWatch{margin-top:9px;color:#ffcf8a;font-size:13px;line-height:1.45;}
+  .ruleLine{font-size:13.5px;line-height:1.5;margin:7px 0;padding-left:20px;position:relative;}
+  .ruleLine:before{content:"\2713";position:absolute;left:0;color:var(--accent);font-weight:800;}
+  #toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:var(--accent);color:var(--ink);font-weight:800;font-size:14px;padding:12px 20px;border-radius:14px;
+    transition:all .3s;z-index:400;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:80%;text-align:center;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
-  <canvas id="scene"></canvas>
-  <div id="buildtag">kids &bull; build 3</div>
-  <div id="caption">Glowing softly. You are building something.<span id="scoreReadout">SCORE 60</span></div>
 
-  <div id="panel">
-    <div class="themes" id="themes"></div>
-    <div class="row" id="scoreRow">
-      <label>Wellness</label>
-      <input type="range" id="score" min="0" max="100" value="60">
-      <span class="val" id="scoreV">60</span>
+<!-- ============ ONBOARDING ============ -->
+<div id="onb">
+  <div class="step active" data-step="0">
+    <div class="q">Hi! What should we call you?</div>
+    <div class="hint">Just your first name is great.</div>
+    <input type="text" id="obName" placeholder="Your name" autocomplete="off" maxlength="18">
+  </div>
+  <div class="step" data-step="1">
+    <div class="q">How old are you?</div>
+    <div class="hint">This helps pick the right kind of workouts.</div>
+    <div class="ageRow">
+      <input type="range" class="age" id="obAge" min="10" max="13" value="11" step="1">
+      <div class="ageVal" id="obAgeVal">11</div>
     </div>
-    <div class="row">
-      <label>Glow size</label>
-      <input type="range" id="glow" min="50" max="250" value="120">
-      <span class="val" id="glowV">1.2</span>
+  </div>
+  <div class="step" data-step="2">
+    <div class="q">Pick your star</div>
+    <div class="hint">This floats above your forest. You can change it later.</div>
+    <div class="symbols" id="obSymbols"></div>
+  </div>
+  <div class="step" data-step="3">
+    <div class="q">How many days a week do you want to be active?</div>
+    <div class="hint">You can change your mind anytime.</div>
+    <div class="opts" id="obDays"></div>
+  </div>
+  <div class="step" data-step="4">
+    <div class="q">Where do you work out?</div>
+    <div class="opts" id="obWhere"></div>
+  </div>
+  <div class="step" data-step="5">
+    <div class="q">What do you want to get better at?</div>
+    <div class="opts" id="obGoal"></div>
+  </div>
+  <div id="obDots"></div>
+  <div class="nav">
+    <button id="obBack">Back</button>
+    <button id="obNext">Next</button>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+  <div id="appbar">
+    <div class="title">Star Health</div>
+    <div class="who" id="whoLabel"></div>
+  </div>
+
+  <div id="views">
+    <!-- HOME -->
+    <div class="view active" id="v-home">
+      <div id="starWrap">
+        <canvas id="starCanvas"></canvas>
+        <div id="scoreBadge"></div>
+        <div id="starCaption"></div>
+      </div>
+      <div class="homeBtns">
+        <button class="bigBtn" onclick="go('log')">Log today</button>
+        <button class="bigBtn ghost" onclick="openBreakdown()">How am I doing?</button>
+      </div>
+      <div id="homeBreak" class="card hidden"></div>
     </div>
-    <div class="row">
-      <label>Fireflies</label>
-      <input type="range" id="fire" min="10" max="120" value="60">
-      <span class="val" id="fireV">60</span>
+
+    <!-- LOG -->
+    <div class="view" id="v-log">
+      <div class="sectionTitle">Today</div>
+      <div class="card">
+        <div class="sub" id="logDate"></div>
+        <div class="metric"><div class="mi">&#9889;</div><div class="ml"><div class="name">Active minutes</div><div class="goal">Goal: 60 min of moving and playing</div></div><div class="stepper" data-k="activity" data-step="10" data-max="180"></div></div>
+        <div class="metric"><div class="mi">&#128164;</div><div class="ml"><div class="name">Sleep</div><div class="goal">Goal: about 9 hours</div></div><div class="stepper" data-k="sleep" data-step="1" data-max="14" data-unit="h"></div></div>
+        <div class="metric"><div class="mi">&#128167;</div><div class="ml"><div class="name">Water</div><div class="goal">Goal: 6 cups</div></div><div class="stepper" data-k="water" data-step="1" data-max="12"></div></div>
+        <div class="metric"><div class="mi">&#127822;</div><div class="ml"><div class="name">Fruit &amp; veggies</div><div class="goal">Goal: 5 servings</div></div><div class="stepper" data-k="fruitveg" data-step="1" data-max="10"></div></div>
+        <div class="metric"><div class="mi">&#128694;</div><div class="ml"><div class="name">Steps</div><div class="goal">Optional, if you have a tracker</div></div><div class="stepper" data-k="steps" data-step="1000" data-max="25000"></div></div>
+      </div>
+      <div class="sectionTitle">How do you feel?</div>
+      <div class="card">
+        <div class="sub">Tap the one that fits today.</div>
+        <div class="feel" id="feelRow"></div>
+      </div>
+      <button class="bigBtn" style="width:100%;margin-top:16px;" onclick="saveLog()">Save today</button>
     </div>
-    <div class="row">
-      <label>Dark floor</label>
-      <input type="range" id="floor" min="4" max="40" value="12">
-      <span class="val" id="floorV">.12</span>
-    </div>
-    <div class="row">
-      <label>Float</label>
-      <input type="range" id="floatS" min="0" max="200" value="100">
-      <span class="val" id="floatV">1.0</span>
-    </div>
-    <div class="row">
-      <label>Buzz</label>
-      <input type="range" id="buzz" min="0" max="200" value="100">
-      <span class="val" id="buzzV">1.0</span>
-    </div>
-    <div class="row colorRow">
-      <label>Colors</label>
-      <div class="swatches">
-        <span class="sw"><input type="color" id="cGlow"><b>Glow</b></span>
-        <span class="sw"><input type="color" id="cCore"><b>Core</b></span>
-        <span class="sw"><input type="color" id="cPart"><b>Fireflies</b></span>
+
+    <!-- TRAIN -->
+    <div class="view" id="v-train">
+      <div class="sectionTitle">Your workout</div>
+      <div class="card">
+        <h3>Workouts for age <span id="trainAgeLabel">11</span></h3>
+        <div class="sub">Slide to match how you like to train. Lower leans bodyweight and skills, higher adds light weights and machines.</div>
+        <div class="ageRow" style="margin-top:10px;">
+          <input type="range" class="age" id="trainAge" min="10" max="13" step="1" value="11">
+          <div class="ageVal" id="trainAgeBig">11</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Gym rules</h3>
+        <div id="rulesList"></div>
+      </div>
+      <div id="workoutList"></div>
+      <div class="homeBtns" style="margin-top:14px;">
+        <button class="bigBtn ghost" onclick="newWorkout()">New workout</button>
+        <button class="bigBtn" onclick="finishWorkout()">I finished!</button>
       </div>
     </div>
-    <div class="hideRow"><button class="hideBtn" id="hideBtn">Hide controls &#9662;</button></div>
+
+    <!-- SETUP -->
+    <div class="view" id="v-setup">
+      <div class="sectionTitle">Your star</div>
+      <div class="card">
+        <h3>Pick your symbol</h3>
+        <div class="symbols" id="setSymbols"></div>
+      </div>
+      <div class="card">
+        <h3>Pick your colors</h3>
+        <div class="swatches">
+          <span class="sw"><input type="color" id="setGlow"><b>Glow</b></span>
+          <span class="sw"><input type="color" id="setCore"><b>Center</b></span>
+          <span class="sw"><input type="color" id="setPart"><b>Fireflies</b></span>
+        </div>
+      </div>
+      <div class="sectionTitle">You</div>
+      <div class="card">
+        <div class="metric"><div class="mi">&#128100;</div><div class="ml"><div class="name" id="setName"></div><div class="goal" id="setAgeLabel"></div></div></div>
+      </div>
+      <div class="card">
+        <button class="linkBtn" onclick="resetApp()">Start over (erase everything)</button>
+      </div>
+    </div>
   </div>
-  <button id="fab">&#10022;</button>
+
+  <div id="nav">
+    <button data-v="home" class="active" onclick="go('home')"><span class="ic">&#10022;</span>Star</button>
+    <button data-v="log" onclick="go('log')"><span class="ic">&#9998;</span>Log</button>
+    <button data-v="train" onclick="go('train')"><span class="ic">&#128170;</span>Train</button>
+    <button data-v="setup" onclick="go('setup')"><span class="ic">&#9881;</span>You</button>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
 "use strict";
 
-/* ---------- helpers ---------- */
-function hexToRgb(hex){hex=hex.replace("#","");return {r:parseInt(hex.substr(0,2),16),g:parseInt(hex.substr(2,2),16),b:parseInt(hex.substr(4,2),16)};}
+/* ====================== storage ====================== */
+var KEY="kidstar_v1";
+var DB=load();
+function blankDB(){
+  return {settings:{name:"",age:11,theme:"star",col:null,days:3,where:"gym",goal:"feel",trainAge:null,onboarded:false},
+          days:{},train:null,workoutDays:{}};
+}
+function load(){
+  try{var raw=localStorage.getItem(KEY);if(raw){var d=JSON.parse(raw);if(d&&d.settings)return d;}}catch(e){}
+  return blankDB();
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}}
+
+/* ====================== dates ====================== */
+function todayStr(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function dateNDaysAgo(n){var d=new Date();d.setDate(d.getDate()-n);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function prettyDate(){return new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});}
+
+/* ====================== color helpers ====================== */
+function hexToRgb(hex){hex=(hex||"#000000").replace("#","");return {r:parseInt(hex.substr(0,2),16),g:parseInt(hex.substr(2,2),16),b:parseInt(hex.substr(4,2),16)};}
 function shade(hex,f){var c=hexToRgb(hex);return "rgb("+(c.r*f|0)+","+(c.g*f|0)+","+(c.b*f|0)+")";}
 function rgba(hex,a){var c=hexToRgb(hex);return "rgba("+c.r+","+c.g+","+c.b+","+a+")";}
-function lerp(a,b,t){return a+(b-a)*t;}
 function clamp(v,lo,hi){return v<lo?lo:(v>hi?hi:v);}
 function mulberry32(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
 
-/* ---------- themes (the fully-alive palette, then darkened by score) ---------- */
+/* ====================== themes (palette per symbol; particle = TYPE, pcol = COLOR) ====================== */
 var THEMES={
   star:{label:"Star",piece:"star",particle:"firefly",
     skyTop:"#1a1430",skyBottom:"#4a2c52",horizon:"#e0883e",
-    glow:"#ffe7a0",core:"#fffdf2",particle:"#fff0a8",
+    glow:"#ffe7a0",core:"#fffdf2",pcol:"#fff0a8",
     hill:"#2c2148",treeFar:"#20302a",treeNear:"#0e1812",treeStyle:"pine",bgStars:true},
   butterflies:{label:"Butterflies",piece:"butterfly",particle:"butterfly",
     skyTop:"#2a1a40",skyBottom:"#6a3a78",horizon:"#ff9ec4",
-    glow:"#ff9ad8",core:"#fff0fb",particle:"#ffc2ec",
+    glow:"#ff9ad8",core:"#fff0fb",pcol:"#ffc2ec",
     hill:"#4a2c60",treeFar:"#34503e",treeNear:"#16281c",treeStyle:"round",bgStars:false},
-  hammer:{label:"Thor's Hammer",piece:"hammer",particle:"spark",
+  hammer:{label:"Hammer",piece:"hammer",particle:"spark",
     skyTop:"#0c1622",skyBottom:"#1c3450",horizon:"#4aa0d8",
-    glow:"#8fe0ff",core:"#ffffff",particle:"#bff2ff",
+    glow:"#8fe0ff",core:"#ffffff",pcol:"#bff2ff",
     hill:"#122436",treeFar:"#16242e",treeNear:"#08111a",treeStyle:"pine",bgStars:false},
   moon:{label:"Moon",piece:"moon",particle:"firefly",
     skyTop:"#0a1024",skyBottom:"#1a2348",horizon:"#6a7ab0",
-    glow:"#cfe0ff",core:"#ffffff",particle:"#dce8ff",
+    glow:"#cfe0ff",core:"#ffffff",pcol:"#dce8ff",
     hill:"#161e3a",treeFar:"#18242e",treeNear:"#0a121c",treeStyle:"pine",bgStars:true},
   crystal:{label:"Crystal",piece:"crystal",particle:"sparkle",
     skyTop:"#161a30",skyBottom:"#2a3a52",horizon:"#6ad0c0",
-    glow:"#9af0e0",core:"#f0fffb",particle:"#b0ffe8",
+    glow:"#9af0e0",core:"#f0fffb",pcol:"#b0ffe8",
     hill:"#243a44",treeFar:"#1e3a38",treeNear:"#0c1c1c",treeStyle:"round",bgStars:true}
 };
+/* locked tuning constants (your approved Star values; reused across symbols for now) */
+var TUNE={glowMul:2.5,fireSize:0.34,trailLen:13,speed:1.3,floatSpeed:0,maxFire:10,dimFloor:0.12};
 
-/* ---------- state ---------- */
-var state={theme:"star",score:60,glowMul:1.2,maxFire:60,dimFloor:0.12,floatSpeed:1.0,buzzSpeed:1.0,
-  col:{glow:"#ffe7a0",core:"#fffdf2",particle:"#fff0a8"}};
-var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* ====================== scoring (the six metrics feed the star) ====================== */
+var METRIC_TARGET={activity:60,sleep:9,water:6,fruitveg:5,steps:11000};
+var METRIC_WEIGHT={activity:26,sleep:20,fruitveg:20,water:14,steps:12,feelings:8};
 
-/* ---------- canvas ---------- */
-var canvas=document.getElementById("scene");
-var ctx=canvas.getContext("2d");
-var W=0,H=0,DPR=1;
-var trees=[],bgStars=[],particles=[];
-var cx=0,cy=0,R=0;
-
-function resize(){
-  DPR=Math.min(window.devicePixelRatio||1,2.5);
-  W=window.innerWidth;H=window.innerHeight;
-  canvas.width=W*DPR;canvas.height=H*DPR;
-  canvas.style.width=W+"px";canvas.style.height=H+"px";
-  ctx.setTransform(DPR,0,0,DPR,0,0);
-  R=Math.min(W,H)*0.085;
-  cx=W/2;cy=H*0.40;
-  buildTrees();
-  buildBgStars();
+function feelComponent(mood){ // 1..5: gentle floor so a tough day never craters the star
+  if(!mood)return null;
+  return clamp(0.45+(mood-1)/4*0.55,0.3,1);
 }
-
-function buildTrees(){
-  trees=[];
-  var rnd=mulberry32(1337);
-  var layers=[
-    {base:H*0.655,scale:0.7,color:"treeFar",jitter:0.10},
-    {base:H*0.700,scale:0.95,color:"treeFar",jitter:0.14},
-    {base:H*0.760,scale:1.35,color:"treeNear",jitter:0.18}
-  ];
-  for(var l=0;l<layers.length;l++){
-    var L=layers[l];
-    var step=Math.max(34,W/(10+l*4));
-    for(var x=-step; x<W+step; x+=step*(0.62+rnd()*0.5)){
-      var h=(40+rnd()*46)*L.scale;
-      var w=(16+rnd()*12)*L.scale;
-      trees.push({x:x+(rnd()-0.5)*step*L.jitter,base:L.base,h:h,w:w,color:L.color,layer:l});
-    }
+function dayComponents(rec){
+  if(!rec)return {};
+  var c={};
+  if(rec.activity!=null)c.activity=clamp(rec.activity/METRIC_TARGET.activity,0,1);
+  if(rec.sleep!=null)c.sleep=clamp(rec.sleep/METRIC_TARGET.sleep,0,1);
+  if(rec.water!=null)c.water=clamp(rec.water/METRIC_TARGET.water,0,1);
+  if(rec.fruitveg!=null)c.fruitveg=clamp(rec.fruitveg/METRIC_TARGET.fruitveg,0,1);
+  if(rec.steps!=null&&rec.steps>0)c.steps=clamp(rec.steps/METRIC_TARGET.steps,0,1);
+  var fc=feelComponent(rec.feelings);if(fc!=null)c.feelings=fc;
+  return c;
+}
+function hasAnyLog(){
+  var ds=Object.keys(DB.days||{});
+  for(var i=0;i<ds.length;i++){var r=DB.days[ds[i]];
+    if(r&&(r.activity!=null||r.sleep!=null||r.water!=null||r.fruitveg!=null||(r.steps!=null&&r.steps>0)||r.feelings!=null))return true;}
+  return false;
+}
+function computeStarScore(){
+  if(!hasAnyLog())return {score:55,welcome:true,parts:{}};
+  // average each metric component across the last 7 logged days, then weight
+  var sums={},counts={};
+  for(var i=0;i<7;i++){
+    var ds=dateNDaysAgo(i);var rec=DB.days[ds];if(!rec)continue;
+    var c=dayComponents(rec);
+    Object.keys(c).forEach(function(k){sums[k]=(sums[k]||0)+c[k];counts[k]=(counts[k]||0)+1;});
   }
+  var w=0,t=0,parts={};
+  Object.keys(METRIC_WEIGHT).forEach(function(k){
+    if(counts[k]){var avg=sums[k]/counts[k];parts[k]=avg;w+=avg*METRIC_WEIGHT[k];t+=METRIC_WEIGHT[k];}
+  });
+  var score=t>0?(w/t)*100:55;
+  return {score:score,welcome:false,parts:parts};
 }
 
-function buildBgStars(){
-  bgStars=[];
-  var rnd=mulberry32(99);
-  var n=Math.round(W*H/16000);
-  for(var i=0;i<n;i++){
-    bgStars.push({x:rnd()*W,y:rnd()*H*0.55,r:rnd()*1.2+0.3,ph:rnd()*6.28,sp:0.4+rnd()*1.2});
-  }
+/* ====================== STAR ENGINE (ported, container-sized) ====================== */
+var starCanvas=document.getElementById("starCanvas");
+var sctx=starCanvas.getContext("2d");
+var SW=0,SH=0,SDPR=1,scx=0,scy=0,sR=0;
+var sTrees=[],sBgStars=[],sParts=[];
+var starScore=55, starAnimOn=false, starRAF=null;
+
+function sizeStar(){
+  var wrap=document.getElementById("starWrap");
+  var r=wrap.getBoundingClientRect();
+  SW=Math.max(1,r.width);SH=Math.max(1,r.height);
+  SDPR=Math.min(window.devicePixelRatio||1,2.5);
+  starCanvas.width=SW*SDPR;starCanvas.height=SH*SDPR;
+  sctx.setTransform(SDPR,0,0,SDPR,0,0);
+  sR=Math.min(SW,SH)*0.135;
+  scx=SW/2;scy=SH*0.42;
+  buildStarScene();
+}
+function buildStarScene(){
+  sTrees=[];var rnd=mulberry32(1337);
+  var layers=[{base:SH*0.66,scale:0.7,color:"treeFar"},{base:SH*0.74,scale:0.95,color:"treeFar"},{base:SH*0.84,scale:1.3,color:"treeNear"}];
+  for(var l=0;l<layers.length;l++){var L=layers[l];var step=Math.max(28,SW/(8+l*4));
+    for(var x=-step;x<SW+step;x+=step*(0.6+rnd()*0.5)){
+      sTrees.push({x:x+(rnd()-0.5)*step*0.2,base:L.base,h:(34+rnd()*40)*L.scale,w:(13+rnd()*10)*L.scale,color:L.color});}}
+  sBgStars=[];var r2=mulberry32(99);var n=Math.round(SW*SH/9000);
+  for(var i=0;i<n;i++)sBgStars.push({x:r2()*SW,y:r2()*SH*0.55,r:r2()*1.1+0.3,ph:r2()*6.28,sp:0.4+r2()*1.1});
+  sParts=[];var r3=mulberry32(7);
+  for(var k=0;k<20;k++){var ang=r3()*6.28,rad=sR*(1.4+r3()*3.1);
+    sParts.push({x:scx+Math.cos(ang)*rad,y:scy+Math.sin(ang)*rad,vx:(r3()-0.5)*0.4,vy:(r3()-0.5)*0.4,
+      ph:r3()*6.28,sz:0.8+r3()*0.9,z:r3(),flap:r3()*6.28,life:0,trail:[]});}
+}
+function starTheme(){return THEMES[DB.settings.theme]||THEMES.star;}
+function starCol(){
+  var th=starTheme();var c=DB.settings.col;
+  return c?{glow:c.glow,core:c.core,particle:c.particle}:{glow:th.glow,core:th.core,particle:th.pcol};
 }
 
-function buildParticles(){
-  particles=[];
-  var rnd=mulberry32(7);
-  var POOL=120;
-  for(var i=0;i<POOL;i++){
-    var ang=rnd()*6.28, rad=R*(1.4+rnd()*3.1);
-    particles.push({
-      x:cx+Math.cos(ang)*rad, y:cy+Math.sin(ang)*rad,
-      vx:(rnd()-0.5)*0.4, vy:(rnd()-0.5)*0.4,
-      ph:rnd()*6.28, sz:0.8+rnd()*0.9, z:rnd(), flap:rnd()*6.28, life:0, seed:rnd()*1000
-    });
-  }
-}
-
-/* ---------- centerpiece drawing ---------- */
-function drawGlow(B){
-  var rad=R*2.3*state.glowMul*(0.35+0.65*B);
-  var g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,rad);
-  g.addColorStop(0,rgba(state.col.glow,0.55*B));
-  g.addColorStop(0.4,rgba(state.col.glow,0.22*B));
-  g.addColorStop(1,rgba(state.col.glow,0));
-  ctx.fillStyle=g;
-  ctx.beginPath();ctx.arc(cx,cy,rad,0,6.2832);ctx.fill();
-}
-
-function fillPiece(B,inner,outer){
-  var g=ctx.createRadialGradient(cx,cy-R*0.2,R*0.1,cx,cy,R*1.1);
-  g.addColorStop(0,shade(state.col.core,clamp(0.45+0.55*B,0,1)));
-  g.addColorStop(0.55,shade(inner||state.col.glow,clamp(0.30+0.7*B,0,1)));
-  g.addColorStop(1,shade(outer||state.col.glow,clamp(0.18+0.6*B,0,1)));
+function sFillPiece(B,inner,outer){
+  var col=starCol();
+  var g=sctx.createRadialGradient(scx,scy-sR*0.2,sR*0.1,scx,scy,sR*1.1);
+  g.addColorStop(0,shade(col.core,clamp(0.45+0.55*B,0,1)));
+  g.addColorStop(0.55,shade(inner||col.glow,clamp(0.30+0.7*B,0,1)));
+  g.addColorStop(1,shade(outer||col.glow,clamp(0.18+0.6*B,0,1)));
   return g;
 }
-
-function drawStar(B){
-  var spikes=5,outer=R,inner=R*0.42,rot=-Math.PI/2;
-  ctx.beginPath();
-  for(var i=0;i<spikes*2;i++){
-    var rr=(i%2===0)?outer:inner;var a=rot+i*Math.PI/spikes;
-    var px=cx+Math.cos(a)*rr,py=cy+Math.sin(a)*rr;
-    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
-  }
-  ctx.closePath();
-  ctx.fillStyle=fillPiece(B);ctx.fill();
-  ctx.fillStyle=rgba(state.col.core,0.9*B);
-  ctx.beginPath();ctx.arc(cx,cy,R*0.16,0,6.2832);ctx.fill();
-}
-
-function drawButterfly(B){
-  var t=now()*0.004*state.floatSpeed;
-  var flap=reduced?1:(0.78+0.22*Math.abs(Math.sin(t)));
-  ctx.save();ctx.translate(cx,cy);ctx.scale(flap,1);
-  ctx.fillStyle=fillPiece(B);
-  function wing(sx,sy){ctx.beginPath();ctx.ellipse(sx*R*0.5,sy*R*0.45,R*0.55,R*0.42,sx*0.5,0,6.2832);ctx.fill();}
-  wing(-1,-1);wing(1,-1);wing(-1,0.8);wing(1,0.8);
-  ctx.restore();
-  ctx.strokeStyle=rgba(state.col.core,0.85*B);ctx.lineWidth=R*0.07;
-  ctx.beginPath();ctx.moveTo(cx,cy-R*0.5);ctx.lineTo(cx,cy+R*0.55);ctx.stroke();
-  ctx.lineWidth=R*0.035;
-  ctx.beginPath();ctx.moveTo(cx,cy-R*0.5);ctx.quadraticCurveTo(cx-R*0.25,cy-R*0.95,cx-R*0.35,cy-R*0.8);
-  ctx.moveTo(cx,cy-R*0.5);ctx.quadraticCurveTo(cx+R*0.25,cy-R*0.95,cx+R*0.35,cy-R*0.8);ctx.stroke();
-}
-
-function drawHammer(B){
-  var hw=R*1.15,hh=R*0.78,hx=cx-hw/2,hy=cy-R*0.55;
-  ctx.fillStyle=fillPiece(B,"#9fb4c8","#3a4a5e");
-  roundRect(hx,hy,hw,hh,R*0.12);ctx.fill();
-  ctx.fillStyle=rgba("#dfeaf5",0.5*B);roundRect(hx,hy,hw,hh*0.34,R*0.12);ctx.fill();
-  ctx.fillStyle=shade("#6b4a2e",clamp(0.3+0.7*B,0,1));
-  roundRect(cx-R*0.13,hy+hh*0.9,R*0.26,R*1.05,R*0.06);ctx.fill();
-  if(B>0.45&&!reduced){
-    var arcs=Math.round((B-0.45)*8);
-    ctx.strokeStyle=rgba(state.col.glow,0.85*B);ctx.lineWidth=2;
-    for(var k=0;k<arcs;k++){
-      var a0=Math.random()*6.28,r0=R*1.0+Math.random()*R*0.5;
-      ctx.beginPath();var lx=cx+Math.cos(a0)*r0,ly=cy+Math.sin(a0)*r0;ctx.moveTo(lx,ly);
-      for(var s=0;s<4;s++){lx+=(Math.random()-0.5)*R*0.5;ly+=(Math.random()-0.5)*R*0.5;ctx.lineTo(lx,ly);}
-      ctx.stroke();
-    }
-  }
-}
-
-function drawMoon(B){
-  ctx.fillStyle=fillPiece(B,"#e8eefc","#7d8ab5");
-  ctx.beginPath();ctx.arc(cx,cy,R,0,6.2832);ctx.fill();
-  ctx.fillStyle=rgba("#2a3358",0.30*B);
-  var craters=[[-0.3,-0.25,0.18],[0.28,0.1,0.22],[0.05,0.38,0.14],[-0.18,0.3,0.10],[0.34,-0.32,0.12]];
-  for(var i=0;i<craters.length;i++){var c=craters[i];ctx.beginPath();ctx.arc(cx+c[0]*R,cy+c[1]*R,c[2]*R,0,6.2832);ctx.fill();}
-}
-
-function drawCrystal(B){
-  var top=cy-R*1.05,bot=cy+R*1.05,midY=cy-R*0.15,wx=R*0.78;
-  ctx.beginPath();
-  ctx.moveTo(cx,top);ctx.lineTo(cx+wx,midY);ctx.lineTo(cx+wx*0.62,bot);
-  ctx.lineTo(cx-wx*0.62,bot);ctx.lineTo(cx-wx,midY);ctx.closePath();
-  ctx.fillStyle=fillPiece(B);ctx.fill();
-  ctx.strokeStyle=rgba(state.col.core,0.55*B);ctx.lineWidth=1.5;
-  ctx.beginPath();
-  ctx.moveTo(cx,top);ctx.lineTo(cx-wx*0.62,bot);ctx.moveTo(cx,top);ctx.lineTo(cx+wx*0.62,bot);
-  ctx.moveTo(cx-wx,midY);ctx.lineTo(cx+wx,midY);ctx.moveTo(cx,top);ctx.lineTo(cx,bot);ctx.stroke();
-  ctx.fillStyle=rgba(state.col.core,0.8*B);ctx.beginPath();ctx.arc(cx-wx*0.3,midY-R*0.1,R*0.07,0,6.2832);ctx.fill();
-}
-
-function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
-
+function sRoundRect(x,y,w,h,r){sctx.beginPath();sctx.moveTo(x+r,y);sctx.arcTo(x+w,y,x+w,y+h,r);sctx.arcTo(x+w,y+h,x,y+h,r);sctx.arcTo(x,y+h,x,y,r);sctx.arcTo(x,y,x+w,y,r);sctx.closePath();}
 function drawPiece(B){
-  var p=THEMES[state.theme].piece;
-  if(p==="star")drawStar(B);
-  else if(p==="butterfly")drawButterfly(B);
-  else if(p==="hammer")drawHammer(B);
-  else if(p==="moon")drawMoon(B);
-  else if(p==="crystal")drawCrystal(B);
+  var p=starTheme().piece,col=starCol();
+  if(p==="star"){
+    var sp=5,o=sR,inn=sR*0.42,rot=-Math.PI/2;sctx.beginPath();
+    for(var i=0;i<sp*2;i++){var rr=(i%2===0)?o:inn;var a=rot+i*Math.PI/sp;var px=scx+Math.cos(a)*rr,py=scy+Math.sin(a)*rr;i===0?sctx.moveTo(px,py):sctx.lineTo(px,py);}
+    sctx.closePath();sctx.fillStyle=sFillPiece(B);sctx.fill();
+    sctx.fillStyle=rgba(col.core,0.9*B);sctx.beginPath();sctx.arc(scx,scy,sR*0.16,0,6.2832);sctx.fill();
+  }else if(p==="butterfly"){
+    sctx.save();sctx.translate(scx,scy);sctx.fillStyle=sFillPiece(B);
+    function wing(sx,sy){sctx.beginPath();sctx.ellipse(sx*sR*0.5,sy*sR*0.45,sR*0.55,sR*0.42,sx*0.5,0,6.2832);sctx.fill();}
+    wing(-1,-1);wing(1,-1);wing(-1,0.8);wing(1,0.8);sctx.restore();
+    sctx.strokeStyle=rgba(col.core,0.85*B);sctx.lineWidth=sR*0.07;
+    sctx.beginPath();sctx.moveTo(scx,scy-sR*0.5);sctx.lineTo(scx,scy+sR*0.55);sctx.stroke();
+  }else if(p==="hammer"){
+    var hw=sR*1.15,hh=sR*0.78,hx=scx-hw/2,hy=scy-sR*0.55;
+    sctx.fillStyle=sFillPiece(B,"#9fb4c8","#3a4a5e");sRoundRect(hx,hy,hw,hh,sR*0.12);sctx.fill();
+    sctx.fillStyle=rgba("#dfeaf5",0.5*B);sRoundRect(hx,hy,hw,hh*0.34,sR*0.12);sctx.fill();
+    sctx.fillStyle=shade("#6b4a2e",clamp(0.3+0.7*B,0,1));sRoundRect(scx-sR*0.13,hy+hh*0.9,sR*0.26,sR*1.05,sR*0.06);sctx.fill();
+    if(B>0.45){var arcs=Math.round((B-0.45)*8);sctx.strokeStyle=rgba(col.glow,0.85*B);sctx.lineWidth=2;
+      for(var k=0;k<arcs;k++){var a0=Math.random()*6.28,r0=sR*1.0+Math.random()*sR*0.5;sctx.beginPath();var lx=scx+Math.cos(a0)*r0,ly=scy+Math.sin(a0)*r0;sctx.moveTo(lx,ly);for(var s=0;s<4;s++){lx+=(Math.random()-0.5)*sR*0.5;ly+=(Math.random()-0.5)*sR*0.5;sctx.lineTo(lx,ly);}sctx.stroke();}}
+  }else if(p==="moon"){
+    sctx.fillStyle=sFillPiece(B,"#e8eefc","#7d8ab5");sctx.beginPath();sctx.arc(scx,scy,sR,0,6.2832);sctx.fill();
+    sctx.fillStyle=rgba("#2a3358",0.30*B);var cr=[[-0.3,-0.25,0.18],[0.28,0.1,0.22],[0.05,0.38,0.14],[-0.18,0.3,0.10]];
+    for(var i2=0;i2<cr.length;i2++){var c=cr[i2];sctx.beginPath();sctx.arc(scx+c[0]*sR,scy+c[1]*sR,c[2]*sR,0,6.2832);sctx.fill();}
+  }else if(p==="crystal"){
+    var top=scy-sR*1.05,bot=scy+sR*1.05,midY=scy-sR*0.15,wx=sR*0.78;
+    sctx.beginPath();sctx.moveTo(scx,top);sctx.lineTo(scx+wx,midY);sctx.lineTo(scx+wx*0.62,bot);sctx.lineTo(scx-wx*0.62,bot);sctx.lineTo(scx-wx,midY);sctx.closePath();
+    sctx.fillStyle=sFillPiece(B);sctx.fill();
+    sctx.strokeStyle=rgba(col.core,0.55*B);sctx.lineWidth=1.5;sctx.beginPath();
+    sctx.moveTo(scx,top);sctx.lineTo(scx-wx*0.62,bot);sctx.moveTo(scx,top);sctx.lineTo(scx+wx*0.62,bot);sctx.moveTo(scx-wx,midY);sctx.lineTo(scx+wx,midY);sctx.moveTo(scx,top);sctx.lineTo(scx,bot);sctx.stroke();
+  }
 }
-
-/* ---------- particles ----------
-   Visibility fix: each particle gets a dark contrast outline plus a bright
-   opaque core so it reads against both the bright glow and the dark forest.
-   Color comes from state.col (live-editable), not the fixed theme value. */
-function drawParticle(p,B,a){
-  var col=state.col;var t=THEMES[state.theme].particle;
-  var sz=p.sz*(0.7+p.z*0.7)*R*0.16;
-  var pulse=0.7+0.3*Math.sin(p.ph);
-  var alpha=clamp(a,0,1)*pulse;
-  if(alpha<=0.02)return;
-
-  if(t==="firefly"){
-    // dark backing disc so the dot reads even on top of the bright glow
-    ctx.fillStyle=rgba("#0a0700",Math.min(0.5,alpha*0.85));
-    ctx.beginPath();ctx.arc(p.x,p.y,sz*1.7,0,6.2832);ctx.fill();
-    // soft colored halo
-    var g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,sz*4.5);
-    g.addColorStop(0,rgba(col.particle,alpha));
-    g.addColorStop(0.45,rgba(col.particle,alpha*0.35));
-    g.addColorStop(1,rgba(col.particle,0));
-    ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,sz*4.5,0,6.2832);ctx.fill();
-    // bright opaque core
-    ctx.fillStyle=rgba(col.core,Math.min(1,alpha+0.5));
-    ctx.beginPath();ctx.arc(p.x,p.y,sz,0,6.2832);ctx.fill();
-    // bright thin ring
-    ctx.strokeStyle=rgba(col.particle,Math.min(1,alpha+0.3));ctx.lineWidth=Math.max(1,sz*0.4);
-    ctx.beginPath();ctx.arc(p.x,p.y,sz*1.2,0,6.2832);ctx.stroke();
-  }else if(t==="butterfly"){
-    var f=reduced?1:(0.5+0.5*Math.abs(Math.sin(p.flap)));
-    ctx.save();ctx.translate(p.x,p.y);ctx.scale(f,1);
-    ctx.fillStyle=rgba("#1a1020",Math.min(0.5,alpha));
-    ctx.beginPath();ctx.ellipse(-sz*1.45,0,sz*1.5,sz*1.05,0,0,6.2832);ctx.fill();
-    ctx.beginPath();ctx.ellipse(sz*1.45,0,sz*1.5,sz*1.05,0,0,6.2832);ctx.fill();
-    ctx.fillStyle=rgba(col.particle,Math.min(1,alpha+0.2));
-    ctx.beginPath();ctx.ellipse(-sz*1.3,0,sz*1.3,sz*0.9,0,0,6.2832);ctx.fill();
-    ctx.beginPath();ctx.ellipse(sz*1.3,0,sz*1.3,sz*0.9,0,0,6.2832);ctx.fill();
-    ctx.restore();
-  }else if(t==="spark"){
-    var fl=Math.random()<0.5?alpha:alpha*0.35;
-    ctx.lineCap="round";
-    ctx.strokeStyle=rgba("#06121a",Math.min(0.6,fl));ctx.lineWidth=Math.max(1.5,sz*1.1);
-    ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+p.vx*9,p.y+p.vy*9);ctx.stroke();
-    ctx.strokeStyle=rgba(col.particle,Math.min(1,fl+0.2));ctx.lineWidth=Math.max(1,sz*0.6);
-    ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+p.vx*8,p.y+p.vy*8);ctx.stroke();
-    ctx.fillStyle=rgba(col.core,Math.min(1,fl+0.4));ctx.beginPath();ctx.arc(p.x,p.y,sz*0.6,0,6.2832);ctx.fill();
+function drawStarGlow(B){
+  var col=starCol();var rad=sR*2.3*TUNE.glowMul*(0.35+0.65*B);
+  var g=sctx.createRadialGradient(scx,scy,sR*0.2,scx,scy,rad);
+  g.addColorStop(0,rgba(col.glow,0.55*B));g.addColorStop(0.4,rgba(col.glow,0.22*B));g.addColorStop(1,rgba(col.glow,0));
+  sctx.fillStyle=g;sctx.beginPath();sctx.arc(scx,scy,rad,0,6.2832);sctx.fill();
+}
+function updateStarParts(sn){
+  var active=Math.round(TUNE.maxFire*sn);
+  var sp=TUNE.speed*(0.30+0.70*sn);
+  var maxLen=Math.round(TUNE.trailLen*(0.18+0.82*sn));
+  for(var i=0;i<sParts.length;i++){
+    var p=sParts[i];var tgt=(i<active)?1:0;p.life+=(tgt-p.life)*0.04;
+    if(p.life<0.02&&tgt===0){if(p.trail.length)p.trail.length=0;continue;}
+    if(Math.random()<0.06){p.vx+=(Math.random()-0.5)*2.4;p.vy+=(Math.random()-0.5)*2.4;}
+    p.vx+=(Math.random()-0.5)*0.30;p.vy+=(Math.random()-0.5)*0.30;
+    var dx=p.x-scx,dy=p.y-scy,d=Math.sqrt(dx*dx+dy*dy)||1,minR=sR*1.0,maxR=sR*5.0;
+    if(d>maxR){p.vx-=dx/d*0.65;p.vy-=dy/d*0.65;}else if(d<minR){p.vx+=dx/d*0.45;p.vy+=dy/d*0.45;}
+    var spd=Math.sqrt(p.vx*p.vx+p.vy*p.vy),vmax=4.6;if(spd>vmax){p.vx=p.vx/spd*vmax;p.vy=p.vy/spd*vmax;}
+    p.vx*=0.985;p.vy*=0.985;p.x+=p.vx*sp;p.y+=p.vy*sp;p.ph+=0.06;p.flap+=0.2;
+    if(maxLen>0&&p.life>0.08){p.trail.push({x:p.x,y:p.y});while(p.trail.length>maxLen)p.trail.shift();}else if(p.trail.length){p.trail.length=0;}
+  }
+}
+function drawStarPart(p,B,a){
+  var col=starCol(),t=starTheme().particle;
+  var head=p.sz*(0.6+p.z*0.6)*TUNE.fireSize*sR*0.11;if(head<0.6)head=0.6;
+  var pulse=0.72+0.28*Math.sin(p.ph),alpha=clamp(a,0,1)*pulse;if(alpha<=0.02)return;
+  var tr=p.trail;
+  if(tr&&tr.length>1){
+    var lw=Math.max(1,head*0.9),hx=p.x,hy=p.y,tx=tr[0].x,ty=tr[0].y;sctx.lineCap="round";sctx.lineJoin="round";
+    var gh=sctx.createLinearGradient(tx,ty,hx,hy);gh.addColorStop(0,rgba("#140d08",0));gh.addColorStop(1,rgba("#140d08",Math.min(0.5,alpha*0.55)));
+    sctx.strokeStyle=gh;sctx.lineWidth=lw+1.2;sctx.beginPath();sctx.moveTo(tx,ty);for(var k=1;k<tr.length;k++)sctx.lineTo(tr[k].x,tr[k].y);sctx.lineTo(hx,hy);sctx.stroke();
+    var gc=sctx.createLinearGradient(tx,ty,hx,hy);gc.addColorStop(0,rgba(col.particle,0));gc.addColorStop(1,rgba(col.particle,alpha));
+    sctx.strokeStyle=gc;sctx.lineWidth=lw;sctx.beginPath();sctx.moveTo(tx,ty);for(var m=1;m<tr.length;m++)sctx.lineTo(tr[m].x,tr[m].y);sctx.lineTo(hx,hy);sctx.stroke();
+  }
+  sctx.fillStyle=rgba("#140d08",Math.min(0.5,alpha*0.7));sctx.beginPath();sctx.arc(p.x,p.y,head*1.8,0,6.2832);sctx.fill();
+  if(t==="butterfly"){
+    var f=0.5+0.5*Math.abs(Math.sin(p.flap));sctx.save();sctx.translate(p.x,p.y);sctx.scale(f,1);
+    sctx.fillStyle=rgba(col.particle,Math.min(1,alpha+0.2));
+    sctx.beginPath();sctx.ellipse(-head*1.3,0,head*1.3,head*0.9,0,0,6.2832);sctx.fill();
+    sctx.beginPath();sctx.ellipse(head*1.3,0,head*1.3,head*0.9,0,0,6.2832);sctx.fill();sctx.restore();
   }else if(t==="sparkle"){
-    var s=sz*2.6*pulse;ctx.lineCap="round";
-    ctx.strokeStyle=rgba("#06120f",Math.min(0.5,alpha));ctx.lineWidth=Math.max(1.4,sz*0.9);
-    ctx.beginPath();ctx.moveTo(p.x-s,p.y);ctx.lineTo(p.x+s,p.y);ctx.moveTo(p.x,p.y-s);ctx.lineTo(p.x,p.y+s);ctx.stroke();
-    ctx.strokeStyle=rgba(col.particle,Math.min(1,alpha+0.2));ctx.lineWidth=Math.max(1,sz*0.45);
-    ctx.beginPath();ctx.moveTo(p.x-s,p.y);ctx.lineTo(p.x+s,p.y);ctx.moveTo(p.x,p.y-s);ctx.lineTo(p.x,p.y+s);ctx.stroke();
-    ctx.fillStyle=rgba(col.core,Math.min(1,alpha+0.35));ctx.beginPath();ctx.arc(p.x,p.y,sz*0.55,0,6.2832);ctx.fill();
+    var s2=head*2.4*pulse;sctx.lineCap="round";sctx.strokeStyle=rgba(col.particle,Math.min(1,alpha+0.2));sctx.lineWidth=Math.max(1,head*0.5);
+    sctx.beginPath();sctx.moveTo(p.x-s2,p.y);sctx.lineTo(p.x+s2,p.y);sctx.moveTo(p.x,p.y-s2);sctx.lineTo(p.x,p.y+s2);sctx.stroke();
+    sctx.fillStyle=rgba(col.core,Math.min(1,alpha+0.4));sctx.beginPath();sctx.arc(p.x,p.y,head*0.7,0,6.2832);sctx.fill();
+  }else{
+    var g=sctx.createRadialGradient(p.x,p.y,0,p.x,p.y,head*3.2);g.addColorStop(0,rgba(col.particle,alpha*0.6));g.addColorStop(1,rgba(col.particle,0));
+    sctx.fillStyle=g;sctx.beginPath();sctx.arc(p.x,p.y,head*3.2,0,6.2832);sctx.fill();
+    sctx.fillStyle=rgba(col.core,Math.min(1,alpha+0.45));sctx.beginPath();sctx.arc(p.x,p.y,head,0,6.2832);sctx.fill();
   }
 }
+function drawStarScene(){
+  var th=starTheme();
+  var s=clamp(starScore/100,0,1),eased=Math.pow(s,1.25),B=TUNE.dimFloor+(1-TUNE.dimFloor)*eased;
+  sctx.clearRect(0,0,SW,SH);
+  var g=sctx.createLinearGradient(0,0,0,SH);g.addColorStop(0,shade(th.skyTop,B));g.addColorStop(1,shade(th.skyBottom,B));
+  sctx.fillStyle=g;sctx.fillRect(0,0,SW,SH);
+  var hg=sctx.createRadialGradient(scx,SH*0.66,0,scx,SH*0.66,SW*0.75);hg.addColorStop(0,rgba(th.horizon,0.32*B));hg.addColorStop(1,rgba(th.horizon,0));
+  sctx.fillStyle=hg;sctx.fillRect(0,0,SW,SH);
+  if(th.bgStars){var tt=performance.now()*0.001;for(var i=0;i<sBgStars.length;i++){var st=sBgStars[i];var tw=0.4+0.6*Math.abs(Math.sin(tt*st.sp+st.ph));sctx.fillStyle=rgba("#ffffff",0.6*tw*B);sctx.beginPath();sctx.arc(st.x,st.y,st.r,0,6.2832);sctx.fill();}}
+  sctx.fillStyle=shade(th.hill,B*0.9);sctx.beginPath();sctx.moveTo(0,SH*0.72);sctx.quadraticCurveTo(SW*0.3,SH*0.63,SW*0.6,SH*0.70);sctx.quadraticCurveTo(SW*0.85,SH*0.76,SW,SH*0.68);sctx.lineTo(SW,SH);sctx.lineTo(0,SH);sctx.closePath();sctx.fill();
+  for(var j=0;j<sTrees.length;j++){var tr=sTrees[j];var dk=(tr.color==="treeNear")?B*0.78:B*0.92;sctx.fillStyle=shade(th[tr.color],dk);
+    if(th.treeStyle==="pine"){for(var k=0;k<3;k++){var ty=tr.base-(k*tr.h*0.28),tw=tr.w*(1-k*0.22),th2=tr.h*0.5;sctx.beginPath();sctx.moveTo(tr.x,ty-th2);sctx.lineTo(tr.x-tw,ty);sctx.lineTo(tr.x+tw,ty);sctx.closePath();sctx.fill();}}
+    else{sctx.beginPath();sctx.arc(tr.x,tr.base-tr.h*0.5,tr.w*0.95,0,6.2832);sctx.arc(tr.x-tr.w*0.7,tr.base-tr.h*0.32,tr.w*0.7,0,6.2832);sctx.arc(tr.x+tr.w*0.7,tr.base-tr.h*0.32,tr.w*0.7,0,6.2832);sctx.fill();sctx.fillRect(tr.x-tr.w*0.12,tr.base-tr.h*0.5,tr.w*0.24,tr.h*0.5);}}
+  sctx.fillStyle=shade(th.treeNear,B*0.6);sctx.fillRect(0,SH*0.88,SW,SH*0.12);
 
-function updateParticles(B){
-  var active=Math.round(state.maxFire*B);
-  var sp=state.buzzSpeed*(0.4+0.9*B);
-  for(var i=0;i<particles.length;i++){
-    var p=particles[i];
-    var tgt=(i<active)?1:0;
-    p.life+=(tgt-p.life)*0.04;
-    if(!reduced){
-      p.vx+=(Math.random()-0.5)*0.10;p.vy+=(Math.random()-0.5)*0.10;
-      var dx=p.x-cx,dy=p.y-cy,d=Math.sqrt(dx*dx+dy*dy)||1;
-      var minR=R*1.25,maxR=R*4.6;
-      if(d>maxR){p.vx-=dx/d*0.30;p.vy-=dy/d*0.30;}
-      else if(d<minR){p.vx+=dx/d*0.30;p.vy+=dy/d*0.30;}
-      p.vx*=0.95;p.vy*=0.95;
-      p.x+=p.vx*sp;p.y+=p.vy*sp;
-    }
-    p.ph+=0.05;p.flap+=0.18;
-  }
-}
-
-/* ---------- scene ---------- */
-function now(){return performance.now();}
-
-function drawSky(B){
-  var th=THEMES[state.theme];
-  var g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,shade(th.skyTop,B));
-  g.addColorStop(1,shade(th.skyBottom,B));
-  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  var hg=ctx.createRadialGradient(cx,H*0.66,0,cx,H*0.66,W*0.7);
-  hg.addColorStop(0,rgba(th.horizon,0.32*B));
-  hg.addColorStop(1,rgba(th.horizon,0));
-  ctx.fillStyle=hg;ctx.fillRect(0,0,W,H);
-}
-
-function drawStarsBg(B){
-  if(!THEMES[state.theme].bgStars)return;
-  var t=now()*0.001;
-  for(var i=0;i<bgStars.length;i++){
-    var s=bgStars[i];var tw=0.4+0.6*Math.abs(Math.sin(t*s.sp+s.ph));
-    ctx.fillStyle=rgba("#ffffff",0.6*tw*B);
-    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,6.2832);ctx.fill();
-  }
-}
-
-function drawHills(B){
-  var th=THEMES[state.theme];
-  ctx.fillStyle=shade(th.hill,B*0.9);
-  ctx.beginPath();ctx.moveTo(0,H*0.70);
-  ctx.quadraticCurveTo(W*0.3,H*0.60,W*0.6,H*0.68);
-  ctx.quadraticCurveTo(W*0.85,H*0.74,W,H*0.66);
-  ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();
-}
-
-function drawTrees(B){
-  var th=THEMES[state.theme];
-  for(var i=0;i<trees.length;i++){
-    var t=trees[i];
-    var dark=(t.color==="treeNear")?B*0.78:B*0.92;
-    ctx.fillStyle=shade(th[t.color],dark);
-    if(th.treeStyle==="pine"){
-      var tiers=3;
-      for(var k=0;k<tiers;k++){
-        var ty=t.base-(k*t.h*0.28);var tw=t.w*(1-k*0.22);var th2=t.h*0.5;
-        ctx.beginPath();ctx.moveTo(t.x,ty-th2);ctx.lineTo(t.x-tw,ty);ctx.lineTo(t.x+tw,ty);ctx.closePath();ctx.fill();
-      }
-    }else{
-      ctx.beginPath();ctx.arc(t.x,t.base-t.h*0.5,t.w*0.95,0,6.2832);
-      ctx.arc(t.x-t.w*0.7,t.base-t.h*0.32,t.w*0.7,0,6.2832);
-      ctx.arc(t.x+t.w*0.7,t.base-t.h*0.32,t.w*0.7,0,6.2832);ctx.fill();
-      ctx.fillRect(t.x-t.w*0.12,t.base-t.h*0.5,t.w*0.24,t.h*0.5);
-    }
-  }
-  ctx.fillStyle=shade(th.treeNear,B*0.6);ctx.fillRect(0,H*0.80,W,H*0.2);
-}
-
-function drawVignette(B){
-  var v=clamp((1-B)*0.85+0.12,0,0.95);
-  var g=ctx.createRadialGradient(cx,cy,R*1.5,cx,cy,Math.max(W,H)*0.75);
-  g.addColorStop(0,"rgba(0,0,0,0)");
-  g.addColorStop(1,"rgba(0,0,0,"+v+")");
-  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-}
-
-function frame(){
-  var s=state.score/100;
-  var eased=Math.pow(s,1.25);
-  var B=state.dimFloor+(1-state.dimFloor)*eased;
-
-  var bob=reduced?0:Math.sin(now()*0.0014*state.floatSpeed)*R*0.10;
-  var cySave=cy;cy=cySave+bob;
-
-  ctx.clearRect(0,0,W,H);
-  drawSky(B);
-  drawStarsBg(B);
-  drawHills(B);
-  drawTrees(B);
-
-  updateParticles(B);
+  updateStarParts(s);
   var pa=clamp(0.35+0.65*B,0,1);
-  for(var i=0;i<particles.length;i++){if(particles[i].z<0.5)drawParticle(particles[i],B,particles[i].life*pa);}
-  drawGlow(B);
-  drawPiece(B);
-  for(var j=0;j<particles.length;j++){if(particles[j].z>=0.5)drawParticle(particles[j],B,particles[j].life*pa);}
+  for(var a=0;a<sParts.length;a++){if(sParts[a].z<0.5)drawStarPart(sParts[a],B,sParts[a].life*pa);}
+  drawStarGlow(B);drawPiece(B);
+  for(var b=0;b<sParts.length;b++){if(sParts[b].z>=0.5)drawStarPart(sParts[b],B,sParts[b].life*pa);}
 
-  drawVignette(B);
-  cy=cySave;
-  requestAnimationFrame(frame);
+  var vg=clamp((1-B)*0.8+0.10,0,0.92);var vgg=sctx.createRadialGradient(scx,scy,sR*1.4,scx,scy,Math.max(SW,SH)*0.7);
+  vgg.addColorStop(0,"rgba(0,0,0,0)");vgg.addColorStop(1,"rgba(0,0,0,"+vg+")");sctx.fillStyle=vgg;sctx.fillRect(0,0,SW,SH);
+}
+function starLoop(){if(starAnimOn){drawStarScene();}starRAF=requestAnimationFrame(starLoop);}
+
+function captionFor(sc,welcome){
+  if(welcome)return "Log your first day to wake up your star.";
+  if(sc<15)return "Resting. A little move, water, or sleep will wake it up.";
+  if(sc<35)return "Stirring. Keep going, it is waking up.";
+  if(sc<55)return "Glowing softly. You are building something.";
+  if(sc<75)return "Shining. Nice work.";
+  if(sc<90)return "Bright and buzzing!";
+  return "Fully charged. You are crushing it!";
+}
+function refreshStar(){
+  var r=computeStarScore();starScore=r.score;
+  document.getElementById("starCaption").textContent=captionFor(r.score,r.welcome);
+  document.getElementById("scoreBadge").textContent=r.welcome?"NEW":("STAR "+Math.round(r.score));
 }
 
-/* ---------- captions ---------- */
-function captionFor(score){
-  if(score<15)return "Resting. A walk, some water, or good sleep will wake it up.";
-  if(score<35)return "Stirring. Keep going, it is starting to wake.";
-  if(score<55)return "Glowing softly. You are building something.";
-  if(score<75)return "Shining. Nice work today.";
-  if(score<90)return "Bright and buzzing!";
-  return "Fully charged. You are crushing it.";
-}
-function updateCaption(){
-  document.getElementById("caption").firstChild.textContent=captionFor(state.score);
-  document.getElementById("scoreReadout").textContent="SCORE "+state.score;
-}
-
-/* ---------- UI ---------- */
-function applyThemeColors(k){
-  var th=THEMES[k];
-  state.col={glow:th.glow,core:th.core,particle:th.particle};
-  document.getElementById("cGlow").value=th.glow;
-  document.getElementById("cCore").value=th.core;
-  document.getElementById("cPart").value=th.particle;
-  document.documentElement.style.setProperty("--accent",th.glow);
+/* ====================== navigation ====================== */
+var currentView="home";
+function go(v){
+  currentView=v;
+  document.querySelectorAll(".view").forEach(function(x){x.classList.toggle("active",x.id==="v-"+v);});
+  document.querySelectorAll("#nav button").forEach(function(b){b.classList.toggle("active",b.dataset.v===v);});
+  document.getElementById("views").scrollTop=0;
+  starAnimOn=(v==="home");
+  if(v==="home"){sizeStar();refreshStar();}
+  if(v==="log")renderLog();
+  if(v==="setup")renderSetup();
+  if(v==="train")renderTrain();
 }
 
-function buildThemeButtons(){
-  var wrap=document.getElementById("themes");wrap.innerHTML="";
+/* ====================== symbol mini-previews ====================== */
+function drawMiniSymbol(canvas,themeKey,sel){
+  var c=canvas.getContext("2d");var dpr=Math.min(window.devicePixelRatio||1,2.5);
+  canvas.width=64*dpr;canvas.height=64*dpr;c.setTransform(dpr,0,0,dpr,0,0);
+  var th=THEMES[themeKey];c.clearRect(0,0,64,64);
+  c.fillStyle=th.skyTop;c.fillRect(0,0,64,64);
+  var R=15,cx=32,cy=30,col={glow:th.glow,core:th.core};
+  var g=c.createRadialGradient(cx,cy,2,cx,cy,26);g.addColorStop(0,rgba(th.glow,0.7));g.addColorStop(1,rgba(th.glow,0));
+  c.fillStyle=g;c.beginPath();c.arc(cx,cy,26,0,6.2832);c.fill();
+  c.fillStyle=th.glow;
+  var p=th.piece;
+  if(p==="star"){var rot=-Math.PI/2;c.beginPath();for(var i=0;i<10;i++){var rr=(i%2===0)?R:R*0.42;var a=rot+i*Math.PI/5;var px=cx+Math.cos(a)*rr,py=cy+Math.sin(a)*rr;i===0?c.moveTo(px,py):c.lineTo(px,py);}c.closePath();c.fill();c.fillStyle=th.core;c.beginPath();c.arc(cx,cy,R*0.28,0,6.28);c.fill();}
+  else if(p==="butterfly"){[[-1,-1],[1,-1],[-1,0.8],[1,0.8]].forEach(function(s){c.beginPath();c.ellipse(cx+s[0]*R*0.5,cy+s[1]*R*0.45,R*0.55,R*0.42,s[0]*0.5,0,6.28);c.fill();});}
+  else if(p==="hammer"){c.fillStyle="#9fb4c8";c.fillRect(cx-R*0.9,cy-R*0.6,R*1.8,R*0.95);c.fillStyle="#6b4a2e";c.fillRect(cx-R*0.18,cy+R*0.3,R*0.36,R*1.1);}
+  else if(p==="moon"){c.beginPath();c.arc(cx,cy,R,0,6.28);c.fill();c.fillStyle=rgba("#2a3358",0.3);c.beginPath();c.arc(cx-R*0.3,cy-R*0.2,R*0.22,0,6.28);c.arc(cx+R*0.25,cy+R*0.15,R*0.28,0,6.28);c.fill();}
+  else if(p==="crystal"){c.beginPath();c.moveTo(cx,cy-R);c.lineTo(cx+R*0.7,cy-R*0.15);c.lineTo(cx+R*0.45,cy+R);c.lineTo(cx-R*0.45,cy+R);c.lineTo(cx-R*0.7,cy-R*0.15);c.closePath();c.fill();}
+}
+function buildSymbolGrid(containerId,onPick){
+  var wrap=document.getElementById(containerId);wrap.innerHTML="";
   Object.keys(THEMES).forEach(function(k){
-    var b=document.createElement("button");
-    b.className="tbtn"+(k===state.theme?" active":"");
-    b.textContent=THEMES[k].label;b.dataset.k=k;
-    b.onclick=function(){
-      state.theme=k;buildParticles();buildBgStars();applyThemeColors(k);
-      document.querySelectorAll(".tbtn").forEach(function(x){x.classList.toggle("active",x.dataset.k===k);});
-    };
-    wrap.appendChild(b);
+    var d=document.createElement("div");d.className="symbol"+(DB.settings.theme===k?" sel":"");d.dataset.k=k;
+    var cv=document.createElement("canvas");var nm=document.createElement("div");nm.className="nm";nm.textContent=THEMES[k].label;
+    d.appendChild(cv);d.appendChild(nm);wrap.appendChild(d);drawMiniSymbol(cv,k,DB.settings.theme===k);
+    d.onclick=function(){onPick(k);wrap.querySelectorAll(".symbol").forEach(function(x){x.classList.toggle("sel",x.dataset.k===k);});};
   });
 }
 
-function bind(id,vid,fn,fmt){
-  var el=document.getElementById(id);var v=document.getElementById(vid);
-  function up(){fn(parseFloat(el.value));v.textContent=fmt(parseFloat(el.value));}
-  el.addEventListener("input",up);up();
+/* ====================== onboarding ====================== */
+var OB={step:0,total:6,name:"",age:11,theme:"star",days:3,where:"gym",goal:"feel"};
+function startOnboarding(){
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("onb").classList.add("show");
+  buildOptList("obDays",[["2","2 days"],["3","3 days"],["4","4 days"],["5","5 days"]],"days",OB.days+"");
+  buildOptList("obWhere",[["gym","At a gym with a grown-up"],["home","At home"],["both","Both"]],"where",OB.where);
+  buildOptList("obGoal",[["strong","Get stronger"],["fast","Run faster"],["sport","Get better at my sport"],["feel","Just feel good"]],"goal",OB.goal);
+  buildSymbolGrid("obSymbols",function(k){OB.theme=k;});
+  document.getElementById("obAge").addEventListener("input",function(e){OB.age=+e.target.value;document.getElementById("obAgeVal").textContent=OB.age;});
+  document.getElementById("obName").addEventListener("input",function(e){OB.name=e.target.value.trim();});
+  buildDots();showStep(0);
+}
+function buildOptList(id,opts,field,selVal){
+  var wrap=document.getElementById(id);wrap.innerHTML="";
+  opts.forEach(function(o){var d=document.createElement("div");d.className="opt"+(selVal===o[0]?" sel":"");d.textContent=o[1];d.dataset.v=o[0];
+    d.onclick=function(){OB[field]=o[0];wrap.querySelectorAll(".opt").forEach(function(x){x.classList.toggle("sel",x.dataset.v===o[0]);});};
+    wrap.appendChild(d);});
+}
+function buildDots(){var d=document.getElementById("obDots");d.innerHTML="";for(var i=0;i<OB.total;i++){var s=document.createElement("span");d.appendChild(s);}}
+function showStep(n){
+  OB.step=n;
+  document.querySelectorAll("#onb .step").forEach(function(s){s.classList.toggle("active",+s.dataset.step===n);});
+  document.querySelectorAll("#obDots span").forEach(function(s,i){s.classList.toggle("on",i===n);});
+  document.getElementById("obBack").style.visibility=n===0?"hidden":"visible";
+  document.getElementById("obNext").textContent=(n===OB.total-1)?"Start!":"Next";
+}
+function obNext(){
+  if(OB.step===0&&!OB.name){document.getElementById("obName").focus();return;}
+  if(OB.step<OB.total-1){showStep(OB.step+1);return;}
+  DB.settings.name=OB.name||"Friend";DB.settings.age=OB.age;DB.settings.theme=OB.theme;
+  DB.settings.days=+OB.days;DB.settings.where=OB.where;DB.settings.goal=OB.goal;
+  var th=THEMES[OB.theme];DB.settings.col={glow:th.glow,core:th.core,particle:th.pcol};
+  DB.settings.onboarded=true;save();
+  document.getElementById("onb").classList.remove("show");
+  document.getElementById("app").classList.remove("hidden");
+  bootApp();
+}
+document.getElementById("obNext").onclick=obNext;
+document.getElementById("obBack").onclick=function(){if(OB.step>0)showStep(OB.step-1);};
+
+/* ====================== log tab ====================== */
+var FEELINGS=["\uD83D\uDE22","\uD83D\uDE15","\uD83D\uDE10","\uD83D\uDE42","\uD83D\uDE04"];
+function todayRec(){var d=todayStr();if(!DB.days[d])DB.days[d]={activity:null,sleep:null,water:null,fruitveg:null,steps:null,feelings:null};return DB.days[d];}
+function renderLog(){
+  document.getElementById("logDate").textContent=prettyDate();
+  var rec=todayRec();
+  document.querySelectorAll("#v-log .stepper").forEach(function(st){
+    var k=st.dataset.k,step=+st.dataset.step,max=+st.dataset.max,unit=st.dataset.unit||"";
+    var val=rec[k]==null?0:rec[k];
+    st.innerHTML="";
+    var minus=document.createElement("button");minus.textContent="\u2212";
+    var v=document.createElement("div");v.className="v";v.textContent=val+(unit?unit:"");
+    var plus=document.createElement("button");plus.textContent="+";
+    minus.onclick=function(){var cur=rec[k]==null?0:rec[k];cur=Math.max(0,cur-step);rec[k]=cur;v.textContent=cur+(unit?unit:"");};
+    plus.onclick=function(){var cur=rec[k]==null?0:rec[k];cur=Math.min(max,cur+step);rec[k]=cur;v.textContent=cur+(unit?unit:"");};
+    st.appendChild(minus);st.appendChild(v);st.appendChild(plus);
+  });
+  var fr=document.getElementById("feelRow");fr.innerHTML="";
+  FEELINGS.forEach(function(emo,i){var b=document.createElement("button");b.textContent=emo;b.className=(rec.feelings===i+1)?"sel":"";
+    b.onclick=function(){rec.feelings=i+1;fr.querySelectorAll("button").forEach(function(x,j){x.classList.toggle("sel",j===i);});};fr.appendChild(b);});
+}
+function saveLog(){
+  var rec=todayRec();
+  // a stepper at 0 still counts as logged for that metric (0 minutes is a real answer); steps 0 = not tracked
+  if(rec.steps===0)rec.steps=null;
+  save();refreshStar();
+  go("home");
 }
 
-function initUI(){
-  buildThemeButtons();
-  bind("score","scoreV",function(x){state.score=x;updateCaption();},function(x){return x|0;});
-  bind("glow","glowV",function(x){state.glowMul=x/100;},function(x){return (x/100).toFixed(1);});
-  bind("fire","fireV",function(x){state.maxFire=x;},function(x){return x|0;});
-  bind("floor","floorV",function(x){state.dimFloor=x/100;},function(x){return (x/100).toFixed(2).replace("0.",".");});
-  bind("floatS","floatV",function(x){state.floatSpeed=x/100;},function(x){return (x/100).toFixed(1);});
-  bind("buzz","buzzV",function(x){state.buzzSpeed=x/100;},function(x){return (x/100).toFixed(1);});
+/* ====================== setup tab ====================== */
+function renderSetup(){
+  buildSymbolGrid("setSymbols",function(k){
+    DB.settings.theme=k;var th=THEMES[k];DB.settings.col={glow:th.glow,core:th.core,particle:th.pcol};save();
+    seedSetupColors();applyAccent();refreshStar();
+  });
+  seedSetupColors();
+  document.getElementById("setName").textContent=DB.settings.name;
+  document.getElementById("setAgeLabel").textContent="Age "+DB.settings.age;
+}
+function seedSetupColors(){
+  var c=starCol();
+  document.getElementById("setGlow").value=c.glow;
+  document.getElementById("setCore").value=c.core;
+  document.getElementById("setPart").value=c.particle;
+}
+function bindSetupColor(id,key){
+  document.getElementById(id).addEventListener("input",function(e){
+    if(!DB.settings.col){var th=starTheme();DB.settings.col={glow:th.glow,core:th.core,particle:th.pcol};}
+    DB.settings.col[key]=e.target.value;save();applyAccent();
+  });
+}
+bindSetupColor("setGlow","glow");bindSetupColor("setCore","core");bindSetupColor("setPart","particle");
 
-  document.getElementById("cGlow").addEventListener("input",function(e){state.col.glow=e.target.value;document.documentElement.style.setProperty("--accent",e.target.value);});
-  document.getElementById("cCore").addEventListener("input",function(e){state.col.core=e.target.value;});
-  document.getElementById("cPart").addEventListener("input",function(e){state.col.particle=e.target.value;});
-
-  var panel=document.getElementById("panel");
-  document.getElementById("hideBtn").onclick=function(){panel.classList.add("hidden");};
-  document.getElementById("fab").onclick=function(){panel.classList.remove("hidden");};
-  applyThemeColors(state.theme);
-  updateCaption();
+function applyAccent(){document.documentElement.style.setProperty("--accent",starCol().glow);}
+function resetApp(){
+  if(!confirm("Erase everything and start over?"))return;
+  try{localStorage.removeItem(KEY);}catch(e){}
+  DB=blankDB();OB={step:0,total:6,name:"",age:11,theme:"star",days:3,where:"gym",goal:"feel"};
+  startOnboarding();
 }
 
-/* ---------- boot ---------- */
-window.addEventListener("resize",function(){resize();buildParticles();});
-resize();
-buildParticles();
-initUI();
-requestAnimationFrame(frame);
+/* ====================== home breakdown ====================== */
+function openBreakdown(){
+  var el=document.getElementById("homeBreak");
+  if(!el.classList.contains("hidden")){el.classList.add("hidden");return;}
+  var r=computeStarScore();
+  var names={activity:"Active minutes",sleep:"Sleep",water:"Water",fruitveg:"Fruit & veggies",steps:"Steps",feelings:"Feelings"};
+  var html="<h3>Your star today</h3>";
+  if(r.welcome){html+="<div class=\"sub\" style=\"margin-top:6px;\">Log a day and your star will start to glow. The more you keep up your habits, the more fireflies show up.</div>";}
+  else{
+    html+="<div class=\"sub\" style=\"margin-top:6px;\">Each habit lights up your star. Here is the last 7 days.</div>";
+    Object.keys(names).forEach(function(k){if(r.parts[k]!=null){var pct=Math.round(r.parts[k]*100);
+      html+="<div style=\"display:flex;justify-content:space-between;margin-top:8px;font-size:14px;\"><span>"+names[k]+"</span><b style=\"color:var(--accent);\">"+pct+"%</b></div>";}});
+  }
+  el.innerHTML=html;el.classList.remove("hidden");
+}
+
+/* ====================== TRAINING (Stage 2) ======================
+   Exercise library grounded in youth-training consensus: technique before load,
+   1 to 3 sets of light 8 to 15 reps, no maximal lifts, supervised. Each pattern
+   is a progression from foundational (bodyweight/skill) to light resistance
+   (machine/dumbbell). The age slider shifts emphasis along the progression. */
+var PROG={
+  warmup:[
+    {name:"March in place",equip:"warmup",cue:"Lift those knees and pump your arms.",coach:["Stay tall","Easy breathing","Pick up the pace a little"],watch:"Just getting warm, no rush."},
+    {name:"Arm circles",equip:"warmup",cue:"Big slow circles, forward then backward.",coach:["Arms straight","Small circles, then bigger","Both directions"],watch:"Keep it gentle on the shoulders."},
+    {name:"Warm-up squats",equip:"warmup",cue:"A few easy squats to wake up your legs.",coach:["Sit back","Chest up","Smooth and slow"],watch:"No weight, just warming up."},
+    {name:"Jumping jacks",equip:"warmup",cue:"Light bouncy jacks to get your heart going.",coach:["Soft knees","Land quietly","Steady rhythm"],watch:"Land softly, not stomping."}
+  ],
+  lower:[
+    {name:"Bodyweight squat",equip:"bodyweight",cue:"Sit back like into a chair, knees over your toes.",coach:["Chest tall","Push through your heels","Stand all the way up"],watch:"Knees track over your toes, do not let them cave in."},
+    {name:"Glute bridge",equip:"bodyweight",cue:"Squeeze your bottom and push your hips to the ceiling.",coach:["Feet flat","Squeeze at the top","Lower slowly"],watch:"Push with your hips, not your lower back."},
+    {name:"Step-ups",equip:"bodyweight",cue:"Whole foot on the step, stand tall, control the way down.",coach:["Drive through the top foot","Stand fully","Step down softly"],watch:"Use a low, steady box or step."},
+    {name:"Goblet squat",equip:"dumbbell",cue:"Hold one light dumbbell at your chest and sit back.",coach:["Elbows inside your knees","Heels down","Chest proud"],watch:"Start very light. Form comes first, always."},
+    {name:"Leg press machine",equip:"machine",cue:"Feet flat, push through your heels, smooth and steady.",coach:["Do not lock your knees hard","Control the way back","Comfy range"],watch:"Light weight, and a grown-up sets it up with you."}
+  ],
+  push:[
+    {name:"Wall push-up",equip:"bodyweight",cue:"Body straight like a plank, push the wall away.",coach:["Tight belly","Bend your elbows","Push back to straight"],watch:"Keep your body in one straight line."},
+    {name:"Incline push-up",equip:"bodyweight",cue:"Hands on a bench, lower with control, push back up.",coach:["Straight body","Elbows about 45 degrees","Full range"],watch:"The higher your hands, the easier it is."},
+    {name:"Push-up",equip:"bodyweight",cue:"Tight belly, lower down, push the floor away.",coach:["Body in a line","Elbows not flared wide","All the way up"],watch:"Drop to your knees if your hips start to sag."},
+    {name:"Chest press machine",equip:"machine",cue:"Back flat on the pad, press smooth, do not slam.",coach:["Wrists straight","Control the return","Breathe out as you push"],watch:"Light weight, grown-up helps set the seat."},
+    {name:"Dumbbell bench press",equip:"dumbbell",cue:"Control the weights down, then press them up.",coach:["Wrists stacked over elbows","Smooth path","Do not bounce"],watch:"Very light, with a grown-up nearby."}
+  ],
+  pull:[
+    {name:"Band row",equip:"band",cue:"Pull the band to your ribs and squeeze your shoulder blades.",coach:["Tall chest","Elbows back, not out","Slow return"],watch:"Anchor the band at a safe, solid spot."},
+    {name:"Inverted row",equip:"bodyweight",cue:"Body straight, pull your chest up to the bar.",coach:["Squeeze shoulder blades","Straight line","Control down"],watch:"A higher bar is easier, lower is harder."},
+    {name:"Seated row machine",equip:"machine",cue:"Tall chest, pull the handle to your belly, slow back.",coach:["Do not lean way back","Squeeze your back","Smooth tempo"],watch:"Light weight, set it up with a grown-up."},
+    {name:"Lat pulldown",equip:"machine",cue:"Pull the bar down to your chest, not behind your neck.",coach:["Lead with your elbows","Tall posture","Control the way up"],watch:"Always pull to the front, never behind your head."},
+    {name:"Assisted pull-up",equip:"machine",cue:"Lead with your elbows and control the way down.",coach:["Full hang to chin up","No swinging","Slow lower"],watch:"Use the assist so every rep stays clean."}
+  ],
+  core:[
+    {name:"Dead bug",equip:"bodyweight",cue:"Press your low back into the floor, reach opposite arm and leg.",coach:["Slow and steady","Back stays flat","Switch sides"],watch:"If your back arches up, reach a little less far."},
+    {name:"Bird dog",equip:"bodyweight",cue:"Reach opposite arm and leg out, keep your hips level.",coach:["Long reach","No wobble","Switch sides"],watch:"Keep your hips from tipping side to side."},
+    {name:"Plank",equip:"bodyweight",cue:"Straight line head to heels, tight belly, no sagging.",coach:["Elbows under shoulders","Squeeze everything","Keep breathing"],watch:"Drop to your knees if your hips sag."},
+    {name:"Side plank",equip:"bodyweight",cue:"Stack your body, lift your hips, hold steady.",coach:["Straight line","Hips up","Switch sides"],watch:"Drop the bottom knee to make it easier."},
+    {name:"Farmer carry",equip:"dumbbell",cue:"Stand tall and walk slowly holding light dumbbells.",coach:["Shoulders back","Squeeze the handles","Small steady steps"],watch:"Light weights and a clear path to walk."}
+  ],
+  cardio:[
+    {name:"Jog in place",equip:"bodyweight",cue:"Light jog, pump your arms, find a steady rhythm.",coach:["Soft landings","Steady breathing","Keep moving"],watch:"An easy pace you can keep up the whole time."},
+    {name:"Stationary bike",equip:"cardio",cue:"Easy pace, then a little faster, keep it smooth.",coach:["Seat at hip height","Steady pedaling","Relax your grip"],watch:"A grown-up sets the seat height with you."},
+    {name:"Treadmill intervals",equip:"cardio",cue:"Walk one minute, light jog one minute, repeat.",coach:["Look ahead","Stay centered","Hold the rail to start"],watch:"Start slow, and learn to step on and off safely."},
+    {name:"Elliptical",equip:"cardio",cue:"Smooth steady strides, use the handles.",coach:["Tall posture","Even effort","Relaxed shoulders"],watch:"Start at an easy resistance."},
+    {name:"Rower",equip:"cardio",cue:"Push with your legs first, then pull, then return.",coach:["Legs, then arms","Smooth, not jerky","Steady rhythm"],watch:"Learn the order: legs, body, then arms."}
+  ]
+};
+var SESSION=["warmup","lower","push","pull","core","cardio"];
+var EQUIP_LABEL={warmup:"Warm-up",bodyweight:"Bodyweight",dumbbell:"Dumbbell",machine:"Machine",band:"Band",cardio:"Cardio"};
+
+function trainAgeNorm(){var a=DB.settings.trainAge||DB.settings.age||11;return clamp((a-10)/3,0,1);}
+function pickIdx(prog){
+  var n=prog.length,c=trainAgeNorm()*(n-1);
+  var lo=clamp(Math.round(c-1),0,n-1),hi=clamp(Math.round(c+1),0,n-1);
+  return lo+Math.floor(Math.random()*(hi-lo+1));
+}
+function doseFor(item,pattern){
+  var young=trainAgeNorm()<0.5;
+  if(pattern==="warmup")return "1 to 2 minutes, get warm and loose";
+  if(pattern==="cardio")return young?"5 to 8 minutes, easy pace":"8 to 12 minutes, mix easy and a little faster";
+  if(pattern==="core")return young?"2 sets, hold about 15 seconds (or 8 slow reps)":"2 to 3 sets, hold about 25 seconds (or 10 to 12 slow reps)";
+  if(item.equip==="machine"||item.equip==="dumbbell")return young?"2 sets of 8 to 10, very light, learn the move":"2 to 3 sets of 10 to 12, light weight, add a little only when 12 feels easy";
+  return young?"2 sets of 8 to 10, all about form":"2 to 3 sets of 10 to 12, all about form";
+}
+function generateWorkout(){
+  var keepDone=(DB.train&&DB.train.date===todayStr())?DB.train.done:false;
+  var items=SESSION.map(function(pat){
+    var prog=PROG[pat];
+    var idx=(pat==="warmup")?Math.floor(Math.random()*prog.length):pickIdx(prog);
+    return {pattern:pat,idx:idx};
+  });
+  DB.train={date:todayStr(),items:items,done:keepDone};
+  save();
+}
+function renderRules(){
+  var rules=[
+    "A grown-up should be with you at the gym.",
+    "Learn the move first. Light or no weight until your form is perfect.",
+    "Slow and smooth beats heavy. Never try a max lift.",
+    "Breathe out when you push or pull. Do not hold your breath.",
+    "If something hurts (not just tired), stop and tell your grown-up."
+  ];
+  document.getElementById("rulesList").innerHTML=rules.map(function(r){return "<div class=\"ruleLine\">"+r+"</div>";}).join("");
+}
+function renderWorkoutList(){
+  var wrap=document.getElementById("workoutList");wrap.innerHTML="";
+  DB.train.items.forEach(function(it,i){
+    var ex=PROG[it.pattern][it.idx];
+    var coach=ex.coach.map(function(p){return "<div class=\"pt\">"+p+"</div>";}).join("");
+    var d=document.createElement("div");d.className="exItem";
+    d.innerHTML=
+      "<div class=\"exHead\"><div class=\"nm\">"+ex.name+"</div><span class=\"chip\">"+(EQUIP_LABEL[ex.equip]||ex.equip)+"</span></div>"+
+      "<div class=\"exDose\">"+doseFor(ex,it.pattern)+"</div>"+
+      "<div class=\"exCue\">"+ex.cue+"</div>"+
+      "<button class=\"exToggle\" data-i=\""+i+"\">How to do it</button>"+
+      "<div class=\"exDetail hidden\" id=\"exd"+i+"\">"+coach+"<div class=\"exWatch\">Watch: "+ex.watch+"</div></div>";
+    wrap.appendChild(d);
+  });
+  wrap.querySelectorAll(".exToggle").forEach(function(b){
+    b.onclick=function(){var el=document.getElementById("exd"+b.dataset.i);el.classList.toggle("hidden");b.textContent=el.classList.contains("hidden")?"How to do it":"Hide";};
+  });
+}
+function renderTrain(){
+  if(!DB.settings.trainAge)DB.settings.trainAge=DB.settings.age||11;
+  var sl=document.getElementById("trainAge");
+  sl.value=DB.settings.trainAge;
+  document.getElementById("trainAgeLabel").textContent=DB.settings.trainAge;
+  document.getElementById("trainAgeBig").textContent=DB.settings.trainAge;
+  sl.oninput=function(e){
+    DB.settings.trainAge=+e.target.value;
+    document.getElementById("trainAgeLabel").textContent=DB.settings.trainAge;
+    document.getElementById("trainAgeBig").textContent=DB.settings.trainAge;
+    save();generateWorkout();renderWorkoutList();
+  };
+  renderRules();
+  if(!DB.train||DB.train.date!==todayStr())generateWorkout();
+  renderWorkoutList();
+}
+function newWorkout(){generateWorkout();renderWorkoutList();toast("Fresh workout!");}
+function finishWorkout(){
+  var rec=todayRec();
+  rec.activity=Math.min(180,(rec.activity||0)+40); // a finished workout feeds the star via active minutes
+  if(!DB.workoutDays)DB.workoutDays={};
+  DB.workoutDays[todayStr()]=true;
+  if(DB.train)DB.train.done=true;
+  save();refreshStar();
+  toast("Nice work! Your star got brighter.");
+  setTimeout(function(){go("home");},800);
+}
+var _toastT=null;
+function toast(msg){
+  var t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
+  if(_toastT)clearTimeout(_toastT);_toastT=setTimeout(function(){t.classList.remove("show");},1800);
+}
+
+/* ====================== boot ====================== */
+function bootApp(){
+  document.getElementById("whoLabel").textContent=DB.settings.name?("Hi, "+DB.settings.name):"";
+  applyAccent();
+  go("home");
+}
+window.addEventListener("resize",function(){if(currentView==="home")sizeStar();});
+starLoop();
+if(DB.settings.onboarded){
+  document.getElementById("app").classList.remove("hidden");
+  bootApp();
+}else{
+  startOnboarding();
+}
 </script>
 </body>
 </html>
