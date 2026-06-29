@@ -2425,7 +2425,7 @@ function computeOrbShimmer(shimmerPhase){
 }
 var orbArrivalT0=null; // set when the Home tab opens; decays to 0 over ~700ms
 var orbBlastT0=null; // same trigger moment as the arrival boost above; decays over ORB_BLAST_DURATION_MS
-var ORB_BLAST_DURATION_MS=3000, ORB_BLAST_MAX_RADIUS_MULT=1.75, ORB_BLAST_RING_COUNT=1, ORB_BLAST_START_OPACITY=0.85;
+var ORB_BLAST_DURATION_MS=3500, ORB_BLAST_MAX_RADIUS_MULT=2.4, ORB_BLAST_RING_COUNT=3, ORB_BLAST_START_OPACITY=1.0; // TEMP: cranked up for visibility testing, dial back once confirmed
 function triggerOrbArrival(){
   var now=(typeof performance!=="undefined"?performance.now():Date.now());
   orbArrivalT0=now;
@@ -2469,6 +2469,7 @@ var ORB_BLAST_CX=ORB_BLAST_SIZE/2, ORB_BLAST_CY=ORB_BLAST_SIZE/2; // center with
 function positionOrbBlastCanvas(canvasEl){
   var wrap=document.getElementById("orbWrap");if(!wrap)return;
   var rect=wrap.getBoundingClientRect();
+  if(!rect.width||!rect.height)return; // orbWrap is hidden (e.g. we're not on Home) -- its rect collapses to 0,0,0,0 and would otherwise snap the canvas to a wrong corner
   var orbScreenCx=rect.left+rect.width/2, orbScreenCy=rect.top+rect.height/2;
   canvasEl.style.left=(orbScreenCx-ORB_BLAST_SIZE/2)+"px";
   canvasEl.style.top=(orbScreenCy-ORB_BLAST_SIZE/2)+"px";
@@ -2480,6 +2481,16 @@ function drawOrbBlastWave(){
   // than a fixed white, since a fixed white was blending into a white/cream background.
   var canvasEl=getOrbBlastCanvas();
   var ctx=getOrbBlastCtx();if(!ctx)return;
+  if(currentTab!=="home"){
+    // The canvas lives at body level (outside #v-home), so the render loop keeps calling this
+    // every frame no matter which tab is active. Without this guard, the ring would try to
+    // position itself off #orbWrap's rect while #v-home is display:none -- that rect collapses
+    // to 0,0,0,0, snapping the ring to the top-left of the viewport on whatever tab you're on.
+    canvasEl.style.display="none";
+    orbBlastT0=null; // don't let a blast resume/finish once you've navigated away from Home
+    return;
+  }
+  canvasEl.style.display="block";
   positionOrbBlastCanvas(canvasEl);
   ctx.clearRect(0,0,ORB_BLAST_SIZE,ORB_BLAST_SIZE);
   if(orbBlastT0===null)return;
@@ -2497,7 +2508,7 @@ function drawOrbBlastWave(){
     var alpha=ORB_BLAST_START_OPACITY*(1-rt);
     ctx.save();
     ctx.strokeStyle=_orbHexToRgba(blastColors.glow,alpha);
-    ctx.lineWidth=Math.max(0.5,1.5*(1-rt));
+    ctx.lineWidth=Math.max(1.5,4*(1-rt)); // TEMP: thicker for visibility testing, was 0.5/1.5
     ctx.beginPath();ctx.arc(ORB_BLAST_CX,ORB_BLAST_CY,radius,0,Math.PI*2);ctx.stroke();
     ctx.restore();
   }
@@ -2961,6 +2972,7 @@ function orbVerdict(v){
   return {txt:"Off track",cls:"obr-bad"};
 }
 function toggleOrbBreakdown(){
+  if(!ringReducedMotion())triggerOrbArrival(); // tapping the orb now also re-fires the blast wave, so it can be checked on demand without leaving and re-entering Home
   var box=document.getElementById("orbBreakdown");if(!box)return;
   if(box.style.display==="none"||!box.style.display){
     var r=window._lastOrbResult||computeHealthOrbScore();
@@ -8755,6 +8767,63 @@ function buildOrbTuningPanel(){
 function _otpRerender(){
   if(window._lastOrbResult)applyHomeGradient(window._lastOrbResult.score);
   renderOrbCanvasFrame();
+  saveOrbTuningToStorage();
+}
+function saveOrbTuningToStorage(){
+  try{
+    var data={
+      ORB_STOPS:ORB_STOPS, GRAD_STOPS:GRAD_STOPS,
+      GRAD_FADE_HEIGHT_PX:GRAD_FADE_HEIGHT_PX, GRAD_MAX_OPACITY:GRAD_MAX_OPACITY,
+      ORB_SPIN_PIVOT_X:ORB_SPIN_PIVOT_X, ORB_SPIN_PIVOT_Y:ORB_SPIN_PIVOT_Y,
+      ORB_SPIN_MIN_RPM:ORB_SPIN_MIN_RPM, ORB_SPIN_MAX_RPM:ORB_SPIN_MAX_RPM,
+      SAT_COUNT:SAT_COUNT, SAT_RADIUS_PX:SAT_RADIUS_PX, SAT_ORBIT_RX:SAT_ORBIT_RX,
+      SAT_TILT_PCT:SAT_TILT_PCT, SAT_PLANE_SPREAD_PX:SAT_PLANE_SPREAD_PX, SAT_DEPTH_USE_SIN:SAT_DEPTH_USE_SIN,
+      SAT_RPM_LO:SAT_RPM_LO, SAT_RPM_HI:SAT_RPM_HI,
+      SAT_TRAIL_LEN_LO:SAT_TRAIL_LEN_LO, SAT_TRAIL_LEN_HI:SAT_TRAIL_LEN_HI,
+      SAT_TRAIL_WIDTH_PX:SAT_TRAIL_WIDTH_PX, SAT_OPACITY:SAT_OPACITY,
+      SAT_EMBER_CORE:SAT_EMBER_CORE, SAT_EMBER_TRAIL:SAT_EMBER_TRAIL,
+      SAT_EMBER_DIM_THRESHOLD:SAT_EMBER_DIM_THRESHOLD, SAT_EMBER_MIN_INTENSITY:SAT_EMBER_MIN_INTENSITY,
+      ORB_BLAST_DURATION_MS:ORB_BLAST_DURATION_MS, ORB_BLAST_MAX_RADIUS_MULT:ORB_BLAST_MAX_RADIUS_MULT,
+      ORB_BLAST_RING_COUNT:ORB_BLAST_RING_COUNT, ORB_BLAST_START_OPACITY:ORB_BLAST_START_OPACITY
+    };
+    localStorage.setItem("hp_orb_tuning",JSON.stringify(data));
+  }catch(e){}
+}
+function loadOrbTuningFromStorage(){
+  try{
+    var raw=localStorage.getItem("hp_orb_tuning");
+    if(!raw)return;
+    var d=JSON.parse(raw);
+    if(d.ORB_STOPS)ORB_STOPS=d.ORB_STOPS;
+    if(d.GRAD_STOPS)GRAD_STOPS=d.GRAD_STOPS;
+    if(typeof d.GRAD_FADE_HEIGHT_PX==="number")GRAD_FADE_HEIGHT_PX=d.GRAD_FADE_HEIGHT_PX;
+    if(typeof d.GRAD_MAX_OPACITY==="number")GRAD_MAX_OPACITY=d.GRAD_MAX_OPACITY;
+    if(typeof d.ORB_SPIN_PIVOT_X==="number")ORB_SPIN_PIVOT_X=d.ORB_SPIN_PIVOT_X;
+    if(typeof d.ORB_SPIN_PIVOT_Y==="number")ORB_SPIN_PIVOT_Y=d.ORB_SPIN_PIVOT_Y;
+    if(typeof d.ORB_SPIN_MIN_RPM==="number")ORB_SPIN_MIN_RPM=d.ORB_SPIN_MIN_RPM;
+    if(typeof d.ORB_SPIN_MAX_RPM==="number")ORB_SPIN_MAX_RPM=d.ORB_SPIN_MAX_RPM;
+    if(typeof d.SAT_COUNT==="number"){SAT_COUNT=d.SAT_COUNT;}
+    if(typeof d.SAT_RADIUS_PX==="number")SAT_RADIUS_PX=d.SAT_RADIUS_PX;
+    if(typeof d.SAT_ORBIT_RX==="number")SAT_ORBIT_RX=d.SAT_ORBIT_RX;
+    if(typeof d.SAT_TILT_PCT==="number")SAT_TILT_PCT=d.SAT_TILT_PCT;
+    if(typeof d.SAT_PLANE_SPREAD_PX==="number")SAT_PLANE_SPREAD_PX=d.SAT_PLANE_SPREAD_PX;
+    if(typeof d.SAT_DEPTH_USE_SIN==="boolean")SAT_DEPTH_USE_SIN=d.SAT_DEPTH_USE_SIN;
+    if(typeof d.SAT_RPM_LO==="number")SAT_RPM_LO=d.SAT_RPM_LO;
+    if(typeof d.SAT_RPM_HI==="number")SAT_RPM_HI=d.SAT_RPM_HI;
+    if(typeof d.SAT_TRAIL_LEN_LO==="number")SAT_TRAIL_LEN_LO=d.SAT_TRAIL_LEN_LO;
+    if(typeof d.SAT_TRAIL_LEN_HI==="number")SAT_TRAIL_LEN_HI=d.SAT_TRAIL_LEN_HI;
+    if(typeof d.SAT_TRAIL_WIDTH_PX==="number")SAT_TRAIL_WIDTH_PX=d.SAT_TRAIL_WIDTH_PX;
+    if(typeof d.SAT_OPACITY==="number")SAT_OPACITY=d.SAT_OPACITY;
+    if(d.SAT_EMBER_CORE)SAT_EMBER_CORE=d.SAT_EMBER_CORE;
+    if(d.SAT_EMBER_TRAIL)SAT_EMBER_TRAIL=d.SAT_EMBER_TRAIL;
+    if(typeof d.SAT_EMBER_DIM_THRESHOLD==="number")SAT_EMBER_DIM_THRESHOLD=d.SAT_EMBER_DIM_THRESHOLD;
+    if(typeof d.SAT_EMBER_MIN_INTENSITY==="number")SAT_EMBER_MIN_INTENSITY=d.SAT_EMBER_MIN_INTENSITY;
+    if(typeof d.ORB_BLAST_DURATION_MS==="number")ORB_BLAST_DURATION_MS=d.ORB_BLAST_DURATION_MS;
+    if(typeof d.ORB_BLAST_MAX_RADIUS_MULT==="number")ORB_BLAST_MAX_RADIUS_MULT=d.ORB_BLAST_MAX_RADIUS_MULT;
+    if(typeof d.ORB_BLAST_RING_COUNT==="number")ORB_BLAST_RING_COUNT=d.ORB_BLAST_RING_COUNT;
+    if(typeof d.ORB_BLAST_START_OPACITY==="number")ORB_BLAST_START_OPACITY=d.ORB_BLAST_START_OPACITY;
+    initSatellites();
+  }catch(e){}
 }
 function _wireOrbTuningInputs(){
   function range(id,setter,decimals){
@@ -8813,6 +8882,10 @@ function _wireOrbTuningInputs(){
     });
   });
 }
+function resetOrbTuningToDefaults(){
+  try{localStorage.removeItem("hp_orb_tuning");}catch(e){}
+  location.reload();
+}
 function openOrbTuningPanel(){
   buildOrbTuningPanel();
   document.getElementById("orbTuningPanel").style.display="block";
@@ -8820,6 +8893,7 @@ function openOrbTuningPanel(){
 function closeOrbTuningPanel(){
   document.getElementById("orbTuningPanel").style.display="none";
 }
+loadOrbTuningFromStorage();
 applyTuningModeVisibility();
 
 </script>
@@ -8833,7 +8907,9 @@ applyTuningModeVisibility();
       </div>
       <div class="note dim" style="margin-bottom:14px;">Live edits to the orb already running on this page. Closing this panel keeps your changes for the rest of this session; reloading the app resets everything to normal defaults.</div>
       <div id="otp-sections"></div>
-      <button onclick="closeOrbTuningPanel()" class="btn sm dark" style="width:100%;margin-top:10px;">Close</button>
+      <div class="note dim" style="margin-top:4px;">Changes save automatically to this device and apply the next time anyone opens the app, until reset or changed again.</div>
+      <button onclick="resetOrbTuningToDefaults()" class="btn sm ghost" style="width:100%;margin-top:10px;">Reset Colors &amp; Spin to Defaults</button>
+      <button onclick="closeOrbTuningPanel()" class="btn sm dark" style="width:100%;margin-top:8px;">Close</button>
     </div>
   </div>
 </body>
