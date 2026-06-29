@@ -18,6 +18,12 @@
   html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#05070d;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--txt);}
   #scene{position:fixed;inset:0;display:block;width:100%;height:100%;}
 
+  #buildtag{
+    position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 14px);
+    z-index:6;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:rgba(255,255,255,.5);pointer-events:none;text-shadow:0 1px 4px rgba(0,0,0,.6);
+  }
+
   #caption{
     position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 18px);
     text-align:center;font-size:15px;font-weight:600;letter-spacing:.2px;
@@ -78,6 +84,7 @@
 </head>
 <body>
   <canvas id="scene"></canvas>
+  <div id="buildtag">kids &bull; build 3</div>
   <div id="caption">Glowing softly. You are building something.<span id="scoreReadout">SCORE 60</span></div>
 
   <div id="panel">
@@ -330,21 +337,27 @@ function drawPiece(B){
    Color comes from state.col (live-editable), not the fixed theme value. */
 function drawParticle(p,B,a){
   var col=state.col;var t=THEMES[state.theme].particle;
-  var sz=p.sz*(0.7+p.z*0.7)*R*0.10;
-  var pulse=0.6+0.4*Math.sin(p.ph);
+  var sz=p.sz*(0.7+p.z*0.7)*R*0.16;
+  var pulse=0.7+0.3*Math.sin(p.ph);
   var alpha=clamp(a,0,1)*pulse;
   if(alpha<=0.02)return;
 
   if(t==="firefly"){
-    var g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,sz*5);
-    g.addColorStop(0,rgba(col.particle,alpha*0.9));
-    g.addColorStop(0.45,rgba(col.particle,alpha*0.3));
+    // dark backing disc so the dot reads even on top of the bright glow
+    ctx.fillStyle=rgba("#0a0700",Math.min(0.5,alpha*0.85));
+    ctx.beginPath();ctx.arc(p.x,p.y,sz*1.7,0,6.2832);ctx.fill();
+    // soft colored halo
+    var g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,sz*4.5);
+    g.addColorStop(0,rgba(col.particle,alpha));
+    g.addColorStop(0.45,rgba(col.particle,alpha*0.35));
     g.addColorStop(1,rgba(col.particle,0));
-    ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,sz*5,0,6.2832);ctx.fill();
-    ctx.strokeStyle=rgba("#1a1206",Math.min(0.65,alpha));ctx.lineWidth=Math.max(1,sz*0.5);
-    ctx.beginPath();ctx.arc(p.x,p.y,sz*1.05,0,6.2832);ctx.stroke();
-    ctx.fillStyle=rgba(col.core,Math.min(1,alpha+0.4));
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,sz*4.5,0,6.2832);ctx.fill();
+    // bright opaque core
+    ctx.fillStyle=rgba(col.core,Math.min(1,alpha+0.5));
     ctx.beginPath();ctx.arc(p.x,p.y,sz,0,6.2832);ctx.fill();
+    // bright thin ring
+    ctx.strokeStyle=rgba(col.particle,Math.min(1,alpha+0.3));ctx.lineWidth=Math.max(1,sz*0.4);
+    ctx.beginPath();ctx.arc(p.x,p.y,sz*1.2,0,6.2832);ctx.stroke();
   }else if(t==="butterfly"){
     var f=reduced?1:(0.5+0.5*Math.abs(Math.sin(p.flap)));
     ctx.save();ctx.translate(p.x,p.y);ctx.scale(f,1);
