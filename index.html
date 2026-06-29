@@ -1690,7 +1690,20 @@ var PLAYTESTER_FDC_KEY="cgYh3ZegjtLwvbhppgBYz6wKI0YcTKe99FKyrlcF";
 var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],sleep:[],stress:[],oneRM:{},foodLog:[],myFoods:[],medasDaily:[],dietDaily:[],workoutTemplates:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,sleepEnabled:true,stressPrompt:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null,digestEmail:""},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var _activeCardioZoneCap=null; // set by renderTrain from getLabLoadConstraints, read by updateCardioHRPreview
-var timerInt=null, timerLeft=0, timerEndAt=null;
+var timerInt=null, timerLeft=0, timerEndAt=null, _wakeLock=null;
+function acquireWakeLock(){
+  try{
+    if("wakeLock" in navigator){
+      navigator.wakeLock.request("screen").then(function(lock){_wakeLock=lock;}).catch(function(){});
+    }
+  }catch(e){}
+}
+function releaseWakeLock(){
+  try{if(_wakeLock){_wakeLock.release();_wakeLock=null;}}catch(e){}
+}
+document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState==="visible"&&timerEndAt!==null&&!_wakeLock)acquireWakeLock();
+});
 
 function load(){
   try{var s=localStorage.getItem("healthpad_db");if(s)DB=JSON.parse(s);}catch(e){}
@@ -5179,6 +5192,7 @@ function startTimer(sec){
   document.getElementById("restTimer").classList.add("show");updTimer();
   if(timerInt)clearInterval(timerInt);
   timerInt=setInterval(timerTick,500);
+  acquireWakeLock();
   try{
     if(window.Notification&&Notification.permission==="default"){Notification.requestPermission().catch(function(){});}
   }catch(e){}
@@ -5191,6 +5205,7 @@ function timerTick(){
 }
 function completeTimer(){
   if(timerInt)clearInterval(timerInt);timerInt=null;timerEndAt=null;
+  releaseWakeLock();
   document.getElementById("restTimer").classList.remove("show");
   try{navigator.vibrate&&navigator.vibrate([300,150,300]);}catch(e){}
   playTimerChime();
@@ -5214,7 +5229,7 @@ function playTimerChime(){
   }catch(e){}
 }
 function updTimer(){var m=Math.floor(timerLeft/60),s=timerLeft%60;document.getElementById("timerT").textContent=m+":"+pad(s);}
-function stopTimer(){if(timerInt)clearInterval(timerInt);timerInt=null;timerEndAt=null;document.getElementById("restTimer").classList.remove("show");}
+function stopTimer(){if(timerInt)clearInterval(timerInt);timerInt=null;timerEndAt=null;releaseWakeLock();document.getElementById("restTimer").classList.remove("show");}
 document.addEventListener("visibilitychange",function(){
   if(document.visibilityState==="visible"&&timerEndAt!==null){
     var remaining=Math.round((timerEndAt-Date.now())/1000);
