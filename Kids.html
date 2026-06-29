@@ -289,7 +289,7 @@
 </div>
 
 <div id="toast"></div>
-<div id="noteBanner" class="hidden"><span class="ni">&#10022;</span><span id="noteText"></span><button id="noteClose">Got it</button></div>
+<div id="noteBanner" class="hidden"><span class="ni">&#10022;</span><span id="noteText"></span><button id="noteClose">Close</button></div>
 
 <script>
 "use strict";
@@ -299,7 +299,7 @@ var KEY="kidstar_v1";
 var DB=load();
 function blankDB(){
   return {settings:{name:"",age:11,theme:"star",col:null,days:3,where:"gym",goal:"feel",trainAge:null,onboarded:false},
-          days:{},train:null,workoutDays:{},notes:{date:"",shownToday:0,target:1,lastTs:0,recent:[]}};
+          days:{},train:null,workoutDays:{},notes:{recent:[]}};
 }
 function load(){
   try{var raw=localStorage.getItem(KEY);if(raw){var d=JSON.parse(raw);if(d&&d.settings)return d;}}catch(e){}
@@ -870,15 +870,11 @@ function pickNoteIdx(){
 function maybeShowNote(){
   if(!DB.settings.onboarded)return;
   if(NOTES.length===0)return;
-  if(!DB.notes)DB.notes={date:"",shownToday:0,target:1,lastTs:0,recent:[]};
-  var n=DB.notes,t=todayStr(),now=Date.now();
-  if(n.date!==t){n.date=t;n.shownToday=0;n.target=(Math.random()<0.6?1:2);}
-  if(n.shownToday>=n.target)return;
-  var MIN_GAP=3.5*3600*1000; // space a second note by at least ~3.5 hours
-  if(n.shownToday>=1&&(now-n.lastTs)<MIN_GAP)return;
+  if(!DB.notes)DB.notes={recent:[]};
+  var n=DB.notes;
   var idx=pickNoteIdx();if(idx<0)return;
   n.recent=(n.recent||[]).concat(idx).slice(-25);
-  n.shownToday++;n.lastTs=now;save();
+  save();
   showNote(NOTES[idx]);
 }
 function showNote(text){
