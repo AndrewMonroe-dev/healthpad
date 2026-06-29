@@ -2425,7 +2425,7 @@ function computeOrbShimmer(shimmerPhase){
 }
 var orbArrivalT0=null; // set when the Home tab opens; decays to 0 over ~700ms
 var orbBlastT0=null; // same trigger moment as the arrival boost above; decays over ORB_BLAST_DURATION_MS
-var ORB_BLAST_DURATION_MS=3500, ORB_BLAST_MAX_RADIUS_MULT=2.4, ORB_BLAST_RING_COUNT=3, ORB_BLAST_START_OPACITY=1.0; // TEMP: cranked up for visibility testing, dial back once confirmed
+var ORB_BLAST_DURATION_MS=3000, ORB_BLAST_MAX_RADIUS_MULT=1.75, ORB_BLAST_RING_COUNT=1, ORB_BLAST_START_OPACITY=0.85;
 function triggerOrbArrival(){
   var now=(typeof performance!=="undefined"?performance.now():Date.now());
   orbArrivalT0=now;
@@ -2456,7 +2456,7 @@ function getOrbBlastCanvas(){
     c=document.createElement("canvas");
     c.id="orbBlastCanvas";
     c.width=ORB_BLAST_SIZE;c.height=ORB_BLAST_SIZE;
-    c.style.cssText="position:fixed;width:"+ORB_BLAST_SIZE+"px;height:"+ORB_BLAST_SIZE+"px;pointer-events:none;z-index:0;top:0;left:0;";
+    c.style.cssText="position:fixed;width:"+ORB_BLAST_SIZE+"px;height:"+ORB_BLAST_SIZE+"px;pointer-events:none;z-index:2;top:0;left:0;"; // must beat .app's z-index:1 (root-level stacking) or it renders behind the orb's own opaque canvas, invisible everywhere it actually overlaps the orb
     document.body.appendChild(c);
   }
   return c;
@@ -2508,7 +2508,7 @@ function drawOrbBlastWave(){
     var alpha=ORB_BLAST_START_OPACITY*(1-rt);
     ctx.save();
     ctx.strokeStyle=_orbHexToRgba(blastColors.glow,alpha);
-    ctx.lineWidth=Math.max(1.5,4*(1-rt)); // TEMP: thicker for visibility testing, was 0.5/1.5
+    ctx.lineWidth=Math.max(0.5,1.5*(1-rt));
     ctx.beginPath();ctx.arc(ORB_BLAST_CX,ORB_BLAST_CY,radius,0,Math.PI*2);ctx.stroke();
     ctx.restore();
   }
