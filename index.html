@@ -7963,6 +7963,7 @@ var _introTimeline=null;
 /* ============ INIT ============ */
 function safeBoot(fn,label){try{fn();}catch(e){try{console.error("Boot step failed: "+label,e);}catch(e2){}}}
 safeBoot(load,"load");
+safeBoot(loadOrbTuningFromStorage,"loadOrbTuningFromStorage");
 safeBoot(renderAppbarDate,"renderAppbarDate");
 safeBoot(function(){runIntroAnimation();},"introAnimation");
 safeBoot(renderHome,"renderHome");
@@ -8980,7 +8981,6 @@ function openOrbTuningPanel(){
 function closeOrbTuningPanel(){
   document.getElementById("orbTuningPanel").style.display="none";
 }
-loadOrbTuningFromStorage();
 applyTuningModeVisibility();
 
 </script>
