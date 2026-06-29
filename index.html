@@ -622,10 +622,6 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     </div>
     <div id="workoutArea"></div>
     <button class="btn" onclick="_adhocMode?saveAdHocWorkout():saveWorkout()">Save Session</button>
-    <div class="btn-row" style="margin-top:10px;">
-      <button class="btn sm dark" onclick="startTimer(getBPRestSec(180))">Rest 3:00+</button>
-      <button class="btn sm dark" onclick="startTimer(getBPRestSec(90))">Rest 1:30+</button>
-    </div>
   </div>
 
   <!-- LOG -->
@@ -1694,7 +1690,7 @@ var PLAYTESTER_FDC_KEY="cgYh3ZegjtLwvbhppgBYz6wKI0YcTKe99FKyrlcF";
 var DB={weights:[],nutrition:[],rhr:[],bp:[],steps:[],workouts:[],prs:{},readiness:[],sleep:[],stress:[],oneRM:{},foodLog:[],myFoods:[],medasDaily:[],dietDaily:[],workoutTemplates:[],settings:{sheetUrl:PLAYTESTER_SHEET_URL,medStack:"",userName:"",bpPrompt:false,hasOnboarded:false,stepBaseline:null,weightReaction:true,sleepEnabled:true,stressPrompt:true,medCategories:[],fdcKey:PLAYTESTER_FDC_KEY,trackingStyle:"calories",pointsBudgetOverride:null,macroProPct:30,macroCarbPct:40,macroFatPct:30,waterTarget:64,knownMaxHR:null,digestEmail:""},goal:{type:"weight_loss",name:"",targetDate:"",startDate:""},milestones:[]};
 var selDay=null, selFatigue=null, readyPick={sleep:null,energy:null,pain:null};
 var _activeCardioZoneCap=null; // set by renderTrain from getLabLoadConstraints, read by updateCardioHRPreview
-var timerInt=null, timerLeft=0;
+var timerInt=null, timerLeft=0, timerEndAt=null;
 
 function load(){
   try{var s=localStorage.getItem("healthpad_db");if(s)DB=JSON.parse(s);}catch(e){}
@@ -3576,10 +3572,12 @@ function renderTrain(){
     var rows="";var last=lastSetData(ex.n);
     for(var si=0;si<a.sets;si++){
       var pw=last&&last[si]?last[si].w:"";
+      var dw=draftSetVal(ei,si,"w"),dr=draftSetVal(ei,si,"r"),dRir=draftSetVal(ei,si,"rir");
+      var vw=dw!==undefined?dw:pw;
       rows+='<div class="setrow"><span class="sn">'+(si+1)+'</span>'+
-        '<input type="number" inputmode="decimal" placeholder="lb" data-ex="'+ei+'" data-set="'+si+'" data-f="w" value="'+(pw||"")+'">'+
-        '<input type="number" inputmode="numeric" placeholder="reps" data-ex="'+ei+'" data-set="'+si+'" data-f="r">'+
-        '<input type="number" inputmode="decimal" placeholder="RIR" data-ex="'+ei+'" data-set="'+si+'" data-f="rir"></div>';
+        '<input type="number" inputmode="decimal" placeholder="lb" data-ex="'+ei+'" data-set="'+si+'" data-f="w" value="'+(vw||"")+'" oninput="captureSetVal(this)">'+
+        '<input type="number" inputmode="numeric" placeholder="reps" data-ex="'+ei+'" data-set="'+si+'" data-f="r" value="'+(dr!==undefined?dr:"")+'" oninput="captureSetVal(this)">'+
+        '<input type="number" inputmode="decimal" placeholder="RIR" data-ex="'+ei+'" data-set="'+si+'" data-f="rir" value="'+(dRir!==undefined?dRir:"")+'" oninput="captureSetVal(this)"></div>';
     }
     var medNote=medR?getExerciseConflictNote(ex.n,medR):null;
     var medFullText=medNote?medNote.split(", ").map(function(cls){
@@ -3605,6 +3603,10 @@ function renderTrain(){
       '<div class="ex-body">'+
         '<div class="setlbl"><span></span><span>Weight</span><span>Reps</span><span>RIR</span></div>'+rows+
         '<div style="display:flex;gap:8px;margin-top:8px;">'+
+          '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="event.stopPropagation();startTimer(getBPRestSec(180))">Rest 3:00+</button>'+
+          '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="event.stopPropagation();startTimer(getBPRestSec(90))">Rest 1:30+</button>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:8px;">'+
           '<button class="btn sm ghost" style="flex:1;touch-action:manipulation;" onclick="addSessionSet('+ei+')">+ Set</button>'+
           '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="removeSessionSet('+ei+')">- Set</button>'+
         '</div>'+
@@ -3615,7 +3617,7 @@ function renderTrain(){
   document.getElementById("workoutArea").innerHTML=html2;
 }
 function pickDay(i){
-  if(i!==_lastSelDay){_sessionSets={};_sessionRemoved={};_sessionAdded=[];_lastSelDay=i;}
+  if(i!==_lastSelDay){_sessionSets={};_sessionSetVals={};_sessionRemoved={};_sessionAdded=[];_lastSelDay=i;}
   selDay=i;renderTrain();
 }
 function toggleEx(el){el.parentNode.querySelector(".ex-body").classList.toggle("open");}
@@ -5162,13 +5164,63 @@ function sendDigestNow(){
 }
 
 /* ============ TIMER ============ */
+// Real device "alarms while backgrounded" aren't reliably achievable here: this app
+// deliberately runs with no active service worker (one was removed earlier due to
+// stale-cache bugs), and iOS requires a service worker for any notification that can
+// fire while a PWA is backgrounded or the screen is locked. What this version does
+// instead: track an absolute end timestamp (not a naive decrementing counter), so
+// even if the interval gets throttled/suspended while you're away, the moment you
+// come back (visibilitychange -> visible) it immediately recomputes real elapsed
+// time and fires completion correctly -- rather than drifting, stalling silently, or
+// never firing. Also adds a sound + a best-effort Notification on top of the
+// existing vibrate, since vibrate alone is easy to miss.
 function startTimer(sec){
-  timerLeft=sec;document.getElementById("restTimer").classList.add("show");updTimer();
+  timerLeft=sec;timerEndAt=Date.now()+sec*1000;
+  document.getElementById("restTimer").classList.add("show");updTimer();
   if(timerInt)clearInterval(timerInt);
-  timerInt=setInterval(function(){timerLeft--;updTimer();if(timerLeft<=0){stopTimer();try{navigator.vibrate&&navigator.vibrate(400);}catch(e){}toast("Rest complete");}},1000);
+  timerInt=setInterval(timerTick,500);
+  try{
+    if(window.Notification&&Notification.permission==="default"){Notification.requestPermission().catch(function(){});}
+  }catch(e){}
+}
+function timerTick(){
+  if(timerEndAt===null)return;
+  var remaining=Math.round((timerEndAt-Date.now())/1000);
+  if(remaining<=0){completeTimer();return;}
+  timerLeft=remaining;updTimer();
+}
+function completeTimer(){
+  if(timerInt)clearInterval(timerInt);timerInt=null;timerEndAt=null;
+  document.getElementById("restTimer").classList.remove("show");
+  try{navigator.vibrate&&navigator.vibrate([300,150,300]);}catch(e){}
+  playTimerChime();
+  try{
+    if(window.Notification&&Notification.permission==="granted"){new Notification("Rest complete",{body:"Time for your next set."});}
+  }catch(e){}
+  toast("Rest complete");
+}
+function playTimerChime(){
+  try{
+    var ctx=new (window.AudioContext||window.webkitAudioContext)();
+    [880,660].forEach(function(freq,i){
+      var o=ctx.createOscillator(),g=ctx.createGain();
+      o.frequency.value=freq;o.connect(g);g.connect(ctx.destination);
+      var t0=ctx.currentTime+i*0.16;
+      g.gain.setValueAtTime(0.0001,t0);
+      g.gain.exponentialRampToValueAtTime(0.35,t0+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+0.45);
+      o.start(t0);o.stop(t0+0.46);
+    });
+  }catch(e){}
 }
 function updTimer(){var m=Math.floor(timerLeft/60),s=timerLeft%60;document.getElementById("timerT").textContent=m+":"+pad(s);}
-function stopTimer(){if(timerInt)clearInterval(timerInt);timerInt=null;document.getElementById("restTimer").classList.remove("show");}
+function stopTimer(){if(timerInt)clearInterval(timerInt);timerInt=null;timerEndAt=null;document.getElementById("restTimer").classList.remove("show");}
+document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState==="visible"&&timerEndAt!==null){
+    var remaining=Math.round((timerEndAt-Date.now())/1000);
+    if(remaining<=0){completeTimer();}else{timerLeft=remaining;updTimer();}
+  }
+});
 
 /* ============ CHOICE HANDLERS ============ */
 document.addEventListener("click",function(e){
@@ -6854,9 +6906,20 @@ function showWeightReaction(lost,newW,prevW){
 
 /* ============ SESSION EDITS ============ */
 var _sessionSets={};
+var _sessionSetVals={}; // draft weight/reps/RIR per exercise+set, survives re-renders (tab switches, +/- Set, adhoc toggle) until day change or mode switch
 var _sessionRemoved={};
 var _sessionAdded=[];
 var _lastSelDay=null;
+
+function captureSetVal(el){
+  var ei=el.dataset.ex,si=el.dataset.set,f=el.dataset.f;
+  _sessionSetVals[ei]=_sessionSetVals[ei]||{};
+  _sessionSetVals[ei][si]=_sessionSetVals[ei][si]||{};
+  _sessionSetVals[ei][si][f]=el.value;
+}
+function draftSetVal(ei,si,f){
+  return (_sessionSetVals[ei]&&_sessionSetVals[ei][si]&&_sessionSetVals[ei][si][f]!==undefined)?_sessionSetVals[ei][si][f]:undefined;
+}
 
 function removeSessionEx(name){
   _sessionRemoved[name]=true;
@@ -6947,6 +7010,7 @@ function toggleMedasPanel(){
 }
 function toggleAdhoc(){
   _adhocMode=!_adhocMode;
+  _sessionSetVals={}; // switching modes is a fresh context, drafts from the other mode shouldn't carry over
   if(!_adhocMode){_adhocEx=[];_adhocSets={};}
   renderTrain();
 }
@@ -6957,6 +7021,8 @@ function removeAdhocEx(ei){
   _adhocEx.splice(ei,1);
   var ns={};Object.keys(_adhocSets).forEach(function(k){var ki=parseInt(k);if(ki<ei)ns[ki]=_adhocSets[k];else if(ki>ei)ns[ki-1]=_adhocSets[k];});
   _adhocSets=ns;
+  var nv={};Object.keys(_sessionSetVals).forEach(function(k){var ki=parseInt(k);if(ki<ei)nv[ki]=_sessionSetVals[k];else if(ki>ei)nv[ki-1]=_sessionSetVals[k];});
+  _sessionSetVals=nv;
   renderAdhocArea();
 }
 function loadAdhocTemplate(id){
@@ -7062,10 +7128,12 @@ function renderAdhocArea(){
     var rows="";
     for(var si=0;si<sets;si++){
       var pw=last&&last[si]?last[si].w:"";
+      var dw=draftSetVal(ei,si,"w"),dr=draftSetVal(ei,si,"r"),dRir=draftSetVal(ei,si,"rir");
+      var vw=dw!==undefined?dw:pw;
       rows+='<div class="setrow"><span class="sn">'+(si+1)+'</span>'+
-        '<input type="number" inputmode="decimal" placeholder="lb" data-ex="'+ei+'" data-set="'+si+'" data-f="w" value="'+(pw||"")+'">'+
-        '<input type="number" inputmode="numeric" placeholder="reps" data-ex="'+ei+'" data-set="'+si+'" data-f="r">'+
-        '<input type="number" inputmode="decimal" placeholder="RIR" data-ex="'+ei+'" data-set="'+si+'" data-f="rir"></div>';
+        '<input type="number" inputmode="decimal" placeholder="lb" data-ex="'+ei+'" data-set="'+si+'" data-f="w" value="'+(vw||"")+'" oninput="captureSetVal(this)">'+
+        '<input type="number" inputmode="numeric" placeholder="reps" data-ex="'+ei+'" data-set="'+si+'" data-f="r" value="'+(dr!==undefined?dr:"")+'" oninput="captureSetVal(this)">'+
+        '<input type="number" inputmode="decimal" placeholder="RIR" data-ex="'+ei+'" data-set="'+si+'" data-f="rir" value="'+(dRir!==undefined?dRir:"")+'" oninput="captureSetVal(this)"></div>';
     }
     var medNote=medR?getExerciseConflictNote(ex.n,medR):null;
     var medFullText=medNote?medNote.split(", ").map(function(cls){
@@ -7083,6 +7151,10 @@ function renderAdhocArea(){
       '</div>'+
       '<div class="ex-body">'+
         '<div class="setlbl"><span></span><span>Weight</span><span>Reps</span><span>RIR</span></div>'+rows+
+        '<div style="display:flex;gap:8px;margin-top:8px;">'+
+          '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="event.stopPropagation();startTimer(getBPRestSec(180))">Rest 3:00+</button>'+
+          '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="event.stopPropagation();startTimer(getBPRestSec(90))">Rest 1:30+</button>'+
+        '</div>'+
         '<div style="display:flex;gap:8px;margin-top:8px;">'+
           '<button class="btn sm ghost" style="flex:1;touch-action:manipulation;" onclick="addAdhocSet('+ei+')">+ Set</button>'+
           '<button class="btn sm dark" style="flex:1;touch-action:manipulation;" onclick="removeAdhocSet('+ei+')">- Set</button>'+
