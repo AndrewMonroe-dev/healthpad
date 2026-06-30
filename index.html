@@ -1930,7 +1930,29 @@ function load(){
   if(!DB.medasDaily)DB.medasDaily=[];
   if(!DB.dietDaily)DB.dietDaily=[];
 }
-function save(){try{localStorage.setItem("healthpad_db",JSON.stringify(DB));}catch(e){}}
+function save(){
+  try{localStorage.setItem("healthpad_db",JSON.stringify(DB));}catch(e){}
+  scheduleAutoSync();
+}
+var _autoSyncTimer=null;
+function scheduleAutoSync(){
+  // Debounced background push: fires ~2.5s after the last save() in a burst, not on every
+  // keystroke. Quiet (no toast). This is the safety net underneath the existing hand-placed
+  // trySheetSync() calls -- those still fire immediately for the actions that had them; this
+  // catches everything else (workouts, sleep, stress, settings, oneRM, etc.) so no save point
+  // can silently fall outside Sheets backup again.
+  if(!DB.settings||!DB.settings.sheetUrl)return;
+  if(_autoSyncTimer)clearTimeout(_autoSyncTimer);
+  _autoSyncTimer=setTimeout(function(){_autoSyncTimer=null;syncNow(true);},2500);
+}
+function flushAutoSync(){
+  // Best-effort immediate push, used when the app is about to lose focus/visibility and a
+  // debounce timer might not get to fire (backgrounding, tab close, throttled timers).
+  if(_autoSyncTimer){clearTimeout(_autoSyncTimer);_autoSyncTimer=null;}
+  if(DB.settings&&DB.settings.sheetUrl)syncNow(true);
+}
+document.addEventListener("visibilitychange",function(){if(document.hidden)flushAutoSync();});
+window.addEventListener("pagehide",flushAutoSync);
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
 function pad(n){return n<10?"0"+n:""+n;}
 function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},1900);}
@@ -5203,9 +5225,26 @@ function searchOFFByName(query){
 }
 var _offSearchGen=0;
 var _offLastResults=[];
+function saveSearchResultToMyFoods(food){
+  // Called the moment a search/barcode result is picked -- saves it as a quick-pick in My
+  // Foods right away, independent of whether the person goes on to actually log it today.
+  // Most people eat the same handful of things repeatedly, so "I looked this up once" should
+  // be enough to make it reappear next time without re-searching. De-duped by case-insensitive
+  // name match, same rule saveNewFood() already uses, so finishing the log afterward updates
+  // this same entry in place instead of creating a duplicate.
+  try{
+    var points=calcPoints(food.cal||0,food.satFat||0,food.sugar||0,food.pro||0);
+    var f=Object.assign({id:Date.now()},food,{points:points,lastUsed:Date.now()});
+    var existingIdx=DB.myFoods.findIndex(function(x){return x.name.toLowerCase()===food.name.toLowerCase();});
+    if(existingIdx>-1){f.id=DB.myFoods[existingIdx].id;DB.myFoods[existingIdx]=f;}
+    else{DB.myFoods.push(f);}
+    save();
+  }catch(e){}
+}
 function useOFFResult(i){
   var p=_offLastResults[i];if(!p)return;
   var food=offNutrimentsToFood(titleCaseFoodName(p.product_name),p.nutriments,100,"g");
+  saveSearchResultToMyFoods(food);
   var servingG=parseOFFServingGrams(p.serving_size);
   var m=document.getElementById("addFoodModal");if(m)m.remove();
   showNewFoodForm(food,{source:"off",raw:p.nutriments,servingG:servingG,servingLabel:p.serving_size||null});
@@ -5259,6 +5298,7 @@ var _fdcLastResults=[];
 function useFDCResult(i){
   var f=_fdcLastResults[i];if(!f)return;
   var food=fdcNutrientsToFood(titleCaseFoodName(f.description),f.foodNutrients,100,"g");
+  saveSearchResultToMyFoods(food);
   var servingG=(f.servingSizeUnit&&f.servingSizeUnit.toLowerCase()==="g"&&f.servingSize)?f.servingSize:null;
   var m=document.getElementById("addFoodModal");if(m)m.remove();
   showNewFoodForm(food,{source:"fdc",raw:f.foodNutrients,servingG:servingG,servingLabel:f.householdServingFullText||null});
@@ -5272,6 +5312,7 @@ function lookupOFFByBarcode(code){
       closeBarcodeScanner();
       if(data&&data.product&&data.product.product_name){
         var food=offNutrimentsToFood(titleCaseFoodName(data.product.product_name),data.product.nutriments,100,"g");
+        saveSearchResultToMyFoods(food);
         var servingG=parseOFFServingGrams(data.product.serving_size);
         var m=document.getElementById("addFoodModal");if(m)m.remove();
         showNewFoodForm(food,{source:"off",raw:data.product.nutriments,servingG:servingG,servingLabel:data.product.serving_size||null});
