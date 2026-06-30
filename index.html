@@ -2757,6 +2757,10 @@ function clearHomeGradientFromAppbar(){
    rim) is a CONSTANT property of the artifact, unaffected by health data. Breathing pulse
    is the only animation; nothing orbits or floats. */
 var orbAnim={phase:0,shimmerPhase:0,spinAngle:0};
+// Set by the Tune Orb panel's 0-100 preview slider; null means "use the real, live-computed
+// score" (normal app behavior everywhere outside that panel). Never written to DB/localStorage
+// and always reset to null when the panel closes -- this is a what-if view, not a data edit.
+var _otpPreviewScore=null;
 // Pure, DOM-free: a slow (~15s period) independent sweep value, 0..1, used to drift the glass
 // streak/secondary highlight across the surface — separate from and much slower than the
 // breathing pulse, per spec ("optional second, much slower 10-20s independent sweep").
@@ -3248,7 +3252,7 @@ function orbSpinBrightnessForScore(score){
 function renderOrbCanvasFrame(){
   var ctx=getOrbCanvasCtx();if(!ctx)return;
   var result=window._lastOrbResult||computeHealthOrbScore();
-  var score=result.score;
+  var score=(_otpPreviewScore!=null)?_otpPreviewScore:result.score;
   var pulse=computeOrbPulse(result.components,orbAnim.phase);
   var shimmer=computeOrbShimmer(orbAnim.shimmerPhase);
   var boost=orbArrivalBoost();
@@ -3274,7 +3278,7 @@ function orbTick(ts){
   var dt=Math.min(48,ts-orbLastTs);orbLastTs=ts;
   orbAnim.phase+=dt*0.0016;
   orbAnim.shimmerPhase+=dt*0.00042; // independent, much slower (~15s period) sweep
-  var currentScore=(window._lastOrbResult&&window._lastOrbResult.score!==undefined)?window._lastOrbResult.score:null;
+  var currentScore=(_otpPreviewScore!=null)?_otpPreviewScore:((window._lastOrbResult&&window._lastOrbResult.score!==undefined)?window._lastOrbResult.score:null);
   var rpm=orbSpinRPMForScore(currentScore);
   orbAnim.spinAngle+=dt*(rpm*Math.PI*2/60000); // score-linked: 0 RPM at score 0, 600 RPM at score 100
   updateSatellites(dt,currentScore); // independent angle advance, own score-linked RPM (see satRpmForScore)
@@ -9259,9 +9263,17 @@ function buildOrbTuningPanel(){
   _wireOrbTuningInputs();
 }
 function _otpRerender(){
-  if(window._lastOrbResult)applyHomeGradient(window._lastOrbResult.score);
+  var liveScore=(_otpPreviewScore!=null)?_otpPreviewScore:(window._lastOrbResult?window._lastOrbResult.score:null);
+  if(liveScore!=null)applyHomeGradient(liveScore);
+  _otpPaintGradientSwatch(liveScore);
   renderOrbCanvasFrame();
   saveOrbTuningToStorage();
+}
+function _otpPaintGradientSwatch(score){
+  var sw=document.getElementById("otpGradSwatch");
+  if(!sw||score==null)return;
+  var colors=gradColorsForScore(score);
+  sw.style.background="linear-gradient(to bottom, "+colors.top+" 0%, "+colors.mid+" 100%)";
 }
 function saveOrbTuningToStorage(){
   try{
@@ -9338,6 +9350,7 @@ function _wireOrbTuningInputs(){
     var el=document.getElementById(id);
     el.addEventListener("input",function(){setter(el.value);_otpRerender();});
   }
+  range("otp_previewScore",function(v){_otpPreviewScore=Math.round(v);});
   range("otp_pivotX",function(v){ORB_SPIN_PIVOT_X=v;});
   range("otp_pivotY",function(v){ORB_SPIN_PIVOT_Y=v;});
   range("otp_spinMin",function(v){ORB_SPIN_MIN_RPM=v;});
@@ -9382,12 +9395,45 @@ function resetOrbTuningToDefaults(){
   try{if(DB&&DB.settings&&DB.settings.orbTuning){delete DB.settings.orbTuning;save();}}catch(e){}
   location.reload();
 }
+var _otpOrbOriginalParent=null, _otpOrbOriginalNext=null;
 function openOrbTuningPanel(){
+  var wrap=document.getElementById("orbWrap");
+  var host=document.getElementById("otpOrbHost");
+  if(wrap&&host&&wrap.parentNode!==host){
+    _otpOrbOriginalParent=wrap.parentNode;
+    _otpOrbOriginalNext=wrap.nextSibling;
+    wrap.style.transform="scale(0.62)";
+    host.appendChild(wrap);
+  }
+  _otpPreviewScore=null; // open showing real live data; only diverges once the slider is touched
+  var startScore=(window._lastOrbResult&&window._lastOrbResult.score!=null)?Math.round(window._lastOrbResult.score):50;
+  var slider=document.getElementById("otp_previewScore"),out=document.getElementById("otp_previewScore_v");
+  if(slider)slider.value=startScore;
+  if(out)out.textContent=startScore;
   buildOrbTuningPanel();
+  _otpPaintGradientSwatch(window._lastOrbResult?window._lastOrbResult.score:startScore);
   document.getElementById("orbTuningPanel").style.display="block";
 }
 function closeOrbTuningPanel(){
+  var wrap=document.getElementById("orbWrap");
+  if(wrap&&_otpOrbOriginalParent){
+    wrap.style.transform="";
+    if(_otpOrbOriginalNext)_otpOrbOriginalParent.insertBefore(wrap,_otpOrbOriginalNext);
+    else _otpOrbOriginalParent.appendChild(wrap);
+    _otpOrbOriginalParent=null;_otpOrbOriginalNext=null;
+  }
+  _otpPreviewScore=null; // drop back to real data so Home reflects actual numbers again
+  if(window._lastOrbResult)applyHomeGradient(window._lastOrbResult.score);
+  renderOrbCanvasFrame();
   document.getElementById("orbTuningPanel").style.display="none";
+}
+function _otpUseLiveData(){
+  _otpPreviewScore=null;
+  var startScore=(window._lastOrbResult&&window._lastOrbResult.score!=null)?Math.round(window._lastOrbResult.score):50;
+  var slider=document.getElementById("otp_previewScore"),out=document.getElementById("otp_previewScore_v");
+  if(slider)slider.value=startScore;
+  if(out)out.textContent=startScore;
+  _otpRerender();
 }
 function saveVaultSkinPref(on){
   try{localStorage.setItem("hp_vault_skin",on?"1":"0");}catch(e){}
@@ -9413,9 +9459,21 @@ applyTuningModeVisibility();
   <!-- ORB TUNING PANEL (hidden unless Setup > Orb Tuning Mode is enabled) -->
   <div id="orbTuningPanel" style="display:none;position:fixed;inset:0;background:rgba(8,6,4,.92);z-index:6000;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top,0px) + 18px) 14px 60px;">
     <div style="max-width:480px;margin:0 auto;">
-      <div style="position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:8px 0;background:rgba(8,6,4,.96);z-index:1;">
-        <div style="font-size:16px;font-weight:700;color:#ffe600;">Tune Orb</div>
-        <button onclick="closeOrbTuningPanel()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:22px;line-height:1;width:44px;height:44px;border-radius:50%;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;">&times;</button>
+      <div style="position:sticky;top:0;background:rgba(8,6,4,.97);z-index:1;padding-bottom:8px;margin-bottom:14px;border-bottom:1px solid #3a3024;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 2px;">
+          <div style="font-size:16px;font-weight:700;color:#ffe600;">Tune Orb</div>
+          <button onclick="closeOrbTuningPanel()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:22px;line-height:1;width:44px;height:44px;border-radius:50%;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;">&times;</button>
+        </div>
+        <div id="otpGradSwatch" style="height:14px;border-radius:7px;margin:6px 0 4px;background:#222;"></div>
+        <div id="otpOrbHost" style="display:flex;justify-content:center;align-items:center;height:170px;margin:0 auto;"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin:4px 0 2px;font-size:12.5px;color:#ccc;">
+          <span style="flex:0 0 110px;">Preview Score</span>
+          <input type="range" id="otp_previewScore" min="0" max="100" step="1" value="50" style="flex:1;">
+          <span id="otp_previewScore_v" style="width:30px;text-align:right;color:#fff;font-variant-numeric:tabular-nums;font-size:11.5px;">50</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;">
+          <button onclick="_otpUseLiveData()" id="otpLiveDataBtn" class="btn sm ghost" style="padding:4px 12px;font-size:11px;margin-top:2px;">Use Live Data</button>
+        </div>
       </div>
       <div class="note dim" style="margin-bottom:14px;">Live edits to the orb already running on this page. Closing this panel keeps your changes for the rest of this session; reloading the app resets everything to normal defaults.</div>
       <div id="otp-sections"></div>
