@@ -297,7 +297,185 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
 .timer .t{font-size:25px;font-weight:800;min-width:64px;text-align:center;}
 .timer button{background:var(--gold);border:none;color:#1a1410;border-radius:16px;padding:8px 14px;font-family:var(--font);font-size:13px;font-weight:700;}
 
-/* TAB BAR */
+/* =====================================================================
+   VAULT / PIP-BOY SKIN  (body.theme-vault)
+   Toggle: Setup → bottom → "Pip-Boy Skin"
+   Architecture: single CSS variable override block + body class.
+   Every rule here is scoped to body.theme-vault so the default skin
+   is completely unaffected when the toggle is off.
+   ===================================================================== */
+
+body.theme-vault{
+  --bg:#060d06;
+  --bg2:#0a120a;
+  --surf:#0c150c;
+  --surf2:#0f1a0f;
+  --surf3:#111e11;
+  --bg-img-opacity:0; /* hide STOTAN.jpeg background in vault mode */
+  --ink:#33ff57;          /* phosphor green — primary text */
+  --ink2:#28cc47;
+  --faint:#1a7a2a;
+  --red:#f0c020;          /* amber-yellow replaces red as the primary accent */
+  --red-soft:#d4a818;
+  --red-deep:#a07a10;
+  --gold:#4a9eff;         /* electric vault-blue replaces gold as secondary accent */
+  --gold-soft:#6ab0ff;
+  --line:rgba(51,255,87,0.15);
+  --line2:rgba(51,255,87,0.22);
+  --good:#33ff57;
+  --warn:#f0c020;
+  --bad:#ff3a3a;
+  --font:"Share Tech Mono","Courier New",Courier,monospace;
+  font-family:"Share Tech Mono","Courier New",Courier,monospace;
+  background:#060d06;
+  color:#33ff57;
+}
+
+/* Scanline overlay — fixed above content, below modals */
+body.theme-vault::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0,0,0,0.18) 3px,
+    rgba(0,0,0,0.18) 4px
+  );
+  pointer-events:none;
+  z-index:500;
+}
+
+/* Appbar */
+body.theme-vault .appbar{
+  background:rgba(6,13,6,0.95);
+  border-bottom:1px solid rgba(51,255,87,0.3);
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+body.theme-vault .appbar-title{color:#33ff57;}
+body.theme-vault .appbar-date{color:#1a7a2a;}
+body.theme-vault .appbar-weight span{color:#f0c020;}
+
+/* Tab bar */
+body.theme-vault .nav{
+  background:rgba(6,13,6,0.97);
+  border-top:1px solid rgba(51,255,87,0.3);
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+body.theme-vault .navb{color:#1a7a2a;}
+body.theme-vault .navb.active{color:#f0c020;}
+body.theme-vault .navb.active::before{background:#f0c020;box-shadow:0 0 8px rgba(240,192,32,.5);}
+
+/* Cards / sections */
+body.theme-vault .sec{
+  background:#0c150c;
+  border:1px solid rgba(51,255,87,0.25);
+  box-shadow:0 0 12px rgba(51,255,87,0.04);
+}
+body.theme-vault .sec-h{color:#1a7a2a;letter-spacing:2px;}
+body.theme-vault .sec-h .tag{color:#4a9eff;}
+
+/* Exercise cards */
+body.theme-vault .ex{background:#0c150c;border:1px solid rgba(51,255,87,0.22);}
+body.theme-vault .ex-name{color:#33ff57;}
+body.theme-vault .ex-target{color:#1a7a2a;}
+body.theme-vault .ex-rec{color:#f0c020;}
+
+/* Inputs */
+body.theme-vault input,
+body.theme-vault select,
+body.theme-vault textarea{
+  background:#060d06;
+  border:1.5px solid rgba(51,255,87,0.35);
+  color:#33ff57;
+  border-radius:4px;
+  font-family:"Share Tech Mono","Courier New",Courier,monospace;
+}
+body.theme-vault input:focus,
+body.theme-vault select:focus,
+body.theme-vault textarea:focus{
+  border-color:#f0c020;
+  background:#0a120a;
+  outline:none;
+}
+body.theme-vault input::placeholder{color:#1a7a2a;}
+body.theme-vault .setrow input.has-prev::placeholder{color:#33ff57;opacity:0.22;font-style:normal;}
+body.theme-vault label.fld{color:#1a7a2a;}
+
+/* Buttons */
+body.theme-vault .btn{
+  background:linear-gradient(135deg,#a07a10,#f0c020);
+  color:#060d06;
+  border-radius:4px;
+  box-shadow:0 4px 16px rgba(240,192,32,0.3);
+  font-family:"Share Tech Mono","Courier New",Courier,monospace;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+}
+body.theme-vault .btn.ghost{
+  background:transparent;
+  color:#33ff57;
+  border:1.5px solid rgba(51,255,87,0.5);
+  box-shadow:none;
+}
+body.theme-vault .btn.dark{
+  background:#0c150c;
+  color:#33ff57;
+  border:1px solid rgba(51,255,87,0.3);
+  box-shadow:none;
+}
+body.theme-vault .btn.ghost:hover,
+body.theme-vault .btn.dark:hover{border-color:#f0c020;color:#f0c020;}
+
+/* Pills / tags */
+body.theme-vault .pill.bone{background:rgba(74,158,255,0.14);color:#4a9eff;border-color:rgba(74,158,255,0.4);}
+body.theme-vault .pill.added{background:rgba(51,255,87,0.1);color:#33ff57;border-color:rgba(51,255,87,0.3);}
+body.theme-vault .pill.held{background:rgba(240,192,32,0.1);color:#f0c020;border-color:rgba(240,192,32,0.3);}
+body.theme-vault .pill.medcaution{background:rgba(255,58,58,0.12);color:#ff8080;border-color:rgba(255,58,58,0.35);}
+
+/* Notes */
+body.theme-vault .note{color:#28cc47;}
+body.theme-vault .note.dim{color:#1a7a2a;}
+
+/* Rest timer */
+body.theme-vault .timer{
+  background:#060d06;
+  border:1px solid #f0c020;
+  color:#f0c020;
+  box-shadow:0 0 20px rgba(240,192,32,0.25);
+}
+
+/* Toggle switches */
+body.theme-vault .toggle-track{background:#1a7a2a;}
+body.theme-vault input:checked + .toggle-track{background:#f0c020;}
+body.theme-vault .toggle-thumb{background:#33ff57;}
+
+/* Orb label */
+body.theme-vault #orbLabel{color:#4a9eff !important;text-shadow:0 0 18px rgba(74,158,255,0.8),0 3px 8px rgba(0,0,0,0.9);}
+
+/* Home tab background */
+body.theme-vault #v-home{background:#060d06 !important;}
+
+/* Adapt panels */
+body.theme-vault .adapt-panel{background:#0c150c;border:1px solid rgba(51,255,87,0.25);color:#33ff57;}
+body.theme-vault .adapt-panel.held{background:rgba(240,192,32,0.08);border-color:rgba(240,192,32,0.35);color:#f0c020;}
+body.theme-vault .adapt-panel.info{background:rgba(74,158,255,0.08);border-color:rgba(74,158,255,0.3);color:#4a9eff;}
+body.theme-vault .bonebar{background:rgba(74,158,255,0.08);border-top:1px solid rgba(74,158,255,0.3);color:#4a9eff;}
+
+/* Charts / history blocks */
+body.theme-vault .chart-empty{color:#1a7a2a;}
+
+/* Toast */
+body.theme-vault .toast{background:#0c150c;color:#33ff57;border:1px solid rgba(51,255,87,0.4);}
+
+/* CRT green glow on headings */
+body.theme-vault .sec-h,
+body.theme-vault .appbar-title,
+body.theme-vault .ex-name{
+  text-shadow:0 0 8px rgba(51,255,87,0.35);
+}
+
 .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;background:rgba(240,238,235,0.92);backdrop-filter:saturate(170%) blur(20px);-webkit-backdrop-filter:saturate(170%) blur(20px);border-top:1px solid var(--line2);display:flex;justify-content:space-around;padding:9px 6px calc(env(safe-area-inset-bottom) + 9px);z-index:50;}
 .navb{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:var(--faint);font-family:var(--font);cursor:pointer;padding:3px 0;position:relative;font-size:11px;}
 .navb svg{width:25px;height:25px;}
@@ -1061,6 +1239,14 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
         <input type="checkbox" id="inTuningMode" onchange="saveTuningModeSetting()" style="width:18px;height:18px;">
         <span style="font-size:13px;">Enable Tune Orb button</span>
+      </label>
+    </div>
+    <div class="sec">
+      <div class="sec-h">Pip-Boy Skin &#x2622;</div>
+      <div class="note dim" style="margin-bottom:10px;">Applies the Pip-Boy device aesthetic to the entire app — phosphor green terminal display, scanline overlay, monospaced type, and dim green borders. The Orb of Health switches to the Vault Boy palette: deep navy at low scores, amber-yellow mid-range, electric blue at peak health. Purely visual — no health data is affected.</div>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="inVaultSkin" onchange="saveVaultSkinPref(this.checked)" style="width:18px;height:18px;">
+        <span style="font-size:13px;">Enable Pip-Boy Skin</span>
       </label>
     </div>
     <div class="sec">
@@ -1961,6 +2147,7 @@ function defaultDayIdx(){
 /* ============ NAV ============ */
 var currentTab="home";
 function nav(v){
+  if(document.body.classList.contains("theme-vault")&&!ringReducedMotion())playPipboyTabSound();
   var order=["home","foods","train","log","prog","setup"];
   var ni=order.indexOf(v),ci=order.indexOf(currentTab);
   var dir=ni>=ci?1:-1;
@@ -2450,21 +2637,44 @@ var ORB_STOPS=[
   {pos:80, core:"#ffe34d",mid:"#ffc233",edge:"#f2900a",glow:"#fff066"},
   {pos:100,core:"#fffaf0",mid:"#ffe066",edge:"#7ec8ff",glow:"#a8e0ff"}
 ];
+
+/* Vault / Pip-Boy orb ramp: deep navy-black at low scores (dead reactor),
+   through amber-yellow mid-range (power building), to electric Vault-suit
+   blue at peak health (full charge). */
+var VAULT_ORB_STOPS=[
+  {pos:0,  core:"#020408",mid:"#010204",edge:"#010102",glow:"#050c14"},
+  {pos:20, core:"#061020",mid:"#040b18",edge:"#020610",glow:"#0a1e3a"},
+  {pos:40, core:"#0e2840",mid:"#0a1e30",edge:"#061428",glow:"#102c4a"},
+  {pos:60, core:"#c8840a",mid:"#a06408",edge:"#704406",glow:"#d49010"},
+  {pos:80, core:"#f0c020",mid:"#d4a018",edge:"#b07810",glow:"#f8d030"},
+  {pos:100,core:"#e0f0ff",mid:"#80c0ff",edge:"#1a70f0",glow:"#4a9eff"}
+];
+
+/* Vault home gradient: dark green-black at low scores through amber to electric blue */
+var VAULT_GRAD_STOPS=[
+  {pos:0,  top:"#020408", mid:"#020408"},
+  {pos:20, top:"#061428", mid:"#040e1e"},
+  {pos:40, top:"#0e2840", mid:"#102040"},
+  {pos:60, top:"#a06408", mid:"#603808"},
+  {pos:80, top:"#d4a018", mid:"#1a5090"},
+  {pos:100,top:"#1a70f0", mid:"#4a9eff"}
+];
 function _orbHexToRgb(hex){hex=hex.replace("#","");return {r:parseInt(hex.substring(0,2),16),g:parseInt(hex.substring(2,4),16),b:parseInt(hex.substring(4,6),16)};}
 function _orbRgbToHex(r,g,b){function h(v){v=Math.max(0,Math.min(255,Math.round(v)));var s=v.toString(16);return s.length<2?"0"+s:s;}return "#"+h(r)+h(g)+h(b);}
 function _orbHexLerp(a,b,t){var ca=_orbHexToRgb(a),cb=_orbHexToRgb(b);return _orbRgbToHex(ca.r+(cb.r-ca.r)*t,ca.g+(cb.g-ca.g)*t,ca.b+(cb.b-ca.b)*t);}
 function _orbHexToRgba(hex,alpha){var c=_orbHexToRgb(hex);return "rgba("+c.r+","+c.g+","+c.b+","+alpha+")";}
 function orbColorsForScore(score){
+  var stops=document.body.classList.contains("theme-vault")?VAULT_ORB_STOPS:ORB_STOPS;
   if(score===null||score===undefined)return {core:"#5a6472",mid:"#3f4750",edge:"#2a3038",glow:"#3f4750",dormant:true};
   score=Math.max(0,Math.min(100,score));
-  for(var i=0;i<ORB_STOPS.length-1;i++){
-    var a=ORB_STOPS[i],b=ORB_STOPS[i+1];
+  for(var i=0;i<stops.length-1;i++){
+    var a=stops[i],b=stops[i+1];
     if(score>=a.pos&&score<=b.pos){
       var t=(score-a.pos)/(b.pos-a.pos);
       return {core:_orbHexLerp(a.core,b.core,t),mid:_orbHexLerp(a.mid,b.mid,t),edge:_orbHexLerp(a.edge,b.edge,t),glow:_orbHexLerp(a.glow,b.glow,t),dormant:false};
     }
   }
-  var last=ORB_STOPS[ORB_STOPS.length-1];
+  var last=stops[stops.length-1];
   return {core:last.core,mid:last.mid,edge:last.edge,glow:last.glow,dormant:false};
 }
 
@@ -2488,16 +2698,17 @@ var GRAD_STOPS=[
 ];
 var GRAD_FADE_HEIGHT_PX=600, GRAD_MAX_OPACITY=0.60;
 function gradColorsForScore(score){
-  if(score===null||score===undefined)score=0; // no-data state reads as the worst case, same convention as orb spin
+  var stops=document.body.classList.contains("theme-vault")?VAULT_GRAD_STOPS:GRAD_STOPS;
+  if(score===null||score===undefined)score=0;
   score=Math.max(0,Math.min(100,score));
-  for(var i=0;i<GRAD_STOPS.length-1;i++){
-    var a=GRAD_STOPS[i],b=GRAD_STOPS[i+1];
+  for(var i=0;i<stops.length-1;i++){
+    var a=stops[i],b=stops[i+1];
     if(score>=a.pos&&score<=b.pos){
       var t=(score-a.pos)/(b.pos-a.pos);
       return {top:_orbHexLerp(a.top,b.top,t),mid:_orbHexLerp(a.mid,b.mid,t)};
     }
   }
-  var last=GRAD_STOPS[GRAD_STOPS.length-1];
+  var last=stops[stops.length-1];
   return {top:last.top,mid:last.mid};
 }
 function applyHomeGradient(score){
@@ -4685,6 +4896,7 @@ function renderSetup(){
   if(tuneInput){try{tuneInput.checked=localStorage.getItem("hp_tuning_mode")==="1";}catch(e){}}
   loadRhrOrbToggle();
   loadBpOrbToggle();
+  applyVaultSkin(); // ensures the checkbox reflects current persisted state
   loadTrackingStyle();
   // phase overview — goal-aware
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
@@ -5336,6 +5548,35 @@ function playTimerChime(){
       g.gain.exponentialRampToValueAtTime(0.0001,t0+0.45);
       o.start(t0);o.stop(t0+0.46);
     });
+  }catch(e){}
+}
+/* Pip-Boy tab-switch sound: short descending frequency sweep (~900→300Hz, 80ms)
+   with a second faint harmonic, mimicking the CRT-terminal blip of the in-game device.
+   Only called from nav() when body.theme-vault is active. */
+function playPipboyTabSound(){
+  try{
+    var ctx=new (window.AudioContext||window.webkitAudioContext)();
+    // Primary sweep — square wave for that digital/CRT character
+    var o=ctx.createOscillator();
+    var g=ctx.createGain();
+    o.type="square";
+    o.frequency.setValueAtTime(860,ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(290,ctx.currentTime+0.09);
+    g.gain.setValueAtTime(0.0001,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.18,ctx.currentTime+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.09);
+    o.connect(g);g.connect(ctx.destination);
+    o.start(ctx.currentTime);o.stop(ctx.currentTime+0.095);
+    // Faint harmonic click at the very start for texture
+    var o2=ctx.createOscillator();
+    var g2=ctx.createGain();
+    o2.type="sine";
+    o2.frequency.value=1400;
+    g2.gain.setValueAtTime(0.0001,ctx.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.06,ctx.currentTime+0.003);
+    g2.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.025);
+    o2.connect(g2);g2.connect(ctx.destination);
+    o2.start(ctx.currentTime);o2.stop(ctx.currentTime+0.03);
   }catch(e){}
 }
 function updTimer(){var m=Math.floor(timerLeft/60),s=timerLeft%60;document.getElementById("timerT").textContent=m+":"+pad(s);}
@@ -9105,6 +9346,22 @@ function openOrbTuningPanel(){
 function closeOrbTuningPanel(){
   document.getElementById("orbTuningPanel").style.display="none";
 }
+function saveVaultSkinPref(on){
+  try{localStorage.setItem("hp_vault_skin",on?"1":"0");}catch(e){}
+  applyVaultSkin();
+  _orbBgToneCache=null; // invalidate glass-smear bg cache so orb recomputes for new bg
+  renderOrbCanvasFrame();
+  if(window._lastOrbResult)applyHomeGradient(window._lastOrbResult.score);
+}
+function applyVaultSkin(){
+  var on=false;
+  try{on=localStorage.getItem("hp_vault_skin")==="1";}catch(e){}
+  document.body.classList.toggle("theme-vault",on);
+  var el=document.getElementById("inVaultSkin");
+  if(el)el.checked=on;
+  _orbBgToneCache=null;
+}
+applyVaultSkin();
 applyTuningModeVisibility();
 
 </script>
