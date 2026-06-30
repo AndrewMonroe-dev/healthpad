@@ -645,7 +645,17 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     </div>
 
     <div class="sec">
-      <div class="sec-h">Resting Heart Rate</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="sec-h" style="margin:0;">Resting Heart Rate</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <label class="toggle-sw" id="rhrOrbToggleWrap" title="Feed RHR trend into Orb of Health">
+            <input type="checkbox" id="rhrOrbToggle" onchange="saveRhrOrbPref(this.checked)">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <span style="font-size:10px;color:var(--faint);letter-spacing:.5px;">FEEDS ORB</span>
+        </div>
+      </div>
+      <div class="note dim" style="margin-bottom:10px;">When on, the Orb scores your 30-day RHR trend vs the prior 30 days — falling RHR = improving fitness. Needs 14+ readings to activate. Ignored on beta-blockers or rate-control meds where RHR is pharmacologically blunted.</div>
       <label class="fld">Morning RHR (bpm)</label>
       <input type="number" id="inRHR" inputmode="numeric" placeholder="e.g. 58">
       <button class="btn sm ghost" onclick="saveRHR()">Record RHR</button>
@@ -696,13 +706,22 @@ small.help{display:block;font-size:11.5px;color:var(--faint);margin-top:6px;line
     <div class="sec">
       <div class="sec-h">Blood Pressure <span class="tag" id="bpStatusTag"></span></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div class="note dim" style="margin:0;max-width:78%;">Log both numbers each time you measure. The 14-day average drives workout adjustments — one reading never changes your program.</div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-          <label class="toggle-sw" id="bpPromptToggleWrap" title="Daily BP prompt on/off">
-            <input type="checkbox" id="bpPromptToggle" onchange="saveBPPromptPref(this.checked)">
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          </label>
-          <span style="font-size:10px;color:var(--faint);letter-spacing:.5px;">DAILY PROMPT</span>
+        <div class="note dim" style="margin:0;max-width:68%;">Log both numbers each time you measure. The 14-day average drives workout adjustments — one reading never changes your program.</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <label class="toggle-sw" id="bpOrbToggleWrap" title="Feed BP rolling average into Orb of Health">
+              <input type="checkbox" id="bpOrbToggle" onchange="saveBpOrbPref(this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+            <span style="font-size:10px;color:var(--faint);letter-spacing:.5px;">FEEDS ORB</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <label class="toggle-sw" id="bpPromptToggleWrap" title="Daily BP prompt on/off">
+              <input type="checkbox" id="bpPromptToggle" onchange="saveBPPromptPref(this.checked)">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+            <span style="font-size:10px;color:var(--faint);letter-spacing:.5px;">DAILY PROMPT</span>
+          </div>
         </div>
       </div>
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
@@ -1965,7 +1984,7 @@ function nav(v){
   if(v==="log")renderLog();
   if(v==="prog")renderProg();
   if(v==="setup")renderSetup();
-  if(v==="log"){renderBPSection();renderStepsSection();renderRHRHistory();loadBPPromptPref();loadWeightReactionPref();loadSleepEnabledPref();renderSleepHistory();loadStressEnabledPref();renderStressEcho();renderLabs();}
+  if(v==="log"){renderBPSection();renderStepsSection();renderRHRHistory();loadBPPromptPref();loadWeightReactionPref();loadSleepEnabledPref();renderSleepHistory();loadStressEnabledPref();renderStressEcho();renderLabs();loadRhrOrbToggle();loadBpOrbToggle();}
   if(v==="setup"){loadMedStack();loadGoalSettings();loadUserName();loadMaxHR();renderMedTags();}
   window.scrollTo(0,0);
   var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2250,6 +2269,70 @@ function orbDaysSinceFirstLog(){
   var days=Math.round((today-first)/86400000)+1;
   return Math.max(1,days);
 }
+/* ── CARDIO WORKOUT CREDIT ──────────────────────────────────────────────────────────────
+   Cardio sessions logged with minutes and/or peakHR contribute fractional workout credit
+   rather than a flat "1 session." A 60-min Zone 4 session earns the same credit as a
+   strength session; a 20-min Zone 1 walk earns 0.33. The cardio credit is added to the
+   raw count of sessions before dividing by the target, so it can only raise the workout
+   component score for people logging cardio, never lower anything. */
+function cardioSessionCredit(session){
+  var mins=session.cardio||0;
+  var peakHR=session.peakHR;
+  var minuteCredit=Math.min(1,mins/60); // 60+ min = 1.0 full credit
+  if(!minuteCredit)return 0;
+  var zoneMultiplier=0.65; // default if no peak HR logged: moderate partial credit
+  if(peakHR){
+    var maxHR=estimatedMaxHR();
+    if(maxHR){
+      var pct=(peakHR/maxHR)*100;
+      zoneMultiplier=pct>=80?1.0:pct>=70?0.85:pct>=60?0.70:0.50;
+    }
+  }
+  return minuteCredit*zoneMultiplier;
+}
+
+/* ── RHR TREND COMPONENT ────────────────────────────────────────────────────────────────
+   Scores the 30-day rolling average of RHR vs the prior 30 days. Going down = better
+   cardiovascular fitness. Needs 14+ total readings to activate (too noisy below that).
+   Medication aware: beta_blocker and ccb_nondhp pharmacologically lower RHR, so we note
+   this rather than silently inflating the score for a drug effect. The trend is still
+   valid on those meds (the drug effect is constant; what matters is whether your RHR is
+   still trending down ON the medication), but we reduce weight to zero on the first 60
+   days of a new HR-blunting med to avoid a confounded reading. */
+function orbRhrTrendScore(){
+  var readings=DB.rhr||[];
+  if(readings.length<14)return null; // not enough data
+  var now=new Date();
+  var cutoff30=new Date(now);cutoff30.setDate(cutoff30.getDate()-30);
+  var cutoff60=new Date(now);cutoff60.setDate(cutoff60.getDate()-60);
+  var recent=readings.filter(function(r){return new Date(r.d+"T00:00:00")>=cutoff30;});
+  var prior=readings.filter(function(r){var d=new Date(r.d+"T00:00:00");return d>=cutoff60&&d<cutoff30;});
+  if(!recent.length||!prior.length)return null;
+  var avgRecent=recent.reduce(function(s,r){return s+r.v;},0)/recent.length;
+  var avgPrior=prior.reduce(function(s,r){return s+r.v;},0)/prior.length;
+  var delta=avgRecent-avgPrior; // negative = improved (RHR fell)
+  // Score: improving (delta <=-2) = 1.0, flat (within ±2bpm) = 0.7, rising (>=+2) = 0.3
+  if(delta<=-2)return 1.0;
+  if(delta<=2)return 0.7;
+  return 0.3;
+}
+
+/* ── BLOOD PRESSURE BAND COMPONENT ─────────────────────────────────────────────────────
+   Rolls the last 7–14 BP readings into an average, then scores vs ACC/AHA 2017 thresholds.
+   Needs at least 5 readings before activating (single-reading noise is too high for the Orb).
+   Weight is low (4) since BP is both medication-confounded and highly variable day-to-day. */
+function orbBpBandScore(){
+  var readings=(DB.bp||[]).slice(-14); // last 14 readings at most
+  if(readings.length<5)return null;
+  var avgSys=readings.reduce(function(s,r){return s+r.s;},0)/readings.length;
+  var avgDia=readings.reduce(function(s,r){return s+r.d2;},0)/readings.length;
+  // ACC/AHA 2017 bands — the worse of sys vs dia determines the tier
+  if(avgSys>=140||avgDia>=90)return 0.1;  // Stage 2 hypertension
+  if(avgSys>=130||avgDia>=80)return 0.4;  // Stage 1 hypertension
+  if(avgSys>=120)return 0.75;             // Elevated
+  return 1.0;                             // Optimal (<120/<80)
+}
+
 function computeHealthOrbScore(){
   var hasAnyHistory=(DB.nutrition&&DB.nutrition.length)||(DB.workouts&&DB.workouts.length)||(DB.weights&&DB.weights.length)||(DB.sleep&&DB.sleep.length)||(DB.stress&&DB.stress.length);
   if(!hasAnyHistory)return {score:null,weekScore:null,todayScore:null,components:{},energyMod:0};
@@ -2258,7 +2341,7 @@ function computeHealthOrbScore(){
   var tgt=getNutTargets();
   var waterTarget=(DB.settings&&DB.settings.waterTarget)||64;
   var proTarget=tgt.proMin||PROTEIN_TARGET;
-  var weights={workout:15,protein:13,sleep:11,fiber:8,water:8,sugar:6,sodium:6,satFat:5,calorie:8,potassium:2,calcium:1,weight:7,stress:3};
+  var weights={workout:15,protein:13,sleep:11,fiber:8,water:8,sugar:6,sodium:6,satFat:5,calorie:8,potassium:2,calcium:1,weight:7,stress:3,rhr:6,bp:4};
 
   function orbEverLogged(field){
     return (DB.nutrition||[]).some(function(r){return (r[field]||0)>0;});
@@ -2278,10 +2361,22 @@ function computeHealthOrbScore(){
   };
   var weekStart=dateNDaysAgo(6);
   var hasEverWorkedOut=!!(DB.workouts&&DB.workouts.length);
-  var workoutDays=(DB.workouts||[]).filter(function(w){return w.d>=weekStart;}).length;
+  // Cardio sessions contribute fractional credit (minutes × zone quality) on top of the
+  // raw session count — so a 60-min Zone 4 cardio day and a strength session both count
+  // as 1.0 workout credit, while a 20-min Zone 2 walk counts as ~0.23.
+  var workoutDays=0;
+  (DB.workouts||[]).filter(function(w){return w.d>=weekStart;}).forEach(function(w){
+    if(w.cardio!=null){workoutDays+=cardioSessionCredit(w);}
+    else if(w.ex&&Object.keys(w.ex).length){workoutDays+=1;}
+  });
   var effectiveWindowDays=Math.min(7,orbDaysSinceFirstLog());
   var workoutTarget=4*(effectiveWindowDays/7);
   weekComponents.workout=hasEverWorkedOut?clamp01(workoutTarget>0?workoutDays/workoutTarget:0):null;
+
+  // Optional RHR trend component (toggle: DB.settings.rhrOrbEnabled)
+  weekComponents.rhr=(DB.settings&&DB.settings.rhrOrbEnabled)?orbRhrTrendScore():null;
+  // Optional BP band component (toggle: DB.settings.bpOrbEnabled)
+  weekComponents.bp=(DB.settings&&DB.settings.bpOrbEnabled)?orbBpBandScore():null;
 
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
   var weightScore=null;
@@ -2325,7 +2420,9 @@ function computeHealthOrbScore(){
     workout:hasEverWorkedOut?((DB.workouts||[]).some(function(w){return w.d===todayD;})?1:0):null,
     weight:weightScore,
     sleep:sleepEnabled()?orbSleepComponentScore(lastNDaysSleep(7).filter(function(x){return x.d===todayD;})):null,
-    stress:stressComponentScore()
+    stress:stressComponentScore(),
+    rhr:(DB.settings&&DB.settings.rhrOrbEnabled)?orbRhrTrendScore():null,
+    bp:(DB.settings&&DB.settings.bpOrbEnabled)?orbBpBandScore():null
   };
   var todayScore=weighted(todayComponents);
 
@@ -4586,6 +4683,8 @@ function renderSetup(){
   var fdcInput=document.getElementById("inFdcKey");if(fdcInput)fdcInput.value=DB.settings.fdcKey||"";
   var tuneInput=document.getElementById("inTuningMode");
   if(tuneInput){try{tuneInput.checked=localStorage.getItem("hp_tuning_mode")==="1";}catch(e){}}
+  loadRhrOrbToggle();
+  loadBpOrbToggle();
   loadTrackingStyle();
   // phase overview — goal-aware
   var goalType=(DB.goal&&DB.goal.type)||"weight_loss";
@@ -5610,6 +5709,10 @@ function saveBPPromptPref(on){
   save();
   toast("Daily BP prompt "+(on?"enabled":"disabled"));
 }
+function saveRhrOrbPref(on){if(!DB.settings)return;DB.settings.rhrOrbEnabled=on;save();renderHealthOrb();toast(on?"RHR trend now feeds the Orb.":"RHR removed from Orb.");}
+function saveBpOrbPref(on){if(!DB.settings)return;DB.settings.bpOrbEnabled=on;save();renderHealthOrb();toast(on?"BP rolling average now feeds the Orb.":"BP removed from Orb.");}
+function loadRhrOrbToggle(){var el=document.getElementById("rhrOrbToggle");if(el)el.checked=!!(DB.settings&&DB.settings.rhrOrbEnabled);}
+function loadBpOrbToggle(){var el=document.getElementById("bpOrbToggle");if(el)el.checked=!!(DB.settings&&DB.settings.bpOrbEnabled);}
 function saveWeightReactionPref(on){
   DB.settings=DB.settings||{};
   DB.settings.weightReaction=on;
