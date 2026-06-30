@@ -3304,9 +3304,28 @@ function renderHealthOrb(){
   var wrap=document.getElementById("orbWrap");if(!wrap)return;
   window._lastOrbResult=computeHealthOrbScore();
   applyHomeGradient(window._lastOrbResult.score);
+  logOrbScoreForToday(window._lastOrbResult.score);
   if(!ringReducedMotion())triggerOrbArrival(); // brief emphasis pulse so the orb reads as the
                                                 // Home tab's focal centerpiece on every arrival
   if(!orbLoopRunning)startOrbLoop();
+}
+function logOrbScoreForToday(score){
+  // One entry per calendar day, overwritten on every Home render so it reflects the latest
+  // score of the day rather than the first. This is the ONLY place Orb score gets persisted --
+  // the score itself stays fully client-computed (see computeHealthOrbScore), this just keeps a
+  // dated record so the weekly digest can report a trend without the Apps Script needing its
+  // own copy of the scoring formula (which would be exactly the drift risk already flagged for
+  // the MEDAS/DASH/MIND/TLC item tables, except worse -- this formula changes far more often).
+  if(score==null||isNaN(score))return;
+  try{
+    DB.orbScoreHistory=DB.orbScoreHistory||[];
+    var t=todayStr();
+    DB.orbScoreHistory=DB.orbScoreHistory.filter(function(x){return x.d!==t;});
+    DB.orbScoreHistory.push({d:t,score:Math.round(score*100)/100});
+    // Cap history so this never grows unbounded across years of daily use.
+    if(DB.orbScoreHistory.length>120)DB.orbScoreHistory=DB.orbScoreHistory.slice(-120);
+    save();
+  }catch(e){}
 }
 function orbVerdict(v){
   if(v===null||v===undefined)return {txt:"No data logged",cls:"obr-none"};
