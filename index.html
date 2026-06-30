@@ -9240,11 +9240,12 @@ function saveOrbTuningToStorage(){
       ORB_BLAST_RING_COUNT:ORB_BLAST_RING_COUNT, ORB_BLAST_START_OPACITY:ORB_BLAST_START_OPACITY
     };
     localStorage.setItem("hp_orb_tuning",JSON.stringify(data));
+    if(DB&&DB.settings){DB.settings.orbTuning=data;save();}
   }catch(e){}
 }
 function loadOrbTuningFromStorage(){
   try{
-    var raw=localStorage.getItem("hp_orb_tuning");
+    var raw=(DB&&DB.settings&&DB.settings.orbTuning)?JSON.stringify(DB.settings.orbTuning):localStorage.getItem("hp_orb_tuning");
     if(!raw)return;
     var d=JSON.parse(raw);
     if(d.ORB_STOPS)ORB_STOPS=d.ORB_STOPS;
@@ -9337,6 +9338,7 @@ function _wireOrbTuningInputs(){
 }
 function resetOrbTuningToDefaults(){
   try{localStorage.removeItem("hp_orb_tuning");}catch(e){}
+  try{if(DB&&DB.settings&&DB.settings.orbTuning){delete DB.settings.orbTuning;save();}}catch(e){}
   location.reload();
 }
 function openOrbTuningPanel(){
@@ -9348,6 +9350,7 @@ function closeOrbTuningPanel(){
 }
 function saveVaultSkinPref(on){
   try{localStorage.setItem("hp_vault_skin",on?"1":"0");}catch(e){}
+  try{if(DB&&DB.settings){DB.settings.vaultSkin=on?"1":"0";save();}}catch(e){}
   applyVaultSkin();
   _orbBgToneCache=null; // invalidate glass-smear bg cache so orb recomputes for new bg
   renderOrbCanvasFrame();
@@ -9355,7 +9358,7 @@ function saveVaultSkinPref(on){
 }
 function applyVaultSkin(){
   var on=false;
-  try{on=localStorage.getItem("hp_vault_skin")==="1";}catch(e){}
+  try{on=(DB&&DB.settings&&DB.settings.vaultSkin!=null)?(DB.settings.vaultSkin==="1"):(localStorage.getItem("hp_vault_skin")==="1");}catch(e){}
   document.body.classList.toggle("theme-vault",on);
   var el=document.getElementById("inVaultSkin");
   if(el)el.checked=on;
