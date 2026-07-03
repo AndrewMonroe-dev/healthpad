@@ -636,7 +636,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="homeToGo">&mdash;</div><div class="ring-lbl" id="weightRingLbl">to goal</div></div>
         </div>
       </div>
-      <div class="ringcard">
+      <div class="ringcard" data-nut-key="pro" style="cursor:pointer;">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -645,7 +645,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="homePro">0</div><div class="ring-lbl">protein g</div><div class="ring-lbl" style="margin-top:1px;">today</div></div>
         </div>
       </div>
-      <div class="ringcard" id="nbCal" onclick="toggleCalPoints()" style="cursor:pointer;">
+      <div class="ringcard" id="nbCal" data-nut-key="cal" style="cursor:pointer;">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -654,7 +654,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbCalVal">0</div><div class="ring-lbl" id="nbCalLbl">calories</div><div class="ring-lbl" id="nbCalSub" style="margin-top:1px;">of 0</div></div>
         </div>
       </div>
-      <div class="ringcard">
+      <div class="ringcard" data-nut-key="carb" style="cursor:pointer;">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -663,7 +663,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbCarbVal">0</div><div class="ring-lbl">carbs</div><div class="ring-lbl" id="nbCarbSub" style="margin-top:1px;">of 0g</div></div>
         </div>
       </div>
-      <div class="ringcard">
+      <div class="ringcard" data-nut-key="fat" style="cursor:pointer;">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -672,7 +672,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbFatVal">0</div><div class="ring-lbl">fat</div><div class="ring-lbl" id="nbFatSub" style="margin-top:1px;">of 0g</div></div>
         </div>
       </div>
-      <div class="ringcard">
+      <div class="ringcard" data-nut-key="fiber" style="cursor:pointer;">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -681,7 +681,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbFiberVal">0</div><div class="ring-lbl">fiber</div><div class="ring-lbl" id="nbFiberSub" style="margin-top:1px;">of 0g</div></div>
         </div>
       </div>
-      <div class="ringcard">
+      <div class="ringcard" data-nut-key="sugar" style="cursor:pointer;">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -690,7 +690,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbSugarVal">0</div><div class="ring-lbl">sugar</div><div class="ring-lbl" id="nbSugarSub" style="margin-top:1px;">of 0g</div></div>
         </div>
       </div>
-      <div class="ringcard">
+      <div class="ringcard" data-nut-key="sodium" style="cursor:pointer;">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -699,7 +699,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbSodiumVal">0</div><div class="ring-lbl">sodium</div><div class="ring-lbl" id="nbSodiumSub" style="margin-top:1px;">of 0mg</div></div>
         </div>
       </div>
-      <div class="ringcard" id="nbWaterBox">
+      <div class="ringcard" id="nbWaterBox" data-nut-key="water" style="cursor:pointer;">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -712,7 +712,7 @@ body.theme-vault .ex-name{
           <button class="nutbox-water-btn" onclick="event.stopPropagation();quickAddWater(16)">+16</button>
         </div>
       </div>
-      <div class="ringcard" id="nbEodBox" onclick="try{showEndOfDayRecap();}catch(e){alert('EOD error: '+e.message);}" style="cursor:pointer;touch-action:manipulation;">
+      <div class="ringcard" id="nbEodBox" onclick="try{showEndOfDayRecap();}catch(e){toast('EOD error: '+e.message);}" style="cursor:pointer;touch-action:manipulation;">
         <div class="ring" style="display:flex;align-items:center;justify-content:center;">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -743,13 +743,13 @@ body.theme-vault .ex-name{
     <div class="sec">
       <div class="sec-h">Today's Nutrition <span class="tag" id="calTargetTagFoods"></span></div>
       <div class="ringrow" id="ringRowTwo" style="margin-top:2px;margin-bottom:8px;">
-        <div class="ringcard">
+        <div class="ringcard" data-nut-key="pro" style="cursor:pointer;">
           <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill red" id="ringProLog" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg><div class="ring-center"><div class="ring-val sm" id="proGramsLog">0</div><div class="ring-sub" id="proSubLog">of 210 g</div><div class="ring-lbl" id="proRingLbl">protein</div></div></div>
         </div>
-        <div class="ringcard">
+        <div class="ringcard" data-nut-key="cal" style="cursor:pointer;">
           <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill gold" id="ringCalLog" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -758,19 +758,19 @@ body.theme-vault .ex-name{
         </div>
       </div>
       <div class="ringrow-3" id="ringRowThree" style="display:none;margin-bottom:8px;">
-        <div class="ringcard">
+        <div class="ringcard" data-nut-key="pro" style="cursor:pointer;">
           <div class="ring"><svg viewBox="0 0 130 130" width="96" height="96">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill red" id="ringProMacro" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg><div class="ring-center"><div class="ring-val sm" id="proGramsMacro">0</div><div class="ring-sub" id="proSubMacro">of 0g</div><div class="ring-lbl">protein</div></div></div>
         </div>
-        <div class="ringcard">
+        <div class="ringcard" data-nut-key="carb" style="cursor:pointer;">
           <div class="ring"><svg viewBox="0 0 130 130" width="96" height="96">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill gold" id="ringCarbMacro" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg><div class="ring-center"><div class="ring-val sm" id="carbGramsMacro">0</div><div class="ring-sub" id="carbSubMacro">of 0g</div><div class="ring-lbl">carbs</div></div></div>
         </div>
-        <div class="ringcard">
+        <div class="ringcard" data-nut-key="fat" style="cursor:pointer;">
           <div class="ring"><svg viewBox="0 0 130 130" width="96" height="96">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill" id="ringFatMacro" cx="65" cy="65" r="54" stroke-width="11" style="stroke:#7a8fb0;"/>
@@ -3562,6 +3562,110 @@ function renderHomeNutBoxes(){
   setRing("nbWaterRing",waterTarget>0?water/waterTarget:0);
 }
 
+/* ============ NUTRITION RING BREAKDOWN MODAL ============
+   Opens when the user taps any nutrition ring card. Shows a ranked list of today's
+   logged foods contributing to that nutrient, with the amount each provided.
+   For the cal ring: redirects to points key automatically when in points mode.
+   For capped nutrients (sugar/satFat/sodium): progress bar color flips to red near limit. */
+function showNutBreakdown(key){
+  if(key==='cal'&&getTrackingStyle()==='points')key='points';
+  var NUT_META={
+    cal:      {label:'Calories',   unit:'kcal', color:'var(--red)'},
+    pro:      {label:'Protein',    unit:'g',    color:'var(--red)'},
+    carb:     {label:'Carbs',      unit:'g',    color:'var(--gold)'},
+    fat:      {label:'Fat',        unit:'g',    color:'#7a8fb0'},
+    fiber:    {label:'Fiber',      unit:'g',    color:'#4a7c59'},
+    sugar:    {label:'Sugar',      unit:'g',    color:'#c478a6'},
+    satFat:   {label:'Sat Fat',    unit:'g',    color:'#a07060'},
+    sodium:   {label:'Sodium',     unit:'mg',   color:'#787878'},
+    water:    {label:'Water',      unit:'oz',   color:'#4a90a4'},
+    potassium:{label:'Potassium',  unit:'mg',   color:'#7a8fb0'},
+    calcium:  {label:'Calcium',    unit:'mg',   color:'#c0a060'},
+    points:   {label:'WW Points',  unit:'pts',  color:'var(--gold)'}
+  };
+  var m=NUT_META[key];if(!m)return;
+  // Per-entry value getter — points are always derived live rather than trusting the stored field
+  function getVal(e){
+    if(key==='points')return calcPoints(e.cal||0,e.satFat||0,e.sugar||0,e.pro||0);
+    return parseFloat(e[key])||0;
+  }
+  var entries=todaysFoodEntries().filter(function(e){return getVal(e)>0;});
+  entries=entries.slice().sort(function(a,b){return getVal(b)-getVal(a);});
+  var total=entries.reduce(function(s,e){return s+getVal(e);},0);
+  // Target for this nutrient
+  var tgt=getNutTargets(),mt=getMacroTargets();
+  var targetMap={
+    cal:mt.cal,pro:tgt.proMin,carb:mt.carbG,fat:mt.fatG,
+    fiber:tgt.fiberGood,sugar:tgt.sugarMax,satFat:tgt.satFatMax,
+    sodium:tgt.sodiumMax,water:(DB.settings&&DB.settings.waterTarget)||64,
+    potassium:tgt.potassiumMin,calcium:tgt.calciumMin,points:getPointsBudget()
+  };
+  var target=targetMap[key]||0;
+  var isCapped=['sugar','satFat','sodium'].indexOf(key)>-1;
+  var pct=target>0?Math.min(1,total/target):0;
+  var barColor=isCapped?(pct>0.85?'var(--red)':pct>0.65?'var(--gold)':m.color):m.color;
+  var progressBar=target>0?
+    '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">'+
+      '<div style="flex:1;height:4px;background:var(--line);border-radius:2px;overflow:hidden;">'+
+        '<div style="height:100%;width:'+(pct*100).toFixed(1)+'%;background:'+barColor+';border-radius:2px;"></div>'+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--faint);white-space:nowrap;">'+Math.round(total)+'\u202f/\u202f'+target+'\u202f'+m.unit+(isCapped?' max':'')+'</div>'+
+    '</div>':'';
+  // Food rows
+  var listHtml=entries.length?entries.map(function(e){
+    var v=getVal(e);
+    var qty=(e.qty!==undefined&&e.qty!==null&&e.unit)?e.qty+'\u202f'+e.unit:'';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;'+
+      'padding:10px 0;border-bottom:1px solid var(--line);">'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="font-size:14px;font-weight:500;color:var(--ink);">'+e.name+'</div>'+
+        (qty?'<div style="font-size:11px;color:var(--faint);margin-top:1px;">'+qty+'</div>':'')+
+      '</div>'+
+      '<div style="font-size:15px;font-weight:700;color:'+m.color+';white-space:nowrap;'+
+        'margin-left:14px;">'+Math.round(v)+'\u202f'+m.unit+'</div>'+
+    '</div>';
+  }).join('')+
+    (entries.length>1?
+      '<div style="display:flex;justify-content:space-between;align-items:center;'+
+        'padding:10px 0;margin-top:2px;">'+
+        '<div style="font-size:12px;font-weight:700;letter-spacing:.04em;'+
+          'text-transform:uppercase;color:var(--faint);">Total</div>'+
+        '<div style="font-size:16px;font-weight:700;color:'+m.color+';">'+
+          Math.round(total)+'\u202f'+m.unit+'</div>'+
+      '</div>':'')
+    :'<div style="padding:24px 0;text-align:center;color:var(--faint);font-size:14px;">'+
+      'Nothing logged yet today</div>';
+  // Cal\u2194points toggle (only relevant for those two ring views)
+  var toggleBtn=(key==='cal'||key==='points')?
+    '<button class="btn sm ghost" style="width:100%;margin-top:12px;touch-action:manipulation;"'+
+      ' onclick="toggleCalPoints();closeExModal(\'nutBreakdownModal\');">'+
+      'Switch to '+(getTrackingStyle()==='points'?'Calories':'WW Points')+' view'+
+    '</button>':'';
+  var modal=document.createElement('div');
+  modal.id='nutBreakdownModal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(10,6,4,.85);z-index:9000;'+
+    'display:flex;align-items:flex-end;justify-content:center;';
+  modal.addEventListener('click',function(ev){if(ev.target===modal)closeExModal('nutBreakdownModal');});
+  modal.innerHTML=
+    '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;'+
+      'max-height:78vh;display:flex;flex-direction:column;color:var(--ink);'+
+      'padding-bottom:max(20px,env(safe-area-inset-bottom));">'+
+    '<div style="padding:16px 20px 14px;border-bottom:1px solid var(--border);'+
+      'flex-shrink:0;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'+
+        '<div style="font-weight:700;font-size:16px;">'+m.label+'\u2009\u2014\u2009Today</div>'+
+        '<button onclick="closeExModal(\'nutBreakdownModal\')" style="background:none;border:none;'+
+          'font-size:22px;color:var(--faint);cursor:pointer;padding:4px;touch-action:manipulation;">&#x2715;</button>'+
+      '</div>'+
+      progressBar+
+    '</div>'+
+    '<div style="overflow-y:auto;flex:1;padding:0 20px;">'+
+      listHtml+
+      (toggleBtn?'<div style="padding-bottom:4px;">'+toggleBtn+'</div>':'')+
+    '</div>'+
+    '</div>';
+  document.body.appendChild(modal);
+}
 function defaultMilestones(goalType){
   var lw=lastWeight();
   var startW=DB.weights.length?DB.weights[0].w:null;
@@ -6482,6 +6586,17 @@ document.addEventListener("click",function(e){
   if(!opt)return;
   if(Date.now()-_obLastTapTime<500)return; // already handled by touchend
   handleObOptTap(opt);
+});
+
+/* Delegated handler for nutrition ring cards (data-nut-key). Plain click delegation is
+   sufficient here because the ringrow uses CSS grid (no overflow scroll), so there is no
+   scroll/tap ambiguity. The button guard prevents the water quick-add buttons from
+   accidentally opening the breakdown modal. */
+document.addEventListener('click',function(e){
+  if(e.target.closest('button'))return; // inner buttons handle their own taps
+  var card=e.target.closest('.ringcard[data-nut-key]');
+  if(!card)return;
+  showNutBreakdown(card.dataset.nutKey);
 });
 
 // Delegated handler for exercise list rows.
