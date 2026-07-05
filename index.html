@@ -636,7 +636,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="homeToGo">&mdash;</div><div class="ring-lbl" id="weightRingLbl">to goal</div></div>
         </div>
       </div>
-      <div class="ringcard" data-nut-key="pro" style="cursor:pointer;">
+      <div class="ringcard">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -645,7 +645,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="homePro">0</div><div class="ring-lbl">protein g</div><div class="ring-lbl" style="margin-top:1px;">today</div></div>
         </div>
       </div>
-      <div class="ringcard" id="nbCal" data-nut-key="cal" style="cursor:pointer;">
+      <div class="ringcard" id="nbCal" onclick="toggleCalPoints()" style="cursor:pointer;">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -654,7 +654,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbCalVal">0</div><div class="ring-lbl" id="nbCalLbl">calories</div><div class="ring-lbl" id="nbCalSub" style="margin-top:1px;">of 0</div></div>
         </div>
       </div>
-      <div class="ringcard" data-nut-key="carb" style="cursor:pointer;">
+      <div class="ringcard">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -663,7 +663,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbCarbVal">0</div><div class="ring-lbl">carbs</div><div class="ring-lbl" id="nbCarbSub" style="margin-top:1px;">of 0g</div></div>
         </div>
       </div>
-      <div class="ringcard" data-nut-key="fat" style="cursor:pointer;">
+      <div class="ringcard">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -672,7 +672,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbFatVal">0</div><div class="ring-lbl">fat</div><div class="ring-lbl" id="nbFatSub" style="margin-top:1px;">of 0g</div></div>
         </div>
       </div>
-      <div class="ringcard" data-nut-key="fiber" style="cursor:pointer;">
+      <div class="ringcard">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -681,7 +681,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbFiberVal">0</div><div class="ring-lbl">fiber</div><div class="ring-lbl" id="nbFiberSub" style="margin-top:1px;">of 0g</div></div>
         </div>
       </div>
-      <div class="ringcard" data-nut-key="sugar" style="cursor:pointer;">
+      <div class="ringcard">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -690,7 +690,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbSugarVal">0</div><div class="ring-lbl">sugar</div><div class="ring-lbl" id="nbSugarSub" style="margin-top:1px;">of 0g</div></div>
         </div>
       </div>
-      <div class="ringcard" data-nut-key="sodium" style="cursor:pointer;">
+      <div class="ringcard">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -699,7 +699,7 @@ body.theme-vault .ex-name{
           <div class="ring-center"><div class="ring-val sm" id="nbSodiumVal">0</div><div class="ring-lbl">sodium</div><div class="ring-lbl" id="nbSodiumSub" style="margin-top:1px;">of 0mg</div></div>
         </div>
       </div>
-      <div class="ringcard" id="nbWaterBox" data-nut-key="water" style="cursor:pointer;">
+      <div class="ringcard" id="nbWaterBox">
         <div class="ring">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -712,7 +712,7 @@ body.theme-vault .ex-name{
           <button class="nutbox-water-btn" onclick="event.stopPropagation();quickAddWater(16)">+16</button>
         </div>
       </div>
-      <div class="ringcard" id="nbEodBox" onclick="try{showEndOfDayRecap();}catch(e){toast('EOD error: '+e.message);}" style="cursor:pointer;touch-action:manipulation;">
+      <div class="ringcard" id="nbEodBox" onclick="try{showEndOfDayRecap();}catch(e){alert('EOD error: '+e.message);}" style="cursor:pointer;touch-action:manipulation;">
         <div class="ring" style="display:flex;align-items:center;justify-content:center;">
           <svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -743,13 +743,13 @@ body.theme-vault .ex-name{
     <div class="sec">
       <div class="sec-h">Today's Nutrition <span class="tag" id="calTargetTagFoods"></span></div>
       <div class="ringrow" id="ringRowTwo" style="margin-top:2px;margin-bottom:8px;">
-        <div class="ringcard" data-nut-key="pro" style="cursor:pointer;">
+        <div class="ringcard">
           <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill red" id="ringProLog" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg><div class="ring-center"><div class="ring-val sm" id="proGramsLog">0</div><div class="ring-sub" id="proSubLog">of 210 g</div><div class="ring-lbl" id="proRingLbl">protein</div></div></div>
         </div>
-        <div class="ringcard" data-nut-key="cal" style="cursor:pointer;">
+        <div class="ringcard">
           <div class="ring"><svg viewBox="0 0 130 130" width="148" height="148">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill gold" id="ringCalLog" cx="65" cy="65" r="54" stroke-width="11"/>
@@ -758,19 +758,19 @@ body.theme-vault .ex-name{
         </div>
       </div>
       <div class="ringrow-3" id="ringRowThree" style="display:none;margin-bottom:8px;">
-        <div class="ringcard" data-nut-key="pro" style="cursor:pointer;">
+        <div class="ringcard">
           <div class="ring"><svg viewBox="0 0 130 130" width="96" height="96">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill red" id="ringProMacro" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg><div class="ring-center"><div class="ring-val sm" id="proGramsMacro">0</div><div class="ring-sub" id="proSubMacro">of 0g</div><div class="ring-lbl">protein</div></div></div>
         </div>
-        <div class="ringcard" data-nut-key="carb" style="cursor:pointer;">
+        <div class="ringcard">
           <div class="ring"><svg viewBox="0 0 130 130" width="96" height="96">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill gold" id="ringCarbMacro" cx="65" cy="65" r="54" stroke-width="11"/>
           </svg><div class="ring-center"><div class="ring-val sm" id="carbGramsMacro">0</div><div class="ring-sub" id="carbSubMacro">of 0g</div><div class="ring-lbl">carbs</div></div></div>
         </div>
-        <div class="ringcard" data-nut-key="fat" style="cursor:pointer;">
+        <div class="ringcard">
           <div class="ring"><svg viewBox="0 0 130 130" width="96" height="96">
             <circle class="ring-track" cx="65" cy="65" r="54" stroke-width="11"/>
             <circle class="ring-fill" id="ringFatMacro" cx="65" cy="65" r="54" stroke-width="11" style="stroke:#7a8fb0;"/>
@@ -868,13 +868,7 @@ body.theme-vault .ex-name{
           <div id="dietChip_hpdi" onclick="selectDiet('hpdi')" style="flex:1;min-width:56px;text-align:center;padding:8px 4px;border-radius:18px;border:1.5px solid var(--line2);background:var(--surf);color:var(--ink2);font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;">hPDI</div>
         </div>
         <div class="note dim" style="margin:10px 0;">Pick a diet to track. Each is logged daily with a rolling 7-day adherence score. Mediterranean uses the validated 14-item MEDAS (PREDIMED) screener; DASH, MIND, TLC, and hPDI use daily adaptations of their published guidance.</div>
-        <div class="note dim" style="margin:10px 0;line-height:1.5;">
-          <div style="margin-bottom:7px;"><b style="color:var(--ink2);">Mediterranean</b> &mdash; Built around the traditional eating patterns of countries bordering the Mediterranean, emphasizing olive oil, vegetables, fish, legumes, and nuts. It has the strongest body of evidence of any dietary pattern for reducing cardiovascular events and overall mortality.</div>
-          <div style="margin-bottom:7px;"><b style="color:var(--ink2);">DASH</b> &mdash; Dietary Approaches to Stop Hypertension, designed by the NIH specifically to lower blood pressure by increasing potassium-rich produce and low-fat dairy while cutting sodium. It is the eating pattern most directly validated for managing and preventing high blood pressure.</div>
-          <div style="margin-bottom:7px;"><b style="color:var(--ink2);">MIND</b> &mdash; A hybrid of the Mediterranean and DASH diets created at Rush University, with added emphasis on leafy greens and berries. Its sole design purpose is to slow age-related cognitive decline and reduce the risk of Alzheimer's disease.</div>
-          <div style="margin-bottom:7px;"><b style="color:var(--ink2);">TLC</b> &mdash; Therapeutic Lifestyle Changes, an NIH/National Cholesterol Education Program plan focused on limiting saturated fat and dietary cholesterol while adding soluble fiber and plant sterols. It exists specifically to lower LDL ("bad") cholesterol without medication.</div>
-          <div><b style="color:var(--ink2);">hPDI</b> &mdash; The healthful Plant-Based Diet Index (Harvard), which rewards healthy plant foods while penalizing both refined plant foods and all animal foods, including fish, dairy, and eggs. It exists to quantify the quality of a plant-forward diet, and higher scores are linked to lower rates of heart disease and type 2 diabetes.</div>
-        </div>
+        <div class="note dim" id="dietDescArea" style="margin:10px 0;line-height:1.5;"></div>
         <div id="medasCheckinArea"></div>
         <button class="btn sm ghost" id="dietSaveBtn" style="margin-top:12px;width:100%;" onclick="saveMedasDaily()">Save Today</button>
         <div class="note dim" id="medasLastScore" style="margin-top:10px;"></div>
@@ -1955,26 +1949,7 @@ document.addEventListener("visibilitychange",function(){if(document.hidden)flush
 window.addEventListener("pagehide",flushAutoSync);
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
 function pad(n){return n<10?"0"+n:""+n;}
-var _toastTimer=null;
-function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("show");if(_toastTimer)clearTimeout(_toastTimer);_toastTimer=setTimeout(function(){t.classList.remove("show");},1900);}
-/* Action toast: message + one tappable action (e.g. Undo). Longer display window than a
-   plain toast (5s) since the whole point is giving the user time to react. The action
-   callback is stored on a module var, not inlined into the HTML, so no escaping issues. */
-var _toastActionFn=null;
-function toastAction(msg,label,fn,ms){
-  var t=document.getElementById("toast");
-  _toastActionFn=fn||null;
-  t.innerHTML=msg.replace(/</g,"&lt;")+' <button onclick="_runToastAction()" style="margin-left:10px;background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:8px;padding:4px 12px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;vertical-align:middle;">'+label+'</button>';
-  t.classList.add("show");
-  if(_toastTimer)clearTimeout(_toastTimer);
-  _toastTimer=setTimeout(function(){t.classList.remove("show");_toastActionFn=null;},ms||5000);
-}
-function _runToastAction(){
-  var fn=_toastActionFn;_toastActionFn=null;
-  var t=document.getElementById("toast");t.classList.remove("show");
-  if(_toastTimer){clearTimeout(_toastTimer);_toastTimer=null;}
-  if(fn)fn();
-}
+function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},1900);}
 function easeOut(p){return 1-Math.pow(1-p,3);}
 function countUp(id,target,dec,suffix){var el=document.getElementById(id);if(!el)return;target=target||0;var t0=null,from=0;function s(t){if(!t0)t0=t;var p=Math.min(1,(t-t0)/850);var v=from+(target-from)*easeOut(p);el.textContent=(dec?v.toFixed(dec):Math.round(v))+(suffix||"");if(p<1)requestAnimationFrame(s);}requestAnimationFrame(s);}
 var GOOD_RING_IDS={ringCampaign:1,ringWeight:1,ringPro:1,nbFiberRing:1,nbWaterRing:1,ringProMacro:1,ringProLog:1};
@@ -3562,110 +3537,6 @@ function renderHomeNutBoxes(){
   setRing("nbWaterRing",waterTarget>0?water/waterTarget:0);
 }
 
-/* ============ NUTRITION RING BREAKDOWN MODAL ============
-   Opens when the user taps any nutrition ring card. Shows a ranked list of today's
-   logged foods contributing to that nutrient, with the amount each provided.
-   For the cal ring: redirects to points key automatically when in points mode.
-   For capped nutrients (sugar/satFat/sodium): progress bar color flips to red near limit. */
-function showNutBreakdown(key){
-  if(key==='cal'&&getTrackingStyle()==='points')key='points';
-  var NUT_META={
-    cal:      {label:'Calories',   unit:'kcal', color:'var(--red)'},
-    pro:      {label:'Protein',    unit:'g',    color:'var(--red)'},
-    carb:     {label:'Carbs',      unit:'g',    color:'var(--gold)'},
-    fat:      {label:'Fat',        unit:'g',    color:'#7a8fb0'},
-    fiber:    {label:'Fiber',      unit:'g',    color:'#4a7c59'},
-    sugar:    {label:'Sugar',      unit:'g',    color:'#c478a6'},
-    satFat:   {label:'Sat Fat',    unit:'g',    color:'#a07060'},
-    sodium:   {label:'Sodium',     unit:'mg',   color:'#787878'},
-    water:    {label:'Water',      unit:'oz',   color:'#4a90a4'},
-    potassium:{label:'Potassium',  unit:'mg',   color:'#7a8fb0'},
-    calcium:  {label:'Calcium',    unit:'mg',   color:'#c0a060'},
-    points:   {label:'WW Points',  unit:'pts',  color:'var(--gold)'}
-  };
-  var m=NUT_META[key];if(!m)return;
-  // Per-entry value getter — points are always derived live rather than trusting the stored field
-  function getVal(e){
-    if(key==='points')return calcPoints(e.cal||0,e.satFat||0,e.sugar||0,e.pro||0);
-    return parseFloat(e[key])||0;
-  }
-  var entries=todaysFoodEntries().filter(function(e){return getVal(e)>0;});
-  entries=entries.slice().sort(function(a,b){return getVal(b)-getVal(a);});
-  var total=entries.reduce(function(s,e){return s+getVal(e);},0);
-  // Target for this nutrient
-  var tgt=getNutTargets(),mt=getMacroTargets();
-  var targetMap={
-    cal:mt.cal,pro:tgt.proMin,carb:mt.carbG,fat:mt.fatG,
-    fiber:tgt.fiberGood,sugar:tgt.sugarMax,satFat:tgt.satFatMax,
-    sodium:tgt.sodiumMax,water:(DB.settings&&DB.settings.waterTarget)||64,
-    potassium:tgt.potassiumMin,calcium:tgt.calciumMin,points:getPointsBudget()
-  };
-  var target=targetMap[key]||0;
-  var isCapped=['sugar','satFat','sodium'].indexOf(key)>-1;
-  var pct=target>0?Math.min(1,total/target):0;
-  var barColor=isCapped?(pct>0.85?'var(--red)':pct>0.65?'var(--gold)':m.color):m.color;
-  var progressBar=target>0?
-    '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">'+
-      '<div style="flex:1;height:4px;background:var(--line);border-radius:2px;overflow:hidden;">'+
-        '<div style="height:100%;width:'+(pct*100).toFixed(1)+'%;background:'+barColor+';border-radius:2px;"></div>'+
-      '</div>'+
-      '<div style="font-size:11px;color:var(--faint);white-space:nowrap;">'+Math.round(total)+'\u202f/\u202f'+target+'\u202f'+m.unit+(isCapped?' max':'')+'</div>'+
-    '</div>':'';
-  // Food rows
-  var listHtml=entries.length?entries.map(function(e){
-    var v=getVal(e);
-    var qty=(e.qty!==undefined&&e.qty!==null&&e.unit)?e.qty+'\u202f'+e.unit:'';
-    return '<div style="display:flex;justify-content:space-between;align-items:center;'+
-      'padding:10px 0;border-bottom:1px solid var(--line);">'+
-      '<div style="flex:1;min-width:0;">'+
-        '<div style="font-size:14px;font-weight:500;color:var(--ink);">'+e.name+'</div>'+
-        (qty?'<div style="font-size:11px;color:var(--faint);margin-top:1px;">'+qty+'</div>':'')+
-      '</div>'+
-      '<div style="font-size:15px;font-weight:700;color:'+m.color+';white-space:nowrap;'+
-        'margin-left:14px;">'+Math.round(v)+'\u202f'+m.unit+'</div>'+
-    '</div>';
-  }).join('')+
-    (entries.length>1?
-      '<div style="display:flex;justify-content:space-between;align-items:center;'+
-        'padding:10px 0;margin-top:2px;">'+
-        '<div style="font-size:12px;font-weight:700;letter-spacing:.04em;'+
-          'text-transform:uppercase;color:var(--faint);">Total</div>'+
-        '<div style="font-size:16px;font-weight:700;color:'+m.color+';">'+
-          Math.round(total)+'\u202f'+m.unit+'</div>'+
-      '</div>':'')
-    :'<div style="padding:24px 0;text-align:center;color:var(--faint);font-size:14px;">'+
-      'Nothing logged yet today</div>';
-  // Cal\u2194points toggle (only relevant for those two ring views)
-  var toggleBtn=(key==='cal'||key==='points')?
-    '<button class="btn sm ghost" style="width:100%;margin-top:12px;touch-action:manipulation;"'+
-      ' onclick="toggleCalPoints();closeExModal(\'nutBreakdownModal\');">'+
-      'Switch to '+(getTrackingStyle()==='points'?'Calories':'WW Points')+' view'+
-    '</button>':'';
-  var modal=document.createElement('div');
-  modal.id='nutBreakdownModal';
-  modal.style.cssText='position:fixed;inset:0;background:rgba(10,6,4,.85);z-index:9000;'+
-    'display:flex;align-items:flex-end;justify-content:center;';
-  modal.addEventListener('click',function(ev){if(ev.target===modal)closeExModal('nutBreakdownModal');});
-  modal.innerHTML=
-    '<div style="background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:560px;'+
-      'max-height:78vh;display:flex;flex-direction:column;color:var(--ink);'+
-      'padding-bottom:max(20px,env(safe-area-inset-bottom));">'+
-    '<div style="padding:16px 20px 14px;border-bottom:1px solid var(--border);'+
-      'flex-shrink:0;">'+
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'+
-        '<div style="font-weight:700;font-size:16px;">'+m.label+'\u2009\u2014\u2009Today</div>'+
-        '<button onclick="closeExModal(\'nutBreakdownModal\')" style="background:none;border:none;'+
-          'font-size:22px;color:var(--faint);cursor:pointer;padding:4px;touch-action:manipulation;">&#x2715;</button>'+
-      '</div>'+
-      progressBar+
-    '</div>'+
-    '<div style="overflow-y:auto;flex:1;padding:0 20px;">'+
-      listHtml+
-      (toggleBtn?'<div style="padding-bottom:4px;">'+toggleBtn+'</div>':'')+
-    '</div>'+
-    '</div>';
-  document.body.appendChild(modal);
-}
 function defaultMilestones(goalType){
   var lw=lastWeight();
   var startW=DB.weights.length?DB.weights[0].w:null;
@@ -5057,7 +4928,6 @@ function renderPRs(){
 function renderSetup(){
   renderProgramExEditor();
   renderOneRMList("");
-  renderSyncStatusLine();
   document.getElementById("inSheetUrl").value=DB.settings.sheetUrl||"";
   document.getElementById("inDigestEmail").value=DB.settings.digestEmail||"";
   var fdcInput=document.getElementById("inFdcKey");if(fdcInput)fdcInput.value=DB.settings.fdcKey||"";
@@ -5393,7 +5263,7 @@ function useOFFResult(i){
   var food=offNutrimentsToFood(titleCaseFoodName(p.product_name),p.nutriments,100,"g");
   saveSearchResultToMyFoods(food);
   var servingG=parseOFFServingGrams(p.serving_size);
-  closeExModal("addFoodModal");
+  var m=document.getElementById("addFoodModal");if(m)m.remove();
   showNewFoodForm(food,{source:"off",raw:p.nutriments,servingG:servingG,servingLabel:p.serving_size||null});
 }
 
@@ -5447,7 +5317,7 @@ function useFDCResult(i){
   var food=fdcNutrientsToFood(titleCaseFoodName(f.description),f.foodNutrients,100,"g");
   saveSearchResultToMyFoods(food);
   var servingG=(f.servingSizeUnit&&f.servingSizeUnit.toLowerCase()==="g"&&f.servingSize)?f.servingSize:null;
-  closeExModal("addFoodModal");
+  var m=document.getElementById("addFoodModal");if(m)m.remove();
   showNewFoodForm(food,{source:"fdc",raw:f.foodNutrients,servingG:servingG,servingLabel:f.householdServingFullText||null});
 }
 function lookupOFFByBarcode(code){
@@ -5461,7 +5331,7 @@ function lookupOFFByBarcode(code){
         var food=offNutrimentsToFood(titleCaseFoodName(data.product.product_name),data.product.nutriments,100,"g");
         saveSearchResultToMyFoods(food);
         var servingG=parseOFFServingGrams(data.product.serving_size);
-        closeExModal("addFoodModal");
+        var m=document.getElementById("addFoodModal");if(m)m.remove();
         showNewFoodForm(food,{source:"off",raw:data.product.nutriments,servingG:servingG,servingLabel:data.product.serving_size||null});
       }else{
         toast("Barcode "+code+" not found on Open Food Facts");
@@ -5481,7 +5351,7 @@ function loadZXing(cb){
   document.head.appendChild(s);
 }
 function showBarcodeScanner(){
-  closeExModal("addFoodModal");
+  var existingFoodModal=document.getElementById("addFoodModal");if(existingFoodModal)existingFoodModal.remove();
   var modal=document.createElement("div");
   modal.id="barcodeScanModal";
   modal.style.cssText="position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column;";
@@ -5595,7 +5465,6 @@ function closeBarcodeScanner(){
     }
   }catch(e){}
   var m=document.getElementById("barcodeScanModal");if(m)m.remove();
-  releaseModalBack("barcodeScanModal");
 }
 
 
@@ -5603,31 +5472,11 @@ function closeBarcodeScanner(){
 function trySheetSync(){if(DB.settings.sheetUrl)syncNow(true);}
 function syncNow(quiet){
   if(!DB.settings.sheetUrl){if(!quiet)toast("Add your Sheets URL first");return;}
-  // Timestamp every attempt (manual AND debounced auto-sync) so Setup can show that the
-  // background backup is actually firing. Written straight to localStorage, NOT via save(),
-  // because save() schedules another auto-sync and that would loop forever. "Attempt" is the
-  // honest word: no-cors is fire-and-forget, so success is never actually confirmable here.
-  DB.settings.lastSyncAttempt=Date.now();
-  try{localStorage.setItem("healthpad_db",JSON.stringify(DB));}catch(e){}
+  var note=document.getElementById("syncNote");
   var payload=Object.assign({},DB,{_userName:DB.settings.userName||"Default",_ts:new Date().toISOString()});
   fetch(DB.settings.sheetUrl,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)})
-   .then(function(){renderSyncStatusLine();if(!quiet)toast("Synced to Sheets");})
+   .then(function(){if(note)note.textContent="Last sync attempt: "+new Date().toLocaleTimeString();if(!quiet)toast("Synced to Sheets");})
    .catch(function(){if(!quiet)toast("Sync failed \u2014 check URL");});
-}
-function fmtAgo(ts){
-  if(!ts)return null;
-  var s=Math.floor((Date.now()-ts)/1000);
-  if(s<60)return"just now";
-  if(s<3600)return Math.floor(s/60)+"m ago";
-  if(s<86400)return Math.floor(s/3600)+"h ago";
-  return Math.floor(s/86400)+"d ago";
-}
-function renderSyncStatusLine(){
-  var note=document.getElementById("syncNote");
-  if(!note)return;
-  if(!DB.settings.sheetUrl){note.textContent="";return;}
-  var ago=fmtAgo(DB.settings.lastSyncAttempt);
-  note.textContent=ago?("Auto-backup on \u00b7 last attempt "+ago):"Auto-backup on \u00b7 no attempts yet this install";
 }
 
 /* ============ RESTORE FROM SHEETS (reverse sync) ============ */
@@ -6248,12 +6097,11 @@ function openGoalQuickModal(){
   if(s)s.value=g.startDate||todayStr();
   var err=document.getElementById("qgError");if(err)err.textContent="";
   var ov=document.getElementById("goalQuickModal");
-  if(ov){ov.style.display="flex";armModalBack("goalQuickModal");}
+  if(ov)ov.style.display="flex";
 }
 function closeGoalQuickModal(){
   var ov=document.getElementById("goalQuickModal");
   if(ov)ov.style.display="none";
-  releaseModalBack("goalQuickModal");
 }
 function saveGoalQuick(){
   var dateVal=document.getElementById("qgDate").value;
@@ -6588,22 +6436,10 @@ document.addEventListener("click",function(e){
   handleObOptTap(opt);
 });
 
-/* Delegated handler for nutrition ring cards (data-nut-key). Plain click delegation is
-   sufficient here because the ringrow uses CSS grid (no overflow scroll), so there is no
-   scroll/tap ambiguity. The button guard prevents the water quick-add buttons from
-   accidentally opening the breakdown modal. */
-document.addEventListener('click',function(e){
-  if(e.target.closest('button'))return; // inner buttons handle their own taps
-  var card=e.target.closest('.ringcard[data-nut-key]');
-  if(!card)return;
-  showNutBreakdown(card.dataset.nutKey);
-});
-
 // Delegated handler for exercise list rows.
 // Uses touchend + movement check so scrolling the list never misfires a selection.
 var _exRowTouch=null,_exRowLastTapTime=0;
 document.addEventListener("touchstart",function(e){
-  if(e.target.closest("button"))return; // in-row buttons (e.g. Log) handle their own taps
   var row=e.target.closest(".add-ex-row");
   if(!row)return;
   var t=e.touches[0];
@@ -6617,63 +6453,12 @@ document.addEventListener("touchend",function(e){
   if(dx<10&&dy<10){_exRowLastTapTime=Date.now();handleExRowTap(row);}
 },{passive:true});
 document.addEventListener("click",function(e){
-  if(e.target.closest("button"))return; // in-row buttons (e.g. Log) handle their own taps
   var row=e.target.closest(".add-ex-row");
   if(!row)return;
   if(Date.now()-_exRowLastTapTime<500)return; // already handled by touchend
   handleExRowTap(row);
 });
-function closeExModal(id){
-  var m=document.getElementById(id);if(m)m.remove();
-  releaseModalBack(id);
-}
-// Consume the history entry a modal armed, so the next hardware back press navigates
-// normally instead of appearing to do nothing. If this id owns the top entry, history.back()
-// consumes it (the resulting popstate finds the modal already closed and no-ops). Called by
-// every close path; when the close was ITSELF triggered by popstate, the id was already
-// popped off the stack first, so this finds nothing and correctly does nothing.
-var _popConsume=0;
-function releaseModalBack(id){
-  if(_modalHist.length&&_modalHist[_modalHist.length-1]===id){
-    _modalHist.pop();
-    _popConsume++; // the history.back() below fires a popstate that must NOT close the next modal down
-    history.back();
-  }
-  else{var i=_modalHist.indexOf(id);if(i>-1)_modalHist.splice(i,1);}
-}
-/* ---------- HARDWARE-BACK MODAL DISMISSAL ----------
-   Android PWAs: the hardware back button fires popstate. Without a history entry per open
-   modal, back with a modal open exits the app entirely. Every dynamically-created overlay in
-   this app follows the same convention (appended to body, id ending in "Modal" or "Popup"),
-   so a single MutationObserver arms a history entry on open with zero per-call-site edits,
-   and one popstate handler closes the topmost. The two static display-toggled overlays
-   (goalQuickModal, dietPopup) register close functions in _modalClosers and arm explicitly
-   from their open functions. Desktop side effect is intentional: back closes the modal
-   instead of leaving the page. */
-var _modalHist=[];
-var _modalClosers={goalQuickModal:function(){closeGoalQuickModal();},dietPopup:function(){closeDietPopup();},barcodeScanModal:function(){closeBarcodeScanner();}};
-function armModalBack(id){
-  if(_modalHist.indexOf(id)>-1)return;
-  _modalHist.push(id);
-  try{history.pushState({hpModal:id},"");}catch(e){}
-}
-new MutationObserver(function(muts){
-  muts.forEach(function(mu){
-    for(var i=0;i<mu.addedNodes.length;i++){
-      var n=mu.addedNodes[i];
-      if(n.nodeType===1&&n.id&&(/Modal$|Popup$/).test(n.id))armModalBack(n.id);
-    }
-  });
-}).observe(document.body,{childList:true});
-window.addEventListener("popstate",function(){
-  if(_popConsume>0){_popConsume--;return;}
-  if(!_modalHist.length)return;
-  var id=_modalHist.pop();
-  var closer=_modalClosers[id];
-  if(closer){closer();return;}
-  var el=document.getElementById(id);
-  if(el)el.remove();
-});
+function closeExModal(id){var m=document.getElementById(id);if(m)m.remove();}
 function handleExRowTap(row){
   var name=row.dataset.name;
   var action=row.dataset.action;
@@ -7868,23 +7653,9 @@ function renderFoodLogList(){
   }).join("");
 }
 function removeFoodEntry(id){
-  var idx=DB.foodLog.findIndex(function(e){return e.id===id;});
-  if(idx===-1)return;
-  var removed=DB.foodLog[idx];
-  DB.foodLog.splice(idx,1);
+  DB.foodLog=DB.foodLog.filter(function(e){return e.id!==id;});
   syncNutritionAggregate();
-  save();
   renderFoodLogList();renderFoodsTab();renderHome();trySheetSync();
-  // Undo window: the deletion is committed immediately (state stays consistent, and the
-  // auto-sync just mirrors whatever DB currently says), undo simply re-inserts the entry
-  // at its original position and syncs again. No deferred-commit bookkeeping needed.
-  toastAction("Removed "+removed.name,"Undo",function(){
-    DB.foodLog.splice(Math.min(idx,DB.foodLog.length),0,removed);
-    syncNutritionAggregate();
-    save();
-    renderFoodLogList();renderFoodsTab();renderHome();trySheetSync();
-    toast(removed.name+" restored");
-  },5000);
 }
 function editFoodEntry(id){
   var e=DB.foodLog.find(function(x){return x.id===id;});
@@ -7933,10 +7704,8 @@ function showAddFoodModal(){
     '<div id="addFoodList" style="overflow-y:auto;flex:1;padding:0 16px max(20px,calc(env(safe-area-inset-bottom)+20px));">'+
       '<div id="offSearchArea"></div>'+
       (recent.length?recent.map(function(f){
-        return '<div class="add-ex-row" data-name="'+f.name.replace(/"/g,"&quot;")+'" data-action="pickFood" data-id="'+f.id+'" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);display:flex;justify-content:space-between;align-items:center;gap:10px;">'+
-          '<div style="flex:1;min-width:0;">'+f.name+'<div style="font-size:12px;color:var(--faint);font-weight:400;">'+f.qty+' '+f.unit+' \u2022 '+f.cal+' kcal \u2022 '+f.pro+'g protein</div></div>'+
-          '<button onclick="event.stopPropagation();logMyFoodAgain('+f.id+')" style="flex-shrink:0;display:inline-block;width:auto;padding:6px 16px;font-size:12px;font-weight:700;font-family:var(--font);background:none;border:1.5px solid var(--red);color:var(--red);border-radius:10px;cursor:pointer;touch-action:manipulation;letter-spacing:.3px;">Log</button>'+
-        '</div>';
+        return '<div class="add-ex-row" data-name="'+f.name.replace(/"/g,"&quot;")+'" data-action="pickFood" data-id="'+f.id+'" style="padding:14px 4px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(192,40,30,.12);">'+
+          f.name+'<div style="font-size:12px;color:var(--faint);font-weight:400;">'+f.qty+' '+f.unit+' \u2022 '+f.cal+' kcal \u2022 '+f.pro+'g protein</div></div>';
       }).join(""):'<div class="note dim" style="padding:14px 4px;">No saved foods yet \u2014 log your first one, or search above.</div>')+
     '</div></div>';
   document.body.appendChild(modal);
@@ -7962,7 +7731,7 @@ function scheduleOFFSearchPrompt(q){
 function filterAddFoodList(q){
   var ql=(q||"").toLowerCase().trim();
   document.querySelectorAll("#addFoodList .add-ex-row[data-action='pickFood']").forEach(function(r){
-    r.style.display=(!ql||r.dataset.name.toLowerCase().indexOf(ql)>-1)?"flex":"none";
+    r.style.display=(!ql||r.dataset.name.toLowerCase().indexOf(ql)>-1)?"block":"none";
   });
 }
 function pickFood(id){
@@ -7974,30 +7743,7 @@ function pickFood(id){
   // (e.g. a different quantity than what was saved) before it's added to today's log.
   showNewFoodForm(f,null,null);
 }
-/* One-tap re-log: logs the saved food exactly as saved (same qty/unit/values), no form.
-   This is the fast path for the repeated-rotation eating pattern; the row body still opens
-   the editable form (which now rescales on qty change) for the exception case. The undo
-   toast is the safety net that makes skipping the confirmation step acceptable. */
-function logMyFoodAgain(id){
-  var f=DB.myFoods.filter(function(x){return String(x.id)===String(id);})[0];
-  if(!f)return;
-  f.lastUsed=Date.now();
-  var entry=Object.assign({},f,{id:Date.now(),d:todayStr()});
-  DB.foodLog.push(entry);
-  syncNutritionAggregate();
-  save();
-  closeExModal("addFoodModal");
-  renderFoodLogList();renderFoodsTab();renderHome();trySheetSync();
-  toastAction("Logged "+f.name+" ("+f.qty+" "+f.unit+")","Undo",function(){
-    DB.foodLog=DB.foodLog.filter(function(e){return e.id!==entry.id;});
-    syncNutritionAggregate();
-    save();
-    renderFoodLogList();renderFoodsTab();renderHome();trySheetSync();
-    toast("Removed "+f.name);
-  },5000);
-}
 var _nfSourceData=null; // holds raw nutriment data + serving info for live unit recalculation, null for manual entries
-var _nfScaleBasis=null; // per-1-unit values derived from a saved/logged entry, drives Qty rescaling when no source data exists
 var _nfEditId=null; // set when editing an existing logged entry in place, null when logging something new
 /* Track B: checks a food (by name + potassium value) against active medication data and
    returns a warning banner string, or null if nothing applies. Warn-don't-block, same pattern
@@ -8049,24 +7795,10 @@ function getFoodMedicationWarning(foodName,potassiumMg){
 }
 
 function showNewFoodForm(prefill,sourceMeta,editId){
-  closeExModal("addFoodModal");
-  closeExModal("newFoodModal");
+  var modal=document.getElementById("addFoodModal");if(modal)modal.remove();
+  var existingNf=document.getElementById("newFoodModal");if(existingNf)existingNf.remove();
   _nfSourceData=sourceMeta||null;
   _nfEditId=editId||null;
-  /* Per-unit scale basis for saved/logged foods. Database results carry per-100g source data
-     and use the existing recalc engine; a saved My Foods entry or an already-logged entry
-     only carries its final values at one specific qty. Deriving values-per-1-unit from that
-     entry lets the Qty field rescale everything linearly with no schema change and works
-     retroactively on every food ever saved: 1 oz of cookie at 90 kcal edited to 3 oz becomes
-     270 kcal, and every other nutrient scales the same way. */
-  _nfScaleBasis=null;
-  if(prefill&&!sourceMeta&&parseFloat(prefill.qty)>0){
-    var _bq=parseFloat(prefill.qty);
-    _nfScaleBasis={qty:_bq,unit:prefill.unit||"",per:{}};
-    ["cal","pro","carb","fat","fiber","sugar","satFat","sodium","water","veg","potassium","calcium"].forEach(function(k){
-      _nfScaleBasis.per[k]=(parseFloat(prefill[k])||0)/_bq;
-    });
-  }
   var m2=document.createElement("div");
   m2.id="newFoodModal";
   m2.style.cssText="position:fixed;inset:0;background:rgba(10,6,4,.92);z-index:9000;display:flex;align-items:flex-end;justify-content:center;";
@@ -8103,7 +7835,6 @@ function showNewFoodForm(prefill,sourceMeta,editId){
       }).join("");
     })()+
     unitSelectorHtml+
-    (_nfScaleBasis?'<div class="note dim" style="margin-bottom:6px;background:rgba(203,162,76,.10);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;">Change Qty and every value rescales automatically from your saved '+_nfScaleBasis.qty+' '+(_nfScaleBasis.unit||'unit')+' entry. Edit any value directly to override.</div>':'')+
     '<label class="fld">Food name</label><input id="nfName" type="text" placeholder="e.g. Chicken Breast">'+
     '<div class="row3" style="margin-top:6px;">'+
       '<div><label class="fld">Qty</label><input id="nfQty" type="number" inputmode="decimal" placeholder="6" oninput="syncQtyToRecalc()"></div>'+
@@ -8167,7 +7898,7 @@ function updateNfPointsDisplay(){
 function syncQtyToRecalc(){
   // Bridges manual edits to the Qty field into the same recalculation path used by the
   // amount/unit selector, since nfQty previously had no handler and silently did nothing.
-  if(!_nfSourceData){scaleNfFromBasis();return;}
+  if(!_nfSourceData)return;
   var amountInput=document.getElementById("nfRecalcAmount");
   var unitSel=document.getElementById("nfRecalcUnit");
   var qtyVal=parseFloat(document.getElementById("nfQty").value)||0;
@@ -8177,21 +7908,6 @@ function syncQtyToRecalc(){
   }
   if(amountInput)amountInput.value=qtyVal;
   recalcNewFoodFromSource();
-}
-/* Linear rescale from the saved-entry basis. Values are rounded to integers because
-   saveNewFood() parseInt's every nutrient field anyway -- displaying what will actually be
-   stored beats showing decimals that silently truncate on save. Direct edits to a nutrient
-   field persist until the next Qty change, which re-derives all fields from the basis. */
-function scaleNfFromBasis(){
-  if(!_nfScaleBasis)return;
-  var q=parseFloat(document.getElementById("nfQty").value);
-  if(!(q>0))return;
-  var idMap={cal:"nfCal",pro:"nfPro",carb:"nfCarb",fat:"nfFat",fiber:"nfFiber",sugar:"nfSugar",satFat:"nfSatFat",sodium:"nfSodium",water:"nfWater",veg:"nfVeg",potassium:"nfPotassium",calcium:"nfCalcium"};
-  Object.keys(idMap).forEach(function(k){
-    var el=document.getElementById(idMap[k]);
-    if(el)el.value=Math.round(_nfScaleBasis.per[k]*q);
-  });
-  updateNfPointsDisplay();
 }
 function recalcNewFoodFromSource(){
   if(!_nfSourceData)return;
@@ -8266,7 +7982,7 @@ function saveNewFood(){
     if(logIdx===-1){toast("Couldn't find that entry to update");return;}
     DB.foodLog[logIdx]=Object.assign({},DB.foodLog[logIdx],fields);
     syncNutritionAggregate();
-    closeExModal("newFoodModal");
+    var m2=document.getElementById("newFoodModal");if(m2)m2.remove();
     _nfEditId=null;
     renderFoodLogList();renderFoodsTab();renderHome();toast(name+" updated.");trySheetSync();
     return;
@@ -8279,7 +7995,7 @@ function saveNewFood(){
   var entry=Object.assign({},f,{id:Date.now(),d:todayStr()});
   DB.foodLog.push(entry);
   syncNutritionAggregate();
-  closeExModal("newFoodModal");
+  var m=document.getElementById("newFoodModal");if(m)m.remove();
   renderFoodLogList();renderFoodsTab();renderHome();toast(name+" logged and saved to My Foods.");trySheetSync();
 }
 
@@ -9053,6 +8769,15 @@ function saveDietDaily(dietId){
 /* The picker. Selecting a diet swaps the panel body, the Save button's target, the section
    header label, and the trend chart. Mediterranean routes to the original medas* functions;
    the other three route through the generalized layer. */
+// Single-diet descriptions, shown one at a time in #dietDescArea based on the active
+// selection -- previously all five rendered permanently, stacked, whether selected or not.
+var DIET_DESCRIPTIONS={
+  med:'<b style="color:var(--ink2);">Mediterranean</b> &mdash; Built around the traditional eating patterns of countries bordering the Mediterranean, emphasizing olive oil, vegetables, fish, legumes, and nuts. It has the strongest body of evidence of any dietary pattern for reducing cardiovascular events and overall mortality.',
+  dash:'<b style="color:var(--ink2);">DASH</b> &mdash; Dietary Approaches to Stop Hypertension, designed by the NIH specifically to lower blood pressure by increasing potassium-rich produce and low-fat dairy while cutting sodium. It is the eating pattern most directly validated for managing and preventing high blood pressure.',
+  mind:'<b style="color:var(--ink2);">MIND</b> &mdash; A hybrid of the Mediterranean and DASH diets created at Rush University, with added emphasis on leafy greens and berries. Its sole design purpose is to slow age-related cognitive decline and reduce the risk of Alzheimer\'s disease.',
+  tlc:'<b style="color:var(--ink2);">TLC</b> &mdash; Therapeutic Lifestyle Changes, an NIH/National Cholesterol Education Program plan focused on limiting saturated fat and dietary cholesterol while adding soluble fiber and plant sterols. It exists specifically to lower LDL ("bad") cholesterol without medication.',
+  hpdi:'<b style="color:var(--ink2);">hPDI</b> &mdash; The healthful Plant-Based Diet Index (Harvard), which rewards healthy plant foods while penalizing both refined plant foods and all animal foods, including fish, dairy, and eggs. It exists to quantify the quality of a plant-forward diet, and higher scores are linked to lower rates of heart disease and type 2 diabetes.'
+};
 function selectDiet(dietId){
   _activeDiet=dietId;
   var diet=DIETS[dietId];
@@ -9065,6 +8790,8 @@ function selectDiet(dietId){
     chip.style.background=on?"rgba(192,40,30,.10)":"var(--surf)";
     chip.style.color=on?"var(--ink)":"var(--ink2)";
   });
+  var descArea=document.getElementById("dietDescArea");
+  if(descArea)descArea.innerHTML=DIET_DESCRIPTIONS[dietId]||"";
   var saveBtn=document.getElementById("dietSaveBtn");
   if(saveBtn)saveBtn.setAttribute("onclick",diet.legacy?"saveMedasDaily()":"saveDietDaily('"+dietId+"')");
   if(diet.legacy){
@@ -9471,7 +9198,7 @@ function openDietPopup(){
   if(pop&&pop.parentNode!==document.body)document.body.appendChild(pop);
   pop.style.display="flex";
 }
-function closeDietPopup(){document.getElementById("dietPopup").style.display="none";releaseModalBack("dietPopup");}
+function closeDietPopup(){document.getElementById("dietPopup").style.display="none";}
 
 /* ============ ORB TUNING PANEL (Setup > Orb Tuning Mode) ============
    Live-editing UI over the orb's existing globals (ORB_STOPS, GRAD_STOPS, SAT_*, ORB_*).
