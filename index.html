@@ -8294,6 +8294,13 @@ function runIntroAnimation(){
   var splash=document.getElementById("splash");
   var canvas=document.getElementById("introCanvas");
   if(!splash||!canvas){return;}
+  try{
+    if(localStorage.getItem("hp_intro_shown")===todayStr()){
+      finishIntro(); // already seen today -- skip straight to the dashboard
+      return;
+    }
+    localStorage.setItem("hp_intro_shown",todayStr());
+  }catch(e){}
   if(!window.gsap){ // GSAP failed to load (offline first launch, CDN blocked, etc.) -- degrade
     // gracefully to a quick plain fade rather than getting stuck on a half-built intro forever.
     setTimeout(function(){finishIntro();},1800);
